@@ -1,0 +1,32 @@
+# Fichiers à ignorer
+# eprinting Spring Boot
+eprinting/target/
+eprinting/*.log
+eprinting/.mvn/
+eprinting/mvnw
+eprinting/mvnw.cmd
+eprinting/HELP.md
+
+# Frontend Angular
+frontend/**/node_modules/
+frontend/**/dist/
+frontend/**/tmp/
+frontend/**/out-tsc/
+frontend/**/.angular/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Fichiers de configuration sensibles
+*.properties.local
+application-local.properties
+application-dev.properties
