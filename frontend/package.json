@@ -40,7 +40,7 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@angular/build": "^21.1.2",
+    "@angular/build": "^20.3.20",
     "@angular/cli": "^21.1.2",
     "@angular/compiler-cli": "^21.1.0",
     "@fortawesome/fontawesome-free": "^7.1.0",
