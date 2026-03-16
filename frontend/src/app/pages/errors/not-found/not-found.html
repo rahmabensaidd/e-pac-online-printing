@@ -1,0 +1,71 @@
+<section class="relative py-12 sm:py-16 overflow-hidden">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="absolute -top-20 -left-16 w-64 h-64 bg-brand-pink/10 blob"></div>
+  <div class="absolute -bottom-24 -right-20 w-80 h-80 bg-brand-teal/15 blob"></div>
+
+  <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="rounded-3xl border border-gray-200 bg-white/90 shadow-xl backdrop-blur-sm p-6 sm:p-10 lg:p-12">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-brand-lime/30 text-brand-navy text-sm font-bold">
+            404
+          </span>
+          <h1 class="mt-5 font-display font-extrabold text-4xl text-brand-navy">Page not found</h1>
+          <p class="mt-3 text-gray-600 max-w-md">
+            The page you are looking for does not exist or may have moved. You can continue from the homepage or browse available products.
+          </p>
+
+          <div class="mt-7 flex flex-wrap items-center gap-3">
+            <a
+              routerLink="/"
+              class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+            >
+              Go to Home
+            </a>
+            <a
+              routerLink="/marketplace"
+              class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white border border-gray-200 text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+            >
+              Browse Marketplace
+            </a>
+          </div>
+
+          <div class="mt-7">
+            <label for="not-found-search" class="block text-sm font-bold text-brand-navy mb-2">
+              Search
+            </label>
+            <div class="flex gap-2">
+              <input
+                id="not-found-search"
+                type="text"
+                class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                placeholder="Try: business cards"
+              />
+              <button
+                type="button"
+                class="px-5 py-3 rounded-2xl bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              >
+                Search
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-gray-200 bg-brand-cream/70 p-6 sm:p-8">
+          <div class="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 sm:p-6">
+            <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-lime/10 via-transparent to-brand-teal/10"></div>
+            <img
+              ngSrc="/illustrations/404-error.svg"
+              alt="Page not found illustration from unDraw"
+              width="640"
+              height="420"
+              class="relative w-full h-auto object-contain"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

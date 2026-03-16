@@ -1,0 +1,145 @@
+<section id="marketplace" class="py-24 bg-brand-cream">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="mb-16 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between" appReveal [revealDelay]="30">
+      <div class="text-center sm:text-left">
+        <h2 class="font-display font-bold text-4xl lg:text-5xl mb-4">Curated Print Catalog</h2>
+        <p class="text-gray-600 text-lg max-w-2xl mx-auto sm:mx-0">
+          Explore ready-made books, calendars, and premium printed products prepared for high-quality production.
+        </p>
+        <div class="mt-5 flex flex-wrap gap-2 justify-center sm:justify-start">
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-200 text-brand-navy">Ready-made books</span>
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-200 text-brand-navy">Calendars</span>
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-200 text-brand-navy">Premium print products</span>
+        </div>
+      </div>
+
+      <a
+        routerLink="/marketplace"
+        [queryParams]="headerCtaQueryParams()"
+        class="inline-flex items-center justify-center self-center sm:self-auto px-5 py-3 rounded-full bg-white border border-gray-200 text-brand-navy font-medium hover:bg-brand-orange hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+      >
+        Browse all
+      </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap justify-center gap-3 mb-12" appReveal [revealDelay]="90">
+      <button
+        type="button"
+        class="px-6 py-3 rounded-full font-medium transition-all hover:shadow-lg"
+        [class]="filter() === 'all'
+          ? 'bg-brand-navy text-white'
+          : 'bg-white text-gray-700 hover:bg-brand-orange hover:text-white'"
+        (click)="setFilter('all')"
+      >All</button>
+
+      <button
+        type="button"
+        class="px-6 py-3 rounded-full font-medium transition-all hover:shadow-lg"
+        [class]="filter() === 'marketing'
+          ? 'bg-brand-navy text-white'
+          : 'bg-white text-gray-700 hover:bg-brand-orange hover:text-white'"
+        (click)="setFilter('marketing')"
+      >Marketing</button>
+
+      <button
+        type="button"
+        class="px-6 py-3 rounded-full font-medium transition-all hover:shadow-lg"
+        [class]="filter() === 'business'
+          ? 'bg-brand-navy text-white'
+          : 'bg-white text-gray-700 hover:bg-brand-orange hover:text-white'"
+        (click)="setFilter('business')"
+      >Business</button>
+
+      <button
+        type="button"
+        class="px-6 py-3 rounded-full font-medium transition-all hover:shadow-lg"
+        [class]="filter() === 'packaging'
+          ? 'bg-brand-navy text-white'
+          : 'bg-white text-gray-700 hover:bg-brand-orange hover:text-white'"
+        (click)="setFilter('packaging')"
+      >Packaging</button>
+
+      <button
+        type="button"
+        class="px-6 py-3 rounded-full font-medium transition-all hover:shadow-lg"
+        [class]="filter() === 'photo'
+          ? 'bg-brand-navy text-white'
+          : 'bg-white text-gray-700 hover:bg-brand-orange hover:text-white'"
+        (click)="setFilter('photo')"
+      >Photo</button>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      @for (p of sectionProducts(); track p.id; let i = $index) {
+        <div
+          class="product-card bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-2xl transition-all"
+          appReveal
+          [revealDelay]="130 + (i * 55)"
+        >
+          <a
+            routerLink="/marketplace"
+            [queryParams]="{ category: p.marketplaceCategory }"
+            [attr.aria-label]="'View ' + p.name + ' in marketplace'"
+            class="block relative p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 rounded-2xl"
+          >
+            <div class="product-image w-full h-40 rounded-2xl" [style.background]="p.image"></div>
+
+            <div class="absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-extrabold text-brand-navy price-tag">
+              {{ p.price | currency:'USD':'symbol':'1.2-2' }}
+            </div>
+          </a>
+
+          <div class="px-6 pb-6">
+            <a
+              routerLink="/marketplace"
+              [queryParams]="{ category: p.marketplaceCategory }"
+              class="inline-flex text-left font-display font-extrabold text-xl mb-2 hover:text-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 rounded-lg"
+            >
+              {{ p.name }}
+            </a>
+            <p class="text-gray-600 text-sm mb-4">{{ p.description }}</p>
+
+            <div class="flex gap-2">
+              <a
+                [routerLink]="['/products', p.detailsKey]"
+                class="flex-1 px-4 py-3 rounded-2xl bg-brand-navy text-white font-bold text-center hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              >
+                View details
+              </a>
+
+              <button
+                type="button"
+                class="px-4 py-3 rounded-2xl bg-white border border-gray-200 font-bold hover:shadow-md transition"
+                (click)="addToCart(p)"
+                title="Add to cart"
+              >
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <a
+        routerLink="/marketplace"
+        class="product-card bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-2xl transition-all p-6 flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+        appReveal
+        [revealDelay]="520"
+      >
+        <div>
+          <div class="product-image w-full h-40 rounded-2xl bg-brand-cream border border-gray-200 grid place-items-center">
+            <span class="text-brand-navy text-base font-display font-extrabold">Full catalog</span>
+          </div>
+          <h3 class="font-display font-extrabold text-xl mt-6">Explore all products</h3>
+          <p class="text-gray-600 text-sm mt-2">See everything we print in the full marketplace.</p>
+        </div>
+        <span class="mt-5 inline-flex items-center gap-2 font-bold text-brand-navy">
+          Browse full catalog
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>

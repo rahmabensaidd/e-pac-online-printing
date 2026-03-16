@@ -1,0 +1,223 @@
+<section id="product-details-page" class="relative py-10 sm:py-14 bg-brand-cream min-h-[calc(100vh-10rem)] overflow-hidden">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="absolute -top-20 -left-20 w-64 h-64 bg-brand-orange/15 blob"></div>
+  <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-brand-teal/15 blob"></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    @if (details(); as product) {
+      <div class="flex flex-wrap items-center gap-2 text-sm" appReveal [revealDelay]="20">
+        <a
+          routerLink="/marketplace"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-brand-navy font-bold hover:bg-brand-orange hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+        >
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          Back to marketplace
+        </a>
+        <span class="text-gray-400" aria-hidden="true">/</span>
+        <span class="font-medium text-gray-600">{{ product.categoryLabel }}</span>
+      </div>
+
+      <header class="mt-5" appReveal [revealDelay]="70">
+        <h1 class="font-display font-extrabold text-4xl lg:text-5xl text-brand-navy">
+          {{ product.title }}
+        </h1>
+        <p class="mt-4 text-gray-600 text-lg max-w-3xl">
+          {{ product.shortDescription }}
+        </p>
+
+        <div class="mt-5 flex flex-wrap gap-2">
+          <span class="px-3 py-1 rounded-full bg-white border border-gray-200 text-xs font-bold text-brand-navy">
+            {{ product.categoryLabel }}
+          </span>
+          <span class="px-3 py-1 rounded-full bg-white border border-gray-200 text-xs font-bold text-brand-navy">
+            Lead time: {{ product.leadTime }}
+          </span>
+          <span class="px-3 py-1 rounded-full bg-white border border-gray-200 text-xs font-bold text-brand-navy">
+            Min order: {{ product.minimumOrder }}
+          </span>
+        </div>
+      </header>
+
+      <div class="mt-8 grid lg:grid-cols-12 gap-6">
+        <article class="lg:col-span-7 rounded-3xl border border-gray-200 bg-white p-6 sm:p-7 shadow-xl" appReveal [revealDelay]="110">
+          <div class="rounded-3xl border border-gray-200 bg-brand-cream/60 p-6 sm:p-8">
+            <div class="mx-auto flex justify-center">
+              @switch (product.visualKind) {
+                @case ('book') {
+                  <div class="relative w-58 h-80 sm:w-64 sm:h-92 rounded-r-xl rounded-l-md shadow-2xl" [style]="previewSurfaceStyle()">
+                    <div class="absolute -right-2 top-0 h-full w-3 rounded-r-xl bg-black/20"></div>
+                  </div>
+                }
+                @case ('magazine') {
+                  <div class="relative w-58 h-80 sm:w-64 sm:h-92 rounded-lg shadow-2xl" [style]="previewSurfaceStyle()">
+                    <div class="absolute top-3 left-3 right-3 h-1.5 rounded-full bg-white/60"></div>
+                  </div>
+                }
+                @case ('poster') {
+                  <div class="relative w-74 h-52 sm:w-80 sm:h-56 rounded-2xl shadow-2xl" [style]="previewSurfaceStyle()"></div>
+                }
+                @case ('card') {
+                  <div class="relative h-48 w-72">
+                    <div class="absolute left-10 top-8 w-52 h-32 rounded-2xl bg-brand-navy/20 rotate-6"></div>
+                    <div class="absolute left-6 top-4 w-52 h-32 rounded-2xl bg-brand-orange/20 -rotate-3"></div>
+                    <div class="absolute left-2 top-0 w-52 h-32 rounded-2xl shadow-xl" [style]="previewSurfaceStyle()"></div>
+                  </div>
+                }
+                @case ('brochure') {
+                  <div class="relative w-72 h-52 rounded-2xl shadow-2xl overflow-hidden">
+                    <div class="absolute inset-0" [style]="previewSurfaceStyle()"></div>
+                    <div class="absolute inset-y-0 left-1/3 w-px bg-white/55"></div>
+                    <div class="absolute inset-y-0 left-2/3 w-px bg-white/55"></div>
+                  </div>
+                }
+                @case ('calendar') {
+                  <div class="relative w-60 h-72 rounded-2xl shadow-2xl" [style]="previewSurfaceStyle()">
+                    <div class="absolute top-0 left-0 right-0 h-10 rounded-t-2xl bg-white/65"></div>
+                    <div class="absolute top-4 left-6 right-6 flex items-center justify-between">
+                      @for (hole of [1, 2, 3, 4, 5, 6]; track hole) {
+                        <span class="w-2.5 h-2.5 rounded-full bg-brand-navy/35"></span>
+                      }
+                    </div>
+                  </div>
+                }
+                @case ('label') {
+                  <div class="relative w-72 h-52 rounded-2xl border border-white/70 bg-white/65 shadow-2xl p-4">
+                    <div class="grid grid-cols-3 gap-3 h-full">
+                      @for (index of [1, 2, 3, 4, 5, 6]; track index) {
+                        <span class="rounded-xl" [style]="previewSurfaceStyle()"></span>
+                      }
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <div class="mt-5 text-center">
+              <p class="text-xs uppercase tracking-wider text-gray-500 font-bold">Product Preview</p>
+              <p class="mt-1 text-sm text-gray-600">Representation updates by product format and category.</p>
+            </div>
+          </div>
+
+          <div class="mt-6 grid md:grid-cols-2 gap-4">
+            <section class="rounded-2xl border border-gray-200 bg-brand-cream/40 p-4">
+              <h2 class="text-sm font-bold text-brand-navy uppercase tracking-wider">Specifications</h2>
+              <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                @for (spec of product.specs; track spec) {
+                  <li class="flex items-start gap-2">
+                    <i class="fas fa-check text-brand-teal mt-1" aria-hidden="true"></i>
+                    <span>{{ spec }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+
+            <section class="rounded-2xl border border-gray-200 bg-brand-cream/40 p-4">
+              <h2 class="text-sm font-bold text-brand-navy uppercase tracking-wider">Included Details</h2>
+              <ul class="mt-3 space-y-2 text-sm text-gray-700">
+                @for (option of product.productOptions; track option) {
+                  <li class="flex items-start gap-2">
+                    <i class="fas fa-list-check text-brand-orange mt-1" aria-hidden="true"></i>
+                    <span>{{ option }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          </div>
+
+          <section class="mt-4 rounded-2xl border border-gray-200 bg-brand-cream/40 p-4">
+            <h2 class="text-sm font-bold text-brand-navy uppercase tracking-wider">Production Notes</h2>
+            <ul class="mt-3 space-y-2 text-sm text-gray-700">
+              @for (note of product.productionNotes; track note) {
+                <li class="flex items-start gap-2">
+                  <i class="fas fa-industry text-brand-navy mt-1" aria-hidden="true"></i>
+                  <span>{{ note }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        </article>
+
+        <aside class="lg:col-span-5" appReveal [revealDelay]="140">
+          <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-xl lg:sticky lg:top-24">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-sm text-gray-500">Starting from</p>
+                <p class="font-display font-extrabold text-4xl text-brand-navy">
+                  {{ product.priceFrom | currency:'USD':'symbol':'1.2-2' }}
+                </p>
+              </div>
+              @if (product.rating) {
+                <div class="text-right">
+                  <p class="text-sm font-bold text-brand-navy inline-flex items-center gap-1">
+                    <i class="fas fa-star text-brand-orange" aria-hidden="true"></i>
+                    {{ product.rating }}
+                  </p>
+                  @if (product.reviewsCount) {
+                    <p class="text-xs text-gray-500">{{ product.reviewsCount }} reviews</p>
+                  }
+                </div>
+              }
+            </div>
+
+            <p class="mt-3 text-sm text-gray-600">Ready-made product with fixed production specifications.</p>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+              @for (tag of product.tags.slice(0, 4); track tag) {
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-cream/80 text-brand-navy border border-gray-200">
+                  {{ tag }}
+                </span>
+              }
+            </div>
+
+            @if (product.isAvailable) {
+              <div class="mt-6 space-y-3">
+                <button
+                  type="button"
+                  class="w-full inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                  (click)="addToCart()"
+                >
+                  Add to Cart
+                </button>
+
+                <button
+                  type="button"
+                  class="w-full inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-white border border-gray-200 text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                  (click)="browseCatalog()"
+                >
+                  {{ browseButtonLabel() }}
+                </button>
+              </div>
+            } @else {
+              <div class="mt-6 space-y-3">
+                <p class="w-full text-center px-5 py-3 rounded-2xl bg-gray-100 text-gray-500 font-bold">
+                  Temporarily unavailable
+                </p>
+                <button
+                  type="button"
+                  class="w-full inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-white border border-gray-200 text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                  (click)="browseCatalog()"
+                >
+                  {{ browseButtonLabel() }}
+                </button>
+              </div>
+            }
+          </div>
+        </aside>
+      </div>
+    } @else {
+      <div class="rounded-3xl border border-gray-200 bg-white p-8 sm:p-10 shadow-xl max-w-2xl mx-auto text-center" appReveal [revealDelay]="30">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-cream text-brand-navy grid place-items-center text-2xl">
+          <i class="fas fa-box-open" aria-hidden="true"></i>
+        </div>
+        <h1 class="mt-5 font-display font-bold text-2xl text-brand-navy">Product details not found</h1>
+        <p class="mt-2 text-gray-600">This product could not be loaded. Continue browsing the marketplace catalog.</p>
+        <a
+          routerLink="/marketplace"
+          class="mt-6 inline-flex items-center justify-center px-6 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+        >
+          Go to marketplace
+        </a>
+      </div>
+    }
+  </div>
+</section>

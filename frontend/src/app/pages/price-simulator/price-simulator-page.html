@@ -1,0 +1,340 @@
+<section id="price-simulator-page" class="relative py-10 sm:py-14 bg-brand-cream min-h-[calc(100vh-10rem)] overflow-hidden">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="absolute -top-16 -left-16 w-64 h-64 bg-brand-orange/15 blob"></div>
+  <div class="absolute -bottom-20 -right-20 w-80 h-80 bg-brand-teal/15 blob"></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header class="text-center max-w-3xl mx-auto" appReveal [revealDelay]="20">
+      <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-lime/30 text-brand-navy text-sm font-bold">
+        <span class="w-2 h-2 rounded-full bg-brand-orange"></span>
+        Price Simulation
+      </span>
+      <h1 class="mt-4 font-display font-extrabold text-4xl lg:text-5xl text-brand-navy">
+        Configure your print and simulate cost in real time
+      </h1>
+      <p class="mt-3 text-gray-600 text-lg">
+        Personalize specifications, preview your print setup, and estimate total production cost before ordering.
+      </p>
+    </header>
+
+    <div class="mt-8 rounded-3xl border border-gray-200/80 bg-white/90 shadow-xl backdrop-blur-sm overflow-hidden" appReveal [revealDelay]="80">
+      <div class="grid lg:grid-cols-[1fr_1.3fr]">
+        <div class="p-5 sm:p-6 lg:p-7 border-b lg:border-b-0 lg:border-r border-gray-200">
+          <p class="text-xs tracking-[0.15em] uppercase font-bold text-gray-500">1. Upload Manuscript</p>
+          <label
+            for="simulator-manuscript"
+            class="mt-4 h-42 rounded-2xl border-2 border-dashed border-gray-300 bg-white grid place-items-center text-center cursor-pointer hover:border-brand-orange transition"
+          >
+            <div class="px-5">
+              <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-brand-cream text-brand-navy text-xl">
+                <i class="fas fa-upload"></i>
+              </span>
+              <p class="mt-4 text-xl font-display font-bold text-brand-navy">Drop PDF here or click to browse</p>
+              <p class="mt-2 text-sm text-gray-500">Max file size: 50MB</p>
+              @if (manuscriptName()) {
+                <p class="mt-3 text-sm font-bold text-brand-navy">{{ manuscriptName() }}</p>
+              }
+            </div>
+          </label>
+          <input
+            id="simulator-manuscript"
+            type="file"
+            accept=".pdf"
+            (change)="onManuscriptChange($event)"
+            class="sr-only"
+          />
+
+          <div class="mt-8">
+            <p class="text-xs tracking-[0.15em] uppercase font-bold text-gray-500">2. Specifications</p>
+
+            <div class="mt-5">
+              <p class="text-sm font-bold text-brand-navy mb-2">Product Type</p>
+              <div class="grid grid-cols-3 gap-2">
+                @for (type of productTypes; track type) {
+                  <button
+                    type="button"
+                    [class]="'px-4 py-2.5 rounded-xl border font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 ' + productTypeClass(type)"
+                    (click)="setProductType(type)"
+                  >
+                    {{ type }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <label for="simulator-binding" class="block text-sm font-bold text-brand-navy mb-2">Binding Type</label>
+              <select
+                id="simulator-binding"
+                [value]="bindingType()"
+                (change)="setBindingType($event)"
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+              >
+                @for (option of bindingOptions; track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="mt-4">
+              <label for="simulator-paper" class="block text-sm font-bold text-brand-navy mb-2">Interior Paper</label>
+              <select
+                id="simulator-paper"
+                [value]="interiorPaper()"
+                (change)="setInteriorPaper($event)"
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+              >
+                @for (option of interiorPaperOptions; track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="mt-4 grid sm:grid-cols-2 gap-4">
+              <div>
+                <label for="simulator-trim" class="block text-sm font-bold text-brand-navy mb-2">Trim Size</label>
+                <select
+                  id="simulator-trim"
+                  [value]="trimSize()"
+                  (change)="setTrimSize($event)"
+                  class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                >
+                  @for (option of trimSizeOptions; track option) {
+                    <option [value]="option">{{ option }}</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label for="simulator-color" class="block text-sm font-bold text-brand-navy mb-2">Print Color</label>
+                <select
+                  id="simulator-color"
+                  [value]="printColor()"
+                  (change)="setPrintColor($event)"
+                  class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                >
+                  @for (option of printColorOptions; track option) {
+                    <option [value]="option">{{ option }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <p class="text-sm font-bold text-brand-navy mb-2">Cover Finish</p>
+              <div class="flex flex-wrap items-center gap-4">
+                @for (finish of coverFinishOptions; track finish) {
+                  <label [class]="'inline-flex items-center gap-2 text-sm ' + coverFinishClass(finish)">
+                    <input
+                      type="radio"
+                      name="cover-finish"
+                      [checked]="coverFinish() === finish"
+                      (change)="setCoverFinish(finish)"
+                      class="h-4 w-4 text-brand-orange border-gray-300 focus:ring-brand-orange/40"
+                    />
+                    {{ finish }}
+                  </label>
+                }
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <label for="simulator-page-count" class="block text-sm font-bold text-brand-navy">Page Count: {{ pageCount() }}</label>
+              <input
+                id="simulator-page-count"
+                type="range"
+                min="24"
+                max="480"
+                step="2"
+                [value]="pageCount()"
+                (input)="onPageCountChange($event)"
+                class="mt-3 w-full accent-brand-orange"
+              />
+            </div>
+
+            <div class="mt-4">
+              <label for="simulator-quantity" class="block text-sm font-bold text-brand-navy mb-2">Quantity</label>
+            <input
+              id="simulator-quantity"
+              type="number"
+              min="1"
+              max="5000"
+              [value]="quantity()"
+              (input)="onQuantityChange($event)"
+              class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-bold outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+            />
+            </div>
+          </div>
+
+          <div class="mt-8">
+            <p class="text-xs tracking-[0.15em] uppercase font-bold text-gray-500">3. Personalization</p>
+
+            <div class="mt-5">
+              <label for="simulator-title" class="block text-sm font-bold text-brand-navy mb-2">Book/Project Title</label>
+              <input
+                id="simulator-title"
+                type="text"
+                [value]="projectTitle()"
+                (input)="onTitleChange($event)"
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+              />
+            </div>
+
+            <div class="mt-4">
+              <label for="simulator-author" class="block text-sm font-bold text-brand-navy mb-2">Author/Brand Name</label>
+              <input
+                id="simulator-author"
+                type="text"
+                [value]="authorName()"
+                (input)="onAuthorChange($event)"
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+              />
+            </div>
+
+            <div class="mt-4">
+              <label for="simulator-lamination" class="block text-sm font-bold text-brand-navy mb-2">Lamination</label>
+              <select
+                id="simulator-lamination"
+                [value]="lamination()"
+                (change)="setLamination($event)"
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+              >
+                @for (option of laminationOptions; track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="mt-4 space-y-2">
+              <label for="simulator-proof-copy" class="flex items-center gap-3 text-sm text-gray-700">
+                <input
+                  id="simulator-proof-copy"
+                  type="checkbox"
+                  [checked]="proofCopy()"
+                  (change)="onProofCopyChange($event)"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                />
+                Printed proof copy (+$3.20)
+              </label>
+              <label for="simulator-isbn-support" class="flex items-center gap-3 text-sm text-gray-700">
+                <input
+                  id="simulator-isbn-support"
+                  type="checkbox"
+                  [checked]="isbnSupport()"
+                  (change)="onIsbnSupportChange($event)"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                />
+                ISBN/barcode setup (+$6.80)
+              </label>
+              <label for="simulator-rush-production" class="flex items-center gap-3 text-sm text-gray-700">
+                <input
+                  id="simulator-rush-production"
+                  type="checkbox"
+                  [checked]="rushProduction()"
+                  (change)="onRushProductionChange($event)"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                />
+                Rush production (+10% production cost)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-5 sm:p-6 lg:p-7 bg-brand-cream/35">
+          <div class="h-full rounded-2xl border border-gray-200 bg-white/70 p-5 sm:p-6 flex flex-col justify-between">
+            <div>
+              <div class="grid place-items-center py-6 sm:py-10">
+                <div [class]="'relative overflow-hidden shadow-2xl text-white ' + previewCoverShapeClass() + ' ' + previewCoverToneClass()">
+                  <div class="absolute inset-0 opacity-25" style="background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,.25) 1px, transparent 0); background-size: 22px 22px;"></div>
+
+                  @if (isMagazineVisual()) {
+                    <div class="absolute top-0 left-0 right-0 h-9 bg-black/15 border-b border-white/20"></div>
+                    <p class="absolute top-2 left-4 text-[0.65rem] uppercase tracking-[0.25em] text-white/85 font-bold">
+                      Monthly edition
+                    </p>
+                  }
+
+                  @if (isSaddleStitchedVisual()) {
+                    <div class="absolute left-1/2 top-0 h-full w-px bg-white/40 -translate-x-1/2"></div>
+                    <span class="absolute left-1/2 top-8 w-2 h-2 rounded-full bg-white/75 -translate-x-1/2"></span>
+                    <span class="absolute left-1/2 bottom-8 w-2 h-2 rounded-full bg-white/75 -translate-x-1/2"></span>
+                  } @else if (isPerfectBoundVisual()) {
+                    <div class="absolute right-0 top-0 h-full w-2.5 bg-white/30"></div>
+                    <div class="absolute right-2.5 top-0 h-full w-px bg-white/25"></div>
+                  } @else if (isCaseboundVisual()) {
+                    <div class="absolute right-0 top-0 h-full w-4 bg-brand-navy/60"></div>
+                    <div class="absolute right-4 top-0 h-full w-px bg-white/25"></div>
+                    <div class="absolute right-0 top-0 w-4 h-3 bg-white/20"></div>
+                    <div class="absolute right-0 bottom-0 w-4 h-3 bg-white/20"></div>
+                  }
+
+                  <div class="absolute inset-0 px-7 py-8 flex flex-col justify-center text-center text-white">
+                    <p class="font-display font-bold text-3xl leading-tight">{{ projectTitle() }}</p>
+                    <p class="mt-4 text-sm uppercase tracking-[0.2em] text-white/80">{{ authorName() }}</p>
+                    <span class="w-14 h-1 mx-auto mt-8 rounded-full bg-brand-orange"></span>
+                  </div>
+                </div>
+
+                <p class="mt-6 text-xs uppercase tracking-[0.16em] text-gray-500 font-bold">Live Preview</p>
+                <p class="mt-2 text-sm text-gray-600">{{ previewMeta() }}</p>
+              </div>
+
+              <div class="rounded-2xl border border-gray-200 bg-white p-5">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-gray-500">Estimated unit price</span>
+                  <span class="font-bold text-brand-navy">{{ estimatedUnitPrice() | currency:'USD':'symbol':'1.2-2' }}</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-sm">
+                  <span class="text-gray-500">Production subtotal</span>
+                  <span class="font-bold text-brand-navy">{{ productionSubtotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-sm">
+                  <span class="text-gray-500">Setup fee</span>
+                  <span class="font-bold text-brand-navy">{{ setupFee() | currency:'USD':'symbol':'1.2-2' }}</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-sm">
+                  <span class="text-gray-500">Add-ons</span>
+                  <span class="font-bold text-brand-navy">{{ addOnTotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+                </div>
+                @if (rushProduction()) {
+                  <div class="mt-2 flex items-center justify-between text-sm">
+                    <span class="text-gray-500">Rush fee</span>
+                    <span class="font-bold text-brand-navy">{{ rushFee() | currency:'USD':'symbol':'1.2-2' }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="mt-5 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+              <div class="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.14em] text-gray-500 font-bold">Estimated total</p>
+                  <p class="mt-1 text-4xl font-display font-extrabold text-brand-navy">
+                    {{ estimatedTotal() | currency:'USD':'symbol':'1.2-2' }}
+                  </p>
+                  <p class="text-sm text-gray-500 mt-1">{{ quantity() }} copies · {{ pageCount() }} pages</p>
+                </div>
+
+                <div class="flex gap-3">
+                  <a
+                    routerLink="/marketplace"
+                    class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-200 text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                  >
+                    Browse products
+                  </a>
+                  <button
+                    type="button"
+                    (click)="addToCart()"
+                    class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-brand-navy text-white font-extrabold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                  >
+                    Add to Cart
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

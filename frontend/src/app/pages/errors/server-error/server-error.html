@@ -1,0 +1,70 @@
+<section class="relative py-12 sm:py-16 overflow-hidden">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="absolute -top-20 -right-16 w-72 h-72 bg-brand-orange/12 blob"></div>
+  <div class="absolute -bottom-24 -left-16 w-80 h-80 bg-brand-teal/15 blob"></div>
+
+  <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="rounded-3xl border border-gray-200 bg-white/90 shadow-xl backdrop-blur-sm p-6 sm:p-10 lg:p-12">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-brand-pink/15 text-brand-navy text-sm font-bold">
+            Status code 500
+          </span>
+          <h1 class="mt-5 font-display font-extrabold text-4xl text-brand-navy">Something went wrong</h1>
+          <p class="mt-3 text-gray-600 max-w-md">
+            We could not complete your request right now. Please retry in a moment or contact support if the issue continues.
+          </p>
+
+          <div class="mt-7 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              (click)="retry()"
+            >
+              Try again
+            </button>
+            <a
+              href="mailto:support@e-pac-online.com"
+              class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white border border-gray-200 text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+            >
+              Contact support
+            </a>
+          </div>
+
+          <p class="mt-6 text-sm text-gray-500">
+            You can also return to
+            <a
+              routerLink="/"
+              class="font-bold text-brand-navy hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 rounded-lg"
+            >
+              home
+            </a>
+            and continue from there.
+          </p>
+        </div>
+
+        <div class="rounded-3xl border border-gray-200 bg-brand-cream/70 p-6 sm:p-8">
+          <svg
+            viewBox="0 0 420 280"
+            role="img"
+            aria-label="Decorative system status illustration"
+            class="w-full h-auto"
+          >
+            <defs>
+              <linearGradient id="seGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1A1A2E"></stop>
+                <stop offset="100%" stop-color="#00D9C0"></stop>
+              </linearGradient>
+            </defs>
+            <rect x="20" y="20" width="380" height="240" rx="28" fill="#ffffff"></rect>
+            <rect x="60" y="72" width="300" height="30" rx="15" fill="#1A1A2E" opacity="0.1"></rect>
+            <rect x="60" y="118" width="220" height="22" rx="11" fill="#1A1A2E" opacity="0.08"></rect>
+            <rect x="60" y="152" width="180" height="22" rx="11" fill="#1A1A2E" opacity="0.08"></rect>
+            <circle cx="318" cy="155" r="36" fill="url(#seGradient)" opacity="0.22"></circle>
+            <path d="M318 138 v24 M318 178 h.01" stroke="#1A1A2E" stroke-width="8" stroke-linecap="round"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,499 @@
+<section class="relative py-10 sm:py-14 lg:py-16 overflow-hidden">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="absolute -top-20 -left-20 w-72 h-72 bg-brand-orange/15 blob"></div>
+  <div class="absolute -bottom-24 -right-20 w-80 h-80 bg-brand-teal/15 blob"></div>
+
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    @if (orderPlaced()) {
+      <div class="rounded-3xl border border-gray-200/80 bg-white/95 shadow-xl backdrop-blur-sm p-7 sm:p-10 lg:p-12 max-w-3xl mx-auto">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-teal/15 text-brand-navy text-sm font-bold">
+          <i class="fas fa-circle-check text-brand-teal"></i>
+          Order confirmed
+        </div>
+
+        <h1 class="mt-5 font-display font-extrabold text-4xl text-brand-navy">Thanks for your order</h1>
+        <p class="mt-3 text-gray-600">
+          Your order reference is <span class="font-bold text-brand-navy">{{ orderNumber() }}</span>.
+        </p>
+
+        <div class="mt-6 rounded-2xl border border-gray-200 bg-brand-cream/50 p-5">
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm text-gray-600">Amount paid</span>
+            <span class="font-extrabold text-brand-navy">{{ placedTotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="mt-7 flex flex-wrap gap-3">
+          <button
+            type="button"
+            (click)="startNewOrder()"
+            class="inline-flex items-center justify-center px-5 py-3 rounded-full border border-gray-200 bg-white text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+          >
+            Start another order
+          </button>
+          <a
+            routerLink="/marketplace"
+            class="inline-flex items-center justify-center px-5 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+          >
+            Continue shopping
+          </a>
+        </div>
+      </div>
+    } @else if (!hasItems()) {
+      <div class="rounded-3xl border border-gray-200/80 bg-white/95 shadow-xl backdrop-blur-sm p-7 sm:p-10 lg:p-12 max-w-3xl mx-auto text-center">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-cream/80 border border-gray-200 grid place-items-center text-brand-orange text-2xl">
+          <i class="fas fa-bag-shopping"></i>
+        </div>
+        <h1 class="mt-5 font-display font-extrabold text-4xl text-brand-navy">Your cart is empty</h1>
+        <p class="mt-3 text-gray-600">
+          Add products from the marketplace or build a custom print setup before checkout.
+        </p>
+        <div class="mt-7 flex flex-wrap justify-center gap-3">
+          <a
+            routerLink="/marketplace"
+            class="inline-flex items-center justify-center px-5 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+          >
+            Browse marketplace
+          </a>
+          <a
+            routerLink="/price-simulator"
+            class="inline-flex items-center justify-center px-5 py-3 rounded-full border border-gray-200 bg-white text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+          >
+            Create custom order
+          </a>
+        </div>
+      </div>
+    } @else {
+      <div class="max-w-3xl">
+        <h1 class="font-display font-extrabold text-4xl text-brand-navy">Checkout</h1>
+        <p class="mt-2 text-gray-600">Complete your shipping and payment details to place your order.</p>
+      </div>
+
+      <form
+        id="checkout-form"
+        class="mt-8 grid lg:grid-cols-5 gap-6 lg:gap-8"
+        [formGroup]="form"
+        (ngSubmit)="onSubmit()"
+        novalidate
+      >
+        <div class="lg:col-span-3 space-y-5">
+          <section class="rounded-3xl border border-gray-200 bg-white/95 p-5 sm:p-6 shadow-lg">
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy">Contact</h2>
+            <div class="mt-4 grid sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label for="checkout-name" class="block text-sm font-bold text-brand-navy mb-2">Full name</label>
+                <input
+                  id="checkout-name"
+                  type="text"
+                  formControlName="fullName"
+                  autocomplete="name"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="Alex Morgan"
+                  [attr.aria-invalid]="showError('fullName') ? 'true' : 'false'"
+                />
+                @if (showError('fullName')) {
+                  <p class="mt-2 text-sm text-brand-pink">Enter your full name.</p>
+                }
+              </div>
+
+              <div>
+                <label for="checkout-email" class="block text-sm font-bold text-brand-navy mb-2">Email</label>
+                <input
+                  id="checkout-email"
+                  type="email"
+                  formControlName="email"
+                  autocomplete="email"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="you@company.com"
+                  [attr.aria-invalid]="showError('email') ? 'true' : 'false'"
+                />
+                @if (showError('email')) {
+                  <p class="mt-2 text-sm text-brand-pink">
+                    @if (form.controls.email.hasError('required')) {
+                      Email is required.
+                    } @else {
+                      Enter a valid email address.
+                    }
+                  </p>
+                }
+              </div>
+
+              <div>
+                <label for="checkout-phone" class="block text-sm font-bold text-brand-navy mb-2">Phone</label>
+                <input
+                  id="checkout-phone"
+                  type="tel"
+                  formControlName="phone"
+                  autocomplete="tel"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="+1 (555) 100-2000"
+                  [attr.aria-invalid]="showError('phone') ? 'true' : 'false'"
+                />
+                @if (showError('phone')) {
+                  <p class="mt-2 text-sm text-brand-pink">Enter a valid phone number.</p>
+                }
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-3xl border border-gray-200 bg-white/95 p-5 sm:p-6 shadow-lg">
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy">Shipping</h2>
+            <div class="mt-4 grid sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label for="checkout-company" class="block text-sm font-bold text-brand-navy mb-2">Company (optional)</label>
+                <input
+                  id="checkout-company"
+                  type="text"
+                  formControlName="company"
+                  autocomplete="organization"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="e-pac-online"
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label for="checkout-address-line-1" class="block text-sm font-bold text-brand-navy mb-2">Address line 1</label>
+                <input
+                  id="checkout-address-line-1"
+                  type="text"
+                  formControlName="addressLine1"
+                  autocomplete="address-line1"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="123 Main Street"
+                  [attr.aria-invalid]="showError('addressLine1') ? 'true' : 'false'"
+                />
+                @if (showError('addressLine1')) {
+                  <p class="mt-2 text-sm text-brand-pink">Address line 1 is required.</p>
+                }
+              </div>
+
+              <div class="sm:col-span-2">
+                <label for="checkout-address-line-2" class="block text-sm font-bold text-brand-navy mb-2">Address line 2 (optional)</label>
+                <input
+                  id="checkout-address-line-2"
+                  type="text"
+                  formControlName="addressLine2"
+                  autocomplete="address-line2"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="Suite, floor, unit"
+                />
+              </div>
+
+              <div>
+                <label for="checkout-city" class="block text-sm font-bold text-brand-navy mb-2">City</label>
+                <input
+                  id="checkout-city"
+                  type="text"
+                  formControlName="city"
+                  autocomplete="address-level2"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="New York"
+                  [attr.aria-invalid]="showError('city') ? 'true' : 'false'"
+                />
+                @if (showError('city')) {
+                  <p class="mt-2 text-sm text-brand-pink">City is required.</p>
+                }
+              </div>
+
+              <div>
+                <label for="checkout-state" class="block text-sm font-bold text-brand-navy mb-2">State</label>
+                <input
+                  id="checkout-state"
+                  type="text"
+                  formControlName="state"
+                  autocomplete="address-level1"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="NY"
+                  [attr.aria-invalid]="showError('state') ? 'true' : 'false'"
+                />
+                @if (showError('state')) {
+                  <p class="mt-2 text-sm text-brand-pink">State is required.</p>
+                }
+              </div>
+
+              <div class="sm:col-span-2">
+                <label for="checkout-postal-code" class="block text-sm font-bold text-brand-navy mb-2">Postal code</label>
+                <input
+                  id="checkout-postal-code"
+                  type="text"
+                  formControlName="postalCode"
+                  autocomplete="postal-code"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="10001"
+                  [attr.aria-invalid]="showError('postalCode') ? 'true' : 'false'"
+                />
+                @if (showError('postalCode')) {
+                  <p class="mt-2 text-sm text-brand-pink">Enter a valid postal code.</p>
+                }
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <p class="block text-sm font-bold text-brand-navy mb-2">Delivery speed</p>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <label class="rounded-2xl border border-gray-200 bg-white p-4 cursor-pointer">
+                  <div class="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      formControlName="shippingMethod"
+                      value="standard"
+                      class="mt-1 h-4 w-4 border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                    />
+                    <span>
+                      <span class="block font-bold text-brand-navy">Standard</span>
+                      <span class="block text-sm text-gray-600">3-5 business days</span>
+                    </span>
+                    <span class="ml-auto text-sm font-bold text-brand-navy">
+                      @if (cart.subtotal() >= 150) {
+                        Free
+                      } @else {
+                        {{ 8.5 | currency:'USD':'symbol':'1.2-2' }}
+                      }
+                    </span>
+                  </div>
+                </label>
+
+                <label class="rounded-2xl border border-gray-200 bg-white p-4 cursor-pointer">
+                  <div class="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      formControlName="shippingMethod"
+                      value="express"
+                      class="mt-1 h-4 w-4 border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                    />
+                    <span>
+                      <span class="block font-bold text-brand-navy">Express</span>
+                      <span class="block text-sm text-gray-600">1-2 business days</span>
+                    </span>
+                    <span class="ml-auto text-sm font-bold text-brand-navy">{{ 18 | currency:'USD':'symbol':'1.2-2' }}</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <label for="checkout-notes" class="block text-sm font-bold text-brand-navy mb-2">Order notes (optional)</label>
+              <textarea
+                id="checkout-notes"
+                formControlName="notes"
+                rows="3"
+                class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30 resize-none"
+                placeholder="Special instructions for production or delivery."
+              ></textarea>
+            </div>
+          </section>
+
+          <section class="rounded-3xl border border-gray-200 bg-white/95 p-5 sm:p-6 shadow-lg">
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy">Payment</h2>
+            <div class="mt-4 grid sm:grid-cols-2 gap-3">
+              <label class="rounded-2xl border border-gray-200 bg-white p-4 cursor-pointer">
+                <div class="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    formControlName="paymentMethod"
+                    value="card"
+                    class="mt-1 h-4 w-4 border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                  />
+                  <span>
+                    <span class="block font-bold text-brand-navy">Credit / debit card</span>
+                    <span class="block text-sm text-gray-600">Visa, Mastercard, AmEx</span>
+                  </span>
+                </div>
+              </label>
+
+              <label class="rounded-2xl border border-gray-200 bg-white p-4 cursor-pointer">
+                <div class="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    formControlName="paymentMethod"
+                    value="invoice"
+                    class="mt-1 h-4 w-4 border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                  />
+                  <span>
+                    <span class="block font-bold text-brand-navy">Invoice</span>
+                    <span class="block text-sm text-gray-600">Net terms for business accounts</span>
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            @if (paymentMethod() === 'card') {
+              <div class="mt-5 grid sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                  <label for="checkout-card-name" class="block text-sm font-bold text-brand-navy mb-2">Cardholder name</label>
+                  <input
+                    id="checkout-card-name"
+                    type="text"
+                    formControlName="cardName"
+                    autocomplete="cc-name"
+                    class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                    placeholder="Alex Morgan"
+                    [attr.aria-invalid]="showError('cardName') ? 'true' : 'false'"
+                  />
+                  @if (showError('cardName')) {
+                    <p class="mt-2 text-sm text-brand-pink">Cardholder name is required.</p>
+                  }
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label for="checkout-card-number" class="block text-sm font-bold text-brand-navy mb-2">Card number</label>
+                  <input
+                    id="checkout-card-number"
+                    type="text"
+                    formControlName="cardNumber"
+                    autocomplete="cc-number"
+                    class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                    placeholder="4242 4242 4242 4242"
+                    [attr.aria-invalid]="showError('cardNumber') ? 'true' : 'false'"
+                  />
+                  @if (showError('cardNumber')) {
+                    <p class="mt-2 text-sm text-brand-pink">Enter a valid card number.</p>
+                  }
+                </div>
+
+                <div>
+                  <label for="checkout-expiry" class="block text-sm font-bold text-brand-navy mb-2">Expiry (MM/YY)</label>
+                  <input
+                    id="checkout-expiry"
+                    type="text"
+                    formControlName="expiry"
+                    autocomplete="cc-exp"
+                    class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                    placeholder="08/28"
+                    [attr.aria-invalid]="showError('expiry') ? 'true' : 'false'"
+                  />
+                  @if (showError('expiry')) {
+                    <p class="mt-2 text-sm text-brand-pink">Use MM/YY format.</p>
+                  }
+                </div>
+
+                <div>
+                  <label for="checkout-cvc" class="block text-sm font-bold text-brand-navy mb-2">CVC</label>
+                  <input
+                    id="checkout-cvc"
+                    type="text"
+                    formControlName="cvc"
+                    autocomplete="cc-csc"
+                    class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                    placeholder="123"
+                    [attr.aria-invalid]="showError('cvc') ? 'true' : 'false'"
+                  />
+                  @if (showError('cvc')) {
+                    <p class="mt-2 text-sm text-brand-pink">Enter a valid CVC.</p>
+                  }
+                </div>
+              </div>
+
+              <label for="checkout-save-card" class="mt-4 inline-flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  id="checkout-save-card"
+                  type="checkbox"
+                  formControlName="saveCard"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                />
+                Save card for faster future checkout.
+              </label>
+            } @else {
+              <div class="mt-5 rounded-2xl border border-brand-teal/30 bg-brand-teal/10 p-4 text-sm text-gray-700">
+                We will send an invoice to your email after order confirmation.
+              </div>
+            }
+          </section>
+        </div>
+
+        <aside class="lg:col-span-2">
+          <div class="rounded-3xl border border-gray-200 bg-white/95 p-5 sm:p-6 shadow-lg lg:sticky lg:top-24">
+            <h2 class="font-display font-extrabold text-2xl text-brand-navy">Order summary</h2>
+
+            <div class="mt-4 space-y-3">
+              @for (item of cart.items(); track item.product.id) {
+                <div class="rounded-2xl border border-gray-200 bg-brand-cream/35 p-4">
+                  <div class="flex gap-3">
+                    <div class="w-12 h-12 rounded-xl shrink-0" [style.background]="item.product.image"></div>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-bold text-brand-navy truncate">{{ item.product.name }}</p>
+                      <p class="text-sm text-gray-600">
+                        {{ item.product.price | currency:'USD':'symbol':'1.2-2' }} each
+                      </p>
+
+                      <div class="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          class="w-8 h-8 rounded-lg border border-gray-300 hover:border-brand-orange transition"
+                          (click)="cart.setQuantity(item.product.id, item.quantity - 1)"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          class="w-14 text-center rounded-lg border border-gray-300 py-1.5"
+                          [value]="item.quantity"
+                          (input)="cart.setQuantity(item.product.id, ($any($event.target).valueAsNumber))"
+                        />
+                        <button
+                          type="button"
+                          class="w-8 h-8 rounded-lg border border-gray-300 hover:border-brand-orange transition"
+                          (click)="cart.setQuantity(item.product.id, item.quantity + 1)"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          class="ml-auto text-xs font-bold text-brand-pink hover:underline"
+                          (click)="cart.remove(item.product.id)"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-3 flex items-center justify-between text-sm">
+                    <span class="text-gray-600">Line total</span>
+                    <span class="font-bold text-brand-navy">{{ lineTotal(item) | currency:'USD':'symbol':'1.2-2' }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="mt-5 space-y-2 text-sm">
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600">Subtotal</span>
+                <span class="font-semibold text-brand-navy">{{ cart.subtotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600">Shipping</span>
+                <span class="font-semibold text-brand-navy">
+                  @if (shippingFee() === 0) {
+                    Free
+                  } @else {
+                    {{ shippingFee() | currency:'USD':'symbol':'1.2-2' }}
+                  }
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600">Taxes (8%)</span>
+                <span class="font-semibold text-brand-navy">{{ taxAmount() | currency:'USD':'symbol':'1.2-2' }}</span>
+              </div>
+              <div class="pt-2 border-t border-gray-200 flex items-center justify-between">
+                <span class="font-bold text-brand-navy">Total</span>
+                <span class="font-extrabold text-brand-navy text-lg">{{ orderTotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="mt-5 w-full inline-flex items-center justify-center px-6 py-3.5 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              [disabled]="!hasItems()"
+            >
+              Place order
+            </button>
+
+            <p class="mt-3 text-xs text-gray-500 text-center">
+              By placing your order, you agree to our terms and production policies.
+            </p>
+          </div>
+        </aside>
+      </form>
+    }
+  </div>
+</section>
