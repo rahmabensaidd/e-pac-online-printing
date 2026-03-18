@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface OrderLineRepository extends JpaRepository<OrderLine, Long> {
 
-    List<OrderLine> findByOrder(Order order);
+
 
 }

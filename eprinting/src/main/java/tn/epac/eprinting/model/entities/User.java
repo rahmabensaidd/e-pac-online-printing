@@ -3,9 +3,8 @@ package tn.epac.eprinting.model.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import tn.epac.eprinting.model.enums.Role;
-
 import java.time.LocalDate;
-
+import java.util.List;
 
 @Entity
 @Getter
@@ -30,4 +29,12 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    // AJOUTER la relation avec Cart
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Cart cart;
+
+    // Relation existante avec Orders
+    @OneToMany(mappedBy = "user")
+    private List<Order> orders;
 }

@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # Base de données MySQL pour votre application Spring Boot (seulement pour le backend)
+  mysql-app:
+    image: mysql:8.0
+    container_name: mysql-app
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword123
+      MYSQL_DATABASE: eprinting_db
+      MYSQL_USER: eprinting_user
+      MYSQL_PASSWORD: eprinting_pass123
+    volumes:
+      - mysql-app-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - eprinting-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak 26.3.1 avec base H2 intégrée
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.1
+    container_name: keycloak
+    restart: unless-stopped
+    environment:
+      # Compte admin
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+
+      # Configuration serveur (les variables KC_* sont toujours valides)
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8081
+      KC_HTTP_ENABLED: true
+      KC_LOG_LEVEL: INFO
+
+      # Configuration supplémentaire pour la version 26.x
+      KC_HEALTH_ENABLED: true
+      KC_METRICS_ENABLED: true
+
+      # Pour éviter les warnings sur H2 en production
+      KC_DB: h2-file
+      KC_DB_URL_PATH: /opt/keycloak/data/h2
+
+    command:
+      - start-dev
+      - --import-realm
+      - --http-port=8080
+      - --health-enabled=true
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./keycloak-config/import:/opt/keycloak/data/import:ro
+      - keycloak-data:/opt/keycloak/data
+    networks:
+      - eprinting-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend Spring Boot
+  backend:
+    build:
+      context: ./eprinting
+      dockerfile: Dockerfile
+    container_name: eprinting-backend
+    restart: unless-stopped
+    environment:
+      # Configuration base de données application (MySQL)
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-app:3306/eprinting_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: eprinting_user
+      SPRING_DATASOURCE_PASSWORD: eprinting_pass123
+
+      # Configuration Keycloak (adaptée pour la version 26)
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: eprinting
+      KEYCLOAK_RESOURCE: eprinting-backend
+      KEYCLOAK_CREDENTIALS_SECRET: your-client-secret
+
+      # Pour Spring Security avec Keycloak 26
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/eprinting
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/eprinting/protocol/openid-connect/certs
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql-app:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - eprinting-network
+
+  # Frontend Angular (optionnel)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: eprinting-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    environment:
+      API_URL: http://localhost:8080
+      KEYCLOAK_URL: http://localhost:8081
+      KEYCLOAK_REALM: eprinting
+      KEYCLOAK_CLIENT_ID: eprinting-frontend
+    depends_on:
+      - backend
+    networks:
+      - eprinting-network
+
+networks:
+  eprinting-network:
+    driver: bridge
+
+volumes:
+  mysql-app-data:
+  keycloak-data:

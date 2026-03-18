@@ -1,15 +1,13 @@
 package tn.epac.eprinting.model.entities;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "cart_items")
+@Table(name = "order_lines")
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,4 +27,9 @@ public class OrderLine {
     private Book book;
 
     private Integer quantity;
+
+    // Ajouter la relation ManyToOne avec Order
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order order;
 }
