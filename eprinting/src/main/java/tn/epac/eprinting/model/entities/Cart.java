@@ -1,9 +1,9 @@
 package tn.epac.eprinting.model.entities;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,11 +20,16 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long cartId;
 
+    // AJOUTER cette relation avec User
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @OneToOne
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderLine> items = new ArrayList<>();
 
@@ -43,7 +48,7 @@ public class Cart {
         calculateTotal();
     }
 
-    private void calculateTotal() {
+    public void calculateTotal() {
         this.totalPrice = (float) items.stream()
                 .mapToDouble(item -> item.getBook().getSalePrice() * item.getQuantity())
                 .sum();
