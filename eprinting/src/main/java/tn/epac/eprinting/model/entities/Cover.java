@@ -6,6 +6,9 @@ import lombok.*;
 @Entity
 @Getter
 @Setter
+/**
+ * *
+ */
 public class Cover {
 
     @Id

@@ -40,6 +40,16 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/sign-up/sign-up').then((m) => m.SignUpComponent),
   },
   {
+    path: 'backoffice',
+    loadChildren: () =>
+      import('./features/backoffice/backoffice.routes').then((m) => m.BACKOFFICE_ROUTES),
+  },
+  {
+    path: 'admin',
+    redirectTo: 'backoffice',
+    pathMatch: 'full',
+  },
+  {
     path: '500',
     loadComponent: () =>
       import('./pages/errors/server-error/server-error').then((m) => m.ServerErrorComponent),
