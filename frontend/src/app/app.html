@@ -1,10 +1,14 @@
-<app-navbar />
+@if (showPublicChrome()) {
+  <app-navbar />
+}
 
-<main class="pt-20">
+<main [class]="showPublicChrome() ? 'pt-20' : 'pt-0'">
   <router-outlet />
 </main>
 
-<app-footer />
+@if (showPublicChrome()) {
+  <app-footer />
 
-<!-- overlays -->
-<app-cart-drawer />
+  <!-- overlays -->
+  <app-cart-drawer />
+}

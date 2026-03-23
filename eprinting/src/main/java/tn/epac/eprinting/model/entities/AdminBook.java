@@ -1,14 +1,10 @@
 package tn.epac.eprinting.model.entities;
 
-import lombok.*;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
-import jakarta.persistence.*;
-
-@Entity
-@Getter
-@Setter
-public abstract class Book {
-
+public class AdminBook {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer bookId;
@@ -22,7 +18,4 @@ public abstract class Book {
     private int pageCount;
 
     private float salePrice;
-
-
-
 }

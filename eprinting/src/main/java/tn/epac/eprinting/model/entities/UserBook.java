@@ -1,13 +1,16 @@
 package tn.epac.eprinting.model.entities;
-
 import lombok.*;
 
 import jakarta.persistence.*;
+import tn.epac.eprinting.model.enums.AdminBookStatus;
+
+
+import java.util.List;
 
 @Entity
 @Getter
 @Setter
-public abstract class Book {
+public class UserBook {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,5 +27,9 @@ public abstract class Book {
     private float salePrice;
 
 
+    @Enumerated(EnumType.STRING)
+    private AdminBookStatus status;
 
+    @ManyToOne
+    private User author;
 }

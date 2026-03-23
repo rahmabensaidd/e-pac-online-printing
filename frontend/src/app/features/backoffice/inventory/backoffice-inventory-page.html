@@ -1,0 +1,105 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+    [breadcrumb]="['Backoffice', 'Inventory']"
+    title="Inventory coverage"
+    description="Stock health and incoming supply."
+  />
+
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <app-backoffice-stat-card
+      label="Materials tracked"
+      [value]="backofficeData.inventory().length.toString()"
+      change="Tracked"
+      hint="total records"
+      icon="fa-boxes-stacked"
+      tone="neutral"
+    />
+    <app-backoffice-stat-card
+      label="Low stock"
+      [value]="backofficeData.lowStockItems().toString()"
+      change="Needs purchase"
+      hint="below target"
+      icon="fa-triangle-exclamation"
+      tone="warning"
+    />
+    <app-backoffice-stat-card
+      label="Average coverage"
+      [value]="warehouseCoverage() + ' days'"
+      change="Average"
+      hint="all materials"
+      icon="fa-warehouse"
+      tone="positive"
+    />
+    <app-backoffice-stat-card
+      label="Incoming units"
+      [value]="incomingUnitsTotal().toString()"
+      change="Booked"
+      hint="already expected"
+      icon="fa-truck-ramp-box"
+      tone="neutral"
+    />
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+    <app-backoffice-data-table
+      title="Materials overview"
+      description="Search and act on stock records."
+      [columns]="inventoryColumns"
+      [rows]="inventoryRows()"
+      [rowActions]="inventoryActions"
+      [searchKeys]="['sku', 'name', 'category', 'status']"
+      (rowAction)="handleRowAction($event)"
+    />
+
+    <app-backoffice-card title="Replenishment queue">
+      @if (lowStockProducts().length === 0) {
+        <app-backoffice-empty-state
+          icon="fa-circle-check"
+          title="Warehouse is balanced"
+          description="No tracked item is below threshold."
+        />
+      } @else {
+        <div class="space-y-3">
+          @for (product of lowStockProducts(); track product.id) {
+            <div class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3.5">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-bold text-brand-navy">{{ product.name }}</p>
+                  <p class="mt-1 text-[0.8125rem] text-slate-500">
+                    {{ product.sku }} • {{ product.location }}
+                  </p>
+                </div>
+                <span
+                  class="rounded-full border px-2.5 py-1 text-[0.72rem] font-semibold"
+                  [class]="statusClass(product.status)"
+                >
+                  {{ product.status }}
+                </span>
+              </div>
+              <div class="mt-3 grid grid-cols-2 gap-3 text-[0.8125rem]">
+                <div class="rounded-[0.9rem] bg-brand-cream/70 px-3 py-2.5">
+                  <p
+                    class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                  >
+                    Stock
+                  </p>
+                  <p class="mt-2 text-[1rem] font-semibold text-brand-navy">{{ product.stock }}</p>
+                </div>
+                <div class="rounded-[0.9rem] bg-brand-cream/70 px-3 py-2.5">
+                  <p
+                    class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                  >
+                    Lead time
+                  </p>
+                  <p class="mt-2 text-[1rem] font-semibold text-brand-navy">
+                    {{ product.leadTimeDays }} days
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </app-backoffice-card>
+  </div>
+</div>
