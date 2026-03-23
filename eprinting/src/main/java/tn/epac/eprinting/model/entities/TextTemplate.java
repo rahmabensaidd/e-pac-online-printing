@@ -2,7 +2,10 @@ package tn.epac.eprinting.model.entities;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
-
+/**
+        * TextTemplate entity - extends Template for text content layouts.
+ * Stores font and margin configurations.
+ */
 
 @Entity
 @Getter

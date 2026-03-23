@@ -9,7 +9,10 @@ import lombok.Getter;
 import lombok.Setter;
 import tn.epac.eprinting.model.enums.ShippingStatus;
 import java.time.LocalDate;
-
+/**
+ * Shipping entity - manages delivery information for orders.
+ * Contains shipping address, method, tracking, and status.
+ */
 @Entity
 @Getter
 @Setter

@@ -13,7 +13,10 @@ import lombok.Setter;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
-
+/**
+ * OrderLine entity - represents a line item in a cart or order.
+ * Links a book with quantity and pricing information.
+ */
 @Entity
 @Table(name = "order_lines")
 @Data

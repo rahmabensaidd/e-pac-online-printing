@@ -12,7 +12,8 @@ import lombok.Setter;
 @Getter
 @Setter
 /**
- * *
+ * Cover entity - stores book cover image, title, and barcode.
+ * One-to-one relationship with Book.
  */
 public class Cover {
 

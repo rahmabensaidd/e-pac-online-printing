@@ -6,10 +6,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.OneToOne;
 import lombok.Getter;
 import lombok.Setter;
-
-
 import java.time.LocalDate;
-
+/**
+ * Invoice entity - represents a commercial invoice for an order.
+ * Contains tax calculation (HT, TVA, TTC) and payment tracking.
+ */
 @Entity
 @Getter
 @Setter

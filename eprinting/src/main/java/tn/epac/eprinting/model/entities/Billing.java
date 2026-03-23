@@ -10,6 +10,11 @@ import lombok.Setter;
 import tn.epac.eprinting.model.enums.PaymentStatus;
 import java.time.LocalDate;
 
+/** Represents a billing record in the e-printing system.
+ This entity stores all billing-related information for customer transactions,
+ including payment details, billing address, and payment status tracking
+ */
+
 @Entity
 @Getter
 @Setter

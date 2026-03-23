@@ -16,6 +16,15 @@ import lombok.Builder;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+/**
+ * Cart entity representing a shopping cart in the e-printing system.
+ *
+ * A cart is associated with a user and contains a collection of order lines (items).
+ * It handles the temporary storage of books/services before order confirmation.
+ *
+ * - each user has one active cart
+ * - One-to-one relationship with Order (converted to order upon checkout)
+ */
 
 @Entity
 @Table(name = "carts")
@@ -30,7 +39,6 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long cartId;
 
-    // AJOUTER cette relation avec User
     @OneToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -43,9 +51,9 @@ public class Cart {
     @Builder.Default
     private List<OrderLine> items = new ArrayList<>();
 
-    private BigDecimal totalPrice;  // Changé de Float à BigDecimal pour cohérence
+    private BigDecimal totalPrice;
 
-    // Méthodes utilitaires
+
     public void addItem(OrderLine item) {
         items.add(item);
         item.setCart(this);
@@ -58,9 +66,7 @@ public class Cart {
         calculateTotal();
     }
 
-    /**
-     * Calcule le prix total du panier en sommant le totalPrice de chaque OrderLine
-     */
+
     public void calculateTotal() {
         if (items == null || items.isEmpty()) {
             this.totalPrice = BigDecimal.ZERO;
@@ -68,14 +74,11 @@ public class Cart {
         }
 
         this.totalPrice = items.stream()
-                .map(OrderLine::getTotalPrice)  // Récupère le totalPrice de chaque ligne
-                .filter(price -> price != null)  // Ignore les nulls
-                .reduce(BigDecimal.ZERO, BigDecimal::add);  // Somme tous les prix
+                .map(OrderLine::getTotalPrice)
+                .filter(price -> price != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /**
-     * Calcule le total et le retourne sans modifier l'objet
-     */
     public BigDecimal getCalculatedTotal() {
         if (items == null || items.isEmpty()) {
             return BigDecimal.ZERO;
@@ -87,24 +90,17 @@ public class Cart {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /**
-     * Vide complètement le panier
-     */
+
     public void clearCart() {
         items.clear();
         calculateTotal();
     }
 
-    /**
-     * Vérifie si le panier est vide
-     */
+
     public boolean isEmpty() {
         return items == null || items.isEmpty();
     }
 
-    /**
-     * Retourne le nombre d'articles dans le panier
-     */
     public int getItemCount() {
         return items != null ? items.size() : 0;
     }

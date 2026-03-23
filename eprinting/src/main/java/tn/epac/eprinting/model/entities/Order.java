@@ -19,7 +19,10 @@ import tn.epac.eprinting.model.enums.OrderStatus;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * Order entity - represents a customer purchase order.
+ * Contains order status, total amount, and linked billing, shipping, and order lines.
+ */
 @Entity
 @Table(name = "orders")
 @Getter
