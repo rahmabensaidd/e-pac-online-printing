@@ -1,17 +1,24 @@
 package tn.epac.eprinting.model.entities;
-
-import lombok.*;
-
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.Builder;
+import tn.epac.eprinting.model.enums.AdminBookStatus;
+import tn.epac.eprinting.model.enums.UserBookStatus;
 
-@Entity
+@Table(name = "admin_books")
+@NoArgsConstructor  // ⚠️ REQUIS par JPA
+@AllArgsConstructor
+@Builder
 @Getter
 @Setter
-public abstract class Book {
-
+@Entity
+public class Book {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer bookId;
+    private Long bookId;
 
     private String title;
 
@@ -23,6 +30,13 @@ public abstract class Book {
 
     private float salePrice;
 
+    private String[] authors;
 
+    @ManyToOne User creation_author;
 
+    @Enumerated(EnumType.STRING)
+    private UserBookStatus userbook_status;
+
+    @Enumerated(EnumType.STRING)
+    private AdminBookStatus stock_status;
 }

@@ -1,8 +1,20 @@
 package tn.epac.eprinting.model.entities;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import jakarta.persistence.*;
+
 import tn.epac.eprinting.model.enums.OrderStatus;
 import java.time.LocalDate;
 import java.util.ArrayList;

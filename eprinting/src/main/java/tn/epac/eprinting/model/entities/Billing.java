@@ -1,11 +1,13 @@
 package tn.epac.eprinting.model.entities;
-
-import jakarta.persistence.*;
-import lombok.*;
-
-import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import lombok.Getter;
+import lombok.Setter;
 import tn.epac.eprinting.model.enums.PaymentStatus;
-
 import java.time.LocalDate;
 
 @Entity

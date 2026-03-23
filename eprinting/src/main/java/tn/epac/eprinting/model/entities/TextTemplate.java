@@ -1,10 +1,8 @@
 package tn.epac.eprinting.model.entities;
+import jakarta.persistence.Entity;
+import lombok.Getter;
+import lombok.Setter;
 
-import lombok.*;
-
-import jakarta.persistence.*;
-import java.util.List;
-import java.util.Map;
 
 @Entity
 @Getter
