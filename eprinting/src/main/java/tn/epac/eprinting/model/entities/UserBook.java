@@ -1,11 +1,14 @@
 package tn.epac.eprinting.model.entities;
-import lombok.*;
-
-import jakarta.persistence.*;
-import tn.epac.eprinting.model.enums.AdminBookStatus;
-
-
-import java.util.List;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import lombok.Getter;
+import lombok.Setter;
+import tn.epac.eprinting.model.enums.UserBookStatus;
 
 @Entity
 @Getter
@@ -14,7 +17,7 @@ public class UserBook {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer bookId;
+    private Long userbookId;
 
     private String title;
 
@@ -28,7 +31,7 @@ public class UserBook {
 
 
     @Enumerated(EnumType.STRING)
-    private AdminBookStatus status;
+    private UserBookStatus status;
 
     @ManyToOne
     private User author;

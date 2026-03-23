@@ -1,8 +1,13 @@
 package tn.epac.eprinting.model.entities;
+import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import lombok.Getter;
 
-import jakarta.persistence.*;
-
-import lombok.*;
+import lombok.Setter;
 
 @Entity
 @Getter
@@ -15,7 +20,7 @@ public class Content {
 
     private String sourceFile;
 
-    @Lob
+    @Lob  // large content
     private String text;
 
     @ManyToOne
