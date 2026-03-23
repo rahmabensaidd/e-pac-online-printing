@@ -22,7 +22,7 @@ public class Shipping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long shippingId;
 
-    private String shippingAddress;
+    private Adress shippingAddress;
 
     private String shippingMethod;
 

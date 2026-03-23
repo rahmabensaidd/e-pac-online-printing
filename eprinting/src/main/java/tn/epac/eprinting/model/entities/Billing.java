@@ -24,7 +24,7 @@ public class Billing {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long billingId;
 
-    private String billingAddress;
+    private Adress billingAddress;
 
     private String paymentMethod;
 
