@@ -16,7 +16,10 @@ import lombok.Setter;
 import tn.epac.eprinting.model.enums.Role;
 import java.time.LocalDate;
 import java.util.List;
-
+/**
+ * User entity - represents a system user (customer or admin).
+ * Manages authentication, profile info, and links to cart and orders.
+ */
 @Entity
 @Getter
 @Setter
