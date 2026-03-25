@@ -20,6 +20,7 @@ import { BackofficeShellService } from '../core/backoffice-shell.service';
   host: {
     class: 'block',
   },
+  standalone: true
 })
 export class BackofficeHeaderComponent {
   private readonly document = inject(DOCUMENT);

@@ -9,6 +9,7 @@ import { BackofficeShellService } from '../core/backoffice-shell.service';
   imports: [NgTemplateOutlet, RouterLink, RouterLinkActive],
   templateUrl: './backoffice-sidebar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true
 })
 export class BackofficeSidebarComponent {
   readonly shell = inject(BackofficeShellService);

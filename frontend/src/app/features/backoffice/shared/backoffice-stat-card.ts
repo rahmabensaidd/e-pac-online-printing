@@ -2,38 +2,39 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { BackofficeTone } from '../core/backoffice.models';
 
 @Component({
-  selector: 'app-backoffice-stat-card',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    class: 'block',
-  },
-  template: `
-    <article [class]="containerClass()">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <p class="truncate text-[0.76rem] font-medium text-slate-500">{{ label() }}</p>
-          <p class="mt-2 text-[1.45rem] font-semibold leading-none tracking-tight text-brand-navy">
-            {{ value() }}
-          </p>
-        </div>
+    selector: 'app-backoffice-stat-card',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    host: {
+        class: 'block',
+    },
+    template: `
+        <article [class]="containerClass()">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="truncate text-[0.76rem] font-medium text-slate-500">{{ label() }}</p>
+                    <p class="mt-2 text-[1.45rem] font-semibold leading-none tracking-tight text-brand-navy">
+                        {{ value() }}
+                    </p>
+                </div>
 
-        <div [class]="iconClass()">
-          <i class="fas" [class]="icon()"></i>
-        </div>
-      </div>
+                <div [class]="iconClass()">
+                    <i class="fas" [class]="icon()"></i>
+                </div>
+            </div>
 
-      @if (change() || hint()) {
-        <div class="mt-4 flex flex-wrap items-center gap-2">
-          @if (change()) {
-            <span [class]="badgeClass()">{{ change() }}</span>
-          }
-          @if (hint()) {
-            <p class="text-[0.72rem] text-slate-400">{{ hint() }}</p>
-          }
-        </div>
-      }
-    </article>
-  `,
+            @if (change() || hint()) {
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                    @if (change()) {
+                        <span [class]="badgeClass()">{{ change() }}</span>
+                    }
+                    @if (hint()) {
+                        <p class="text-[0.72rem] text-slate-400">{{ hint() }}</p>
+                    }
+                </div>
+            }
+        </article>
+    `,
+    standalone: true
 })
 export class BackofficeStatCardComponent {
   readonly label = input.required<string>();

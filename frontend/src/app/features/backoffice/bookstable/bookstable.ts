@@ -1,29 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { BackofficeEmptyStateComponent } from './backoffice-empty-state';
+import {Component, computed, input, output, signal} from '@angular/core';
 import {
   BackofficeDataTableAction,
-  BackofficeDataTableColumn,
-  BackofficeDataTableColumnType,
-  BackofficeDataTableEmptyState,
-  BackofficeDataTableRow,
-  BackofficeDataTableRowActionEvent,
-} from './backoffice-data-table.models';
-
+  BackofficeDataTableColumn, BackofficeDataTableColumnType, BackofficeDataTableEmptyState,
+  BackofficeDataTableRow, BackofficeDataTableRowActionEvent
+} from "../shared/backoffice-data-table.models";
+import {BackofficeEmptyStateComponent} from "../shared/backoffice-empty-state";
 type SortDirection = 'asc' | 'desc';
-
 @Component({
-    selector: 'app-backoffice-data-table',
-    imports: [BackofficeEmptyStateComponent],
-    templateUrl: './backoffice-data-table.html',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: true
+  selector: 'app-bookstable',
+  imports: [
+    BackofficeEmptyStateComponent
+  ],
+  templateUrl: './bookstable.html',
+  styleUrl: './bookstable.css',
+  standalone: true
 })
-export class BackofficeDataTableComponent {
-  private readonly currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  });
+export class Bookstable { private readonly currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
   private readonly dateFormatter = new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
@@ -80,7 +76,7 @@ export class BackofficeDataTableComponent {
     const searchKeys = this.resolveSearchKeys();
 
     return rows.filter((row) =>
-      searchKeys.some((key) => this.stringifyValue(row[key]).toLowerCase().includes(query)),
+        searchKeys.some((key) => this.stringifyValue(row[key]).toLowerCase().includes(query)),
     );
   });
 
@@ -117,7 +113,7 @@ export class BackofficeDataTableComponent {
 
   readonly totalResults = computed(() => this.sortedRows().length);
   readonly pageCount = computed(() =>
-    Math.max(1, Math.ceil(this.totalResults() / this.resolvedPageSize())),
+      Math.max(1, Math.ceil(this.totalResults() / this.resolvedPageSize())),
   );
   readonly safeCurrentPage = computed(() => Math.min(this.currentPage(), this.pageCount()));
   readonly paginatedRows = computed(() => {
@@ -125,10 +121,10 @@ export class BackofficeDataTableComponent {
     return this.sortedRows().slice(start, start + this.resolvedPageSize());
   });
   readonly visibleRangeStart = computed(() =>
-    this.totalResults() === 0 ? 0 : (this.safeCurrentPage() - 1) * this.resolvedPageSize() + 1,
+      this.totalResults() === 0 ? 0 : (this.safeCurrentPage() - 1) * this.resolvedPageSize() + 1,
   );
   readonly visibleRangeEnd = computed(() =>
-    Math.min(this.safeCurrentPage() * this.resolvedPageSize(), this.totalResults()),
+      Math.min(this.safeCurrentPage() * this.resolvedPageSize(), this.totalResults()),
   );
 
   setSearchQuery(event: Event): void {
@@ -186,8 +182,8 @@ export class BackofficeDataTableComponent {
     if (type === 'date') {
       const dateValue = new Date(String(value));
       return Number.isNaN(dateValue.getTime())
-        ? String(value)
-        : this.dateFormatter.format(dateValue);
+          ? String(value)
+          : this.dateFormatter.format(dateValue);
     }
 
     return this.stringifyValue(value);
@@ -222,9 +218,9 @@ export class BackofficeDataTableComponent {
   }
 
   badgeClass(
-    type: BackofficeDataTableColumnType,
-    row: BackofficeDataTableRow,
-    column: BackofficeDataTableColumn,
+      type: BackofficeDataTableColumnType,
+      row: BackofficeDataTableRow,
+      column: BackofficeDataTableColumn,
   ): string {
     const value = String(row[column.key] ?? '').toLowerCase();
 
@@ -249,19 +245,19 @@ export class BackofficeDataTableComponent {
     }
 
     if (
-      value.includes('ready') ||
-      value.includes('healthy') ||
-      value.includes('completed') ||
-      value.includes('paid')
+        value.includes('ready') ||
+        value.includes('healthy') ||
+        value.includes('completed') ||
+        value.includes('paid')
     ) {
       return 'bg-brand-teal/12 text-brand-navy border-brand-teal/20';
     }
 
     if (
-      value.includes('production') ||
-      value.includes('prepress') ||
-      value.includes('incoming') ||
-      value.includes('partial')
+        value.includes('production') ||
+        value.includes('prepress') ||
+        value.includes('incoming') ||
+        value.includes('partial')
     ) {
       return 'bg-brand-orange/12 text-brand-orange border-brand-orange/20';
     }
@@ -271,8 +267,8 @@ export class BackofficeDataTableComponent {
 
   actionClass(tone: 'default' | 'danger' = 'default'): string {
     return tone === 'danger'
-      ? 'admin-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand-pink/20 bg-brand-pink/8 text-brand-pink transition duration-200 hover:bg-brand-pink/15'
-      : 'admin-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-brand-navy transition duration-200 hover:border-slate-300 hover:bg-slate-50';
+        ? 'admin-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand-pink/20 bg-brand-pink/8 text-brand-pink transition duration-200 hover:bg-brand-pink/15'
+        : 'admin-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-brand-navy transition duration-200 hover:border-slate-300 hover:bg-slate-50';
   }
 
   trackByRowId(_: number, row: BackofficeDataTableRow): string {
@@ -287,13 +283,13 @@ export class BackofficeDataTableComponent {
     }
 
     return this.columns().flatMap((column) =>
-      column.secondaryKey ? [column.key, column.secondaryKey] : [column.key],
+        column.secondaryKey ? [column.key, column.secondaryKey] : [column.key],
     );
   }
 
   private normalizeSortValue(
-    value: BackofficeDataTableRow[string],
-    type: BackofficeDataTableColumnType,
+      value: BackofficeDataTableRow[string],
+      type: BackofficeDataTableColumnType,
   ): number | string {
     if (type === 'currency' || type === 'numeric') {
       return Number(value ?? 0);

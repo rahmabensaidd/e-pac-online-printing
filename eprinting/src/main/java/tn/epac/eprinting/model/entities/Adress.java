@@ -1,15 +1,20 @@
 package tn.epac.eprinting.model.entities;
-import jakarta.persistence.Entity;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+
 /**
  * Address entity - stores user address details (city, street, zipcode, country, etc.).
  */
 @Entity
-@Getter
-@Setter
+@Table(name = "addresses")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Adress {
-    private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long adressId;
     private String city;
      private String street;
      private String zipcode;

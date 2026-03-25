@@ -1,10 +1,5 @@
 package tn.epac.eprinting.model.entities;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import tn.epac.eprinting.model.enums.ShippingStatus;
@@ -21,7 +16,7 @@ public class Shipping {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long shippingId;
-
+    @ManyToOne
     private Adress shippingAddress;
 
     private String shippingMethod;

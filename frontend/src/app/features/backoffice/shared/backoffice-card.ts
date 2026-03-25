@@ -1,42 +1,43 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 @Component({
-  selector: 'app-backoffice-card',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    class: 'block',
-  },
-  template: `
-    <section [class]="cardClass()">
-      @if (hasHeader()) {
-        <header class="flex flex-wrap items-start justify-between gap-3">
-          <div class="min-w-0 space-y-1">
-            @if (eyebrow()) {
-              <p class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                {{ eyebrow() }}
-              </p>
-            }
-            @if (title()) {
-              <h2 class="text-[0.95rem] font-semibold tracking-tight text-brand-navy">
-                {{ title() }}
-              </h2>
-            }
-            @if (description()) {
-              <p class="max-w-2xl text-[0.78rem] leading-5 text-slate-500">{{ description() }}</p>
-            }
-          </div>
+    selector: 'app-backoffice-card',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    host: {
+        class: 'block',
+    },
+    template: `
+        <section [class]="cardClass()">
+            @if (hasHeader()) {
+                <header class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 space-y-1">
+                        @if (eyebrow()) {
+                            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                {{ eyebrow() }}
+                            </p>
+                        }
+                        @if (title()) {
+                            <h2 class="text-[0.95rem] font-semibold tracking-tight text-brand-navy">
+                                {{ title() }}
+                            </h2>
+                        }
+                        @if (description()) {
+                            <p class="max-w-2xl text-[0.78rem] leading-5 text-slate-500">{{ description() }}</p>
+                        }
+                    </div>
 
-          <div class="shrink-0">
-            <ng-content select="[card-actions]" />
-          </div>
-        </header>
-      }
+                    <div class="shrink-0">
+                        <ng-content select="[card-actions]"/>
+                    </div>
+                </header>
+            }
 
-      <div [class]="contentClass()">
-        <ng-content />
-      </div>
-    </section>
-  `,
+            <div [class]="contentClass()">
+                <ng-content/>
+            </div>
+        </section>
+    `,
+    standalone: true
 })
 export class BackofficeCardComponent {
   readonly eyebrow = input('');

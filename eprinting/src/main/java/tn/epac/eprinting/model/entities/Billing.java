@@ -1,10 +1,5 @@
 package tn.epac.eprinting.model.entities;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import tn.epac.eprinting.model.enums.PaymentStatus;
@@ -24,6 +19,7 @@ public class Billing {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long billingId;
 
+    @ManyToOne
     private Adress billingAddress;
 
     private String paymentMethod;
