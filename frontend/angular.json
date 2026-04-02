@@ -64,6 +64,8 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
+            "buildTarget": "e-pac-online:build:development",
+            "proxyConfig": "proxy.conf.json",
             "hmr": false
           },
           "configurations": {

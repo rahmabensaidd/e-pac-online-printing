@@ -231,6 +231,7 @@ const INITIAL_SETTINGS: WorkspaceSettings = {
 
 @Injectable({ providedIn: 'root' })
 export class BackofficeDataService {
+
   readonly orders = signal<BackofficeOrder[]>(INITIAL_ORDERS);
   readonly inventory = signal<InventoryProduct[]>(INITIAL_INVENTORY);
   readonly employees = signal<EmployeeRecord[]>(INITIAL_EMPLOYEES);
@@ -238,18 +239,18 @@ export class BackofficeDataService {
 
   readonly delayedOrders = computed(() => this.orders().filter((order) => order.status === 'Delayed').length);
   readonly activeOrders = computed(() =>
-    this.orders().filter((order) => order.status !== 'Completed').length,
+      this.orders().filter((order) => order.status !== 'Completed').length,
   );
   readonly orderValue = computed(() =>
-    this.orders()
-      .filter((order) => order.status !== 'Completed')
-      .reduce((total, order) => total + order.total, 0),
+      this.orders()
+          .filter((order) => order.status !== 'Completed')
+          .reduce((total, order) => total + order.total, 0),
   );
   readonly lowStockItems = computed(() =>
-    this.inventory().filter((product) => product.status === 'Low stock' || product.status === 'Reorder now').length,
+      this.inventory().filter((product) => product.status === 'Low stock' || product.status === 'Reorder now').length,
   );
   readonly activeEmployees = computed(() =>
-    this.employees().filter((employee) => employee.state !== 'Offline').length,
+      this.employees().filter((employee) => employee.state !== 'Offline').length,
   );
 
   readonly dashboardMetrics = computed<DashboardMetric[]>(() => [
@@ -355,7 +356,7 @@ export class BackofficeDataService {
   ]);
 
   readonly recentOrders = computed(() =>
-    [...this.orders()].sort((left, right) => right.submittedAt.localeCompare(left.submittedAt)).slice(0, 5),
+      [...this.orders()].sort((left, right) => right.submittedAt.localeCompare(left.submittedAt)).slice(0, 5),
   );
 
   readonly navItems = computed<BackofficeNavItem[]>(() => [
@@ -420,33 +421,33 @@ export class BackofficeDataService {
     };
 
     this.orders.update((orders) =>
-      [nextOrder, ...orders].sort((left, right) => right.submittedAt.localeCompare(left.submittedAt)),
+        [nextOrder, ...orders].sort((left, right) => right.submittedAt.localeCompare(left.submittedAt)),
     );
   }
 
   updateOrder(id: string, draft: BackofficeOrderDraft): void {
     this.orders.update((orders) =>
-      orders.map((order) =>
-        order.id === id
-          ? {
-              ...order,
-              reference: draft.reference.trim(),
-              customerName: draft.customerName.trim(),
-              companyName: draft.companyName.trim(),
-              channel: draft.channel.trim(),
-              submittedAt: draft.submittedAt,
-              dueDate: draft.dueDate,
-              total: draft.total,
-              status: draft.status,
-              priority: draft.priority,
-              assignee: draft.assignee.trim(),
-              items: draft.items,
-              shippingMethod: draft.shippingMethod.trim(),
-              paymentStatus: draft.paymentStatus,
-              notes: draft.notes.trim(),
-            }
-          : order,
-      ),
+        orders.map((order) =>
+            order.id === id
+                ? {
+                  ...order,
+                  reference: draft.reference.trim(),
+                  customerName: draft.customerName.trim(),
+                  companyName: draft.companyName.trim(),
+                  channel: draft.channel.trim(),
+                  submittedAt: draft.submittedAt,
+                  dueDate: draft.dueDate,
+                  total: draft.total,
+                  status: draft.status,
+                  priority: draft.priority,
+                  assignee: draft.assignee.trim(),
+                  items: draft.items,
+                  shippingMethod: draft.shippingMethod.trim(),
+                  paymentStatus: draft.paymentStatus,
+                  notes: draft.notes.trim(),
+                }
+                : order,
+        ),
     );
   }
 
@@ -456,15 +457,15 @@ export class BackofficeDataService {
 
   markInventoryIncoming(id: string): void {
     this.inventory.update((products) =>
-      products.map((product) =>
-        product.id === id
-          ? {
-              ...product,
-              incomingUnits: Math.max(product.incomingUnits, product.reorderPoint * 2),
-              status: 'Incoming',
-            }
-          : product,
-      ),
+        products.map((product) =>
+            product.id === id
+                ? {
+                  ...product,
+                  incomingUnits: Math.max(product.incomingUnits, product.reorderPoint * 2),
+                  status: 'Incoming',
+                }
+                : product,
+        ),
     );
   }
 

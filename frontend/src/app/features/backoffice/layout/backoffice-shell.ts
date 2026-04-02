@@ -10,6 +10,7 @@ import { BackofficeSidebarComponent } from './backoffice-sidebar';
   templateUrl: './backoffice-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [BackofficeShellService],
+  standalone: true
 })
 export class BackofficeShellComponent {
   readonly shell = inject(BackofficeShellService);

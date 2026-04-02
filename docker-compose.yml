@@ -10,8 +10,10 @@ services:
       MYSQL_DATABASE: eprinting_db
       MYSQL_USER: eprinting_user
       MYSQL_PASSWORD: eprinting_pass123
+      MYSQL_ROOT_HOST: '%'
     volumes:
       - mysql-app-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
     ports:
       - "3306:3306"
     networks:
@@ -62,7 +64,7 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8081/realms/eprinting/protocol/openid-connect/certs
 
     ports:
-      - "8081:8081"
+      - "8080:8080"
 
     depends_on:
       - mysql-app
@@ -80,7 +82,7 @@ services:
     ports:
       - "4200:80"
     environment:
-      API_URL: http://localhost:8081
+      API_URL: http://localhost:8080
       KEYCLOAK_URL: http://localhost:8081
       KEYCLOAK_REALM: eprinting
       KEYCLOAK_CLIENT_ID: eprinting-frontend

@@ -41,6 +41,15 @@
   </div>
 
   <div class="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <app-bookstable
+              title="Books overview"
+              description="Search and manage books in the catalog."
+              [columns]="bookColumns"
+              [rows]="bookRows()"
+              [rowActions]="bookActions"
+              [searchKeys]="['title', 'authors', 'description', 'bindingType']"
+              (rowAction)="handleBookRowAction($event)"
+      />
     <app-backoffice-data-table
       title="Materials overview"
       description="Search and act on stock records."
@@ -50,6 +59,7 @@
       [searchKeys]="['sku', 'name', 'category', 'status']"
       (rowAction)="handleRowAction($event)"
     />
+
 
     <app-backoffice-card title="Replenishment queue">
       @if (lowStockProducts().length === 0) {
