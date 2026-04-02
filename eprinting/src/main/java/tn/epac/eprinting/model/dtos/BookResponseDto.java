@@ -15,7 +15,7 @@ public class BookResponseDto {
     private Long bookId;
     private String title;
     private String description;
-    private Integer pageCount;
+    private Integer productionPage;
     private Float salePrice;
 
     // Numerical fields

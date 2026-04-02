@@ -64,6 +64,7 @@ interface OrderTableRow extends BackofficeDataTableRow {
   ],
   templateUrl: './backoffice-orders-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true
 })
 export class BackofficeOrdersPageComponent {
   private readonly fb = inject(NonNullableFormBuilder);

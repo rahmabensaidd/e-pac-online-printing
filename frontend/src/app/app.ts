@@ -11,6 +11,7 @@ import { CartDrawerComponent } from './overlays/cart-drawer/cart-drawer';
   imports: [RouterOutlet, NavbarComponent, FooterComponent, CartDrawerComponent],
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true
 })
 export class AppComponent {
   private readonly router = inject(Router);

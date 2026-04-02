@@ -1,0 +1,634 @@
+{
+  "version": "4.0.0",
+  "id": "ly.img.page.presets.video",
+  "assets": [
+    {
+      "id": "page-sizes-instagram-square",
+      "label": {
+        "en": "Square Post (1:1)",
+        "de": "Quadratischer Post (1:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/instagram/ig-square.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1080,
+          "height": 1080,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["instagram"]
+    },
+    {
+      "id": "page-sizes-instagram-landscape",
+      "label": {
+        "en": "Landscape Post (1.91:1)",
+        "de": "Querformat-Post (1.91:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/instagram/ig-landscape.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1080,
+          "height": 566,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["instagram"]
+    },
+    {
+      "id": "page-sizes-instagram-portrait",
+      "label": {
+        "en": "Portrait Post (4:5)",
+        "de": "Hochformat-Post (4:5)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/instagram/ig-portrait.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1080,
+          "height": 1350,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["instagram"]
+    },
+    {
+      "id": "page-sizes-instagram-story",
+      "label": {
+        "en": "Story/Reels/IGTV (9:16)",
+        "de": "Story/Reels/IGTV (9:16)"
+      },
+      "meta": {
+        "default": true,
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/instagram/ig-story.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1080,
+          "height": 1920,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["instagram"]
+    },
+    {
+      "id": "page-sizes-instagram-profile",
+      "label": {
+        "en": "Instagram Profile Photo",
+        "de": "Instagram Profilfoto"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/instagram/ig-profile.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 320,
+          "height": 320,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["instagram"]
+    },
+    {
+      "id": "page-sizes-facebook-square",
+      "label": {
+        "en": "Square Post (1:1)",
+        "de": "Quadratischer Post (1:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/facebook/fb-square.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1080,
+          "height": 1080,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["facebook"]
+    },
+    {
+      "id": "page-sizes-facebook-shared-image",
+      "label": {
+        "en": "Shared Image (1.91:1)",
+        "de": "Geteiltes Bild (1.91:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/facebook/fb-shared-image.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1200,
+          "height": 630,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["facebook"]
+    },
+    {
+      "id": "page-sizes-facebook-video-landscape",
+      "label": {
+        "en": "Video Landscape (16:9)",
+        "de": "Video Querformat (16:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/facebook/fb-video-landscape.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1280,
+          "height": 720,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["facebook"]
+    },
+    {
+      "id": "page-sizes-facebook-video-vertical",
+      "label": {
+        "en": "Video Vertical (9:16)",
+        "de": "Video Hochformat (9:16)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/facebook/fb-video-vertical.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 720,
+          "height": 1280,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["facebook"]
+    },
+    {
+      "id": "page-sizes-facebook-cover",
+      "label": {
+        "en": "Cover Photo",
+        "de": "Titelbild"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/facebook/fb-cover.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 820,
+          "height": 312,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["facebook"]
+    },
+    {
+      "id": "page-sizes-facebook-profile",
+      "label": {
+        "en": "Profile Photo",
+        "de": "Profilfoto"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/facebook/fb-profile.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 170,
+          "height": 170,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["facebook"]
+    },
+    {
+      "id": "page-sizes-x-instream",
+      "label": {
+        "en": "In-stream Photo (16:9)",
+        "de": "In-Stream-Foto (16:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/x/x-instream.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1200,
+          "height": 675,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["x"]
+    },
+    {
+      "id": "page-sizes-x-header",
+      "label": {
+        "en": "Profile Header (3:1)",
+        "de": "Profil-Header (3:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/x/x-header.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1500,
+          "height": 500,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["x"]
+    },
+    {
+      "id": "page-sizes-x-video",
+      "label": {
+        "en": "Video (16:9)",
+        "de": "Video (16:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/x/x-video.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1280,
+          "height": 720,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["x"]
+    },
+    {
+      "id": "page-sizes-x-profile",
+      "label": {
+        "en": "Profile Photo (1:1)",
+        "de": "Profilfoto (1:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/x/x-profile.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 400,
+          "height": 400,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["x"]
+    },
+    {
+      "id": "page-sizes-linkedin-shared-post",
+      "label": {
+        "en": "Shared Post (1.91:1)",
+        "de": "Geteilter Post (1.91:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/linkedIn/li-shared-post.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1200,
+          "height": 627,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["linkedIn"]
+    },
+    {
+      "id": "page-sizes-linkedin-company-cover",
+      "label": {
+        "en": "Company Cover Photo",
+        "de": "Unternehmens-Titelbild"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/linkedIn/li-company-cover.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1128,
+          "height": 191,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["linkedIn"]
+    },
+    {
+      "id": "page-sizes-linkedin-background",
+      "label": {
+        "en": "Profile Background Photo",
+        "de": "Profil-Hintergrundfoto"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/linkedIn/li-background.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1584,
+          "height": 396,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["linkedIn"]
+    },
+    {
+      "id": "page-sizes-linkedin-profile",
+      "label": {
+        "en": "Profile Photo (1:1)",
+        "de": "Profilfoto (1:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/linkedIn/li-profile.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 400,
+          "height": 400,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["linkedIn"]
+    },
+    {
+      "id": "page-sizes-pinterest-standard",
+      "label": {
+        "en": "Standard Pin (2:3)",
+        "de": "Standard-Pin (2:3)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/pinterest/pin-standard.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1000,
+          "height": 1500,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["pinterest"]
+    },
+    {
+      "id": "page-sizes-pinterest-long",
+      "label": {
+        "en": "Long Pin",
+        "de": "Langer Pin"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/pinterest/pin-long.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1000,
+          "height": 2100,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["pinterest"]
+    },
+    {
+      "id": "page-sizes-pinterest-profile",
+      "label": {
+        "en": "Profile Photo (1:1)",
+        "de": "Profilfoto (1:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/pinterest/pin-profile.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 165,
+          "height": 165,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["pinterest"]
+    },
+    {
+      "id": "page-sizes-tiktok-video",
+      "label": {
+        "en": "Video (9:16)",
+        "de": "Video (9:16)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/tiktok/tt-video.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1080,
+          "height": 1920,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["tiktok"]
+    },
+    {
+      "id": "page-sizes-tiktok-profile",
+      "label": {
+        "en": "Profile Photo (1:1)",
+        "de": "Profilfoto (1:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/tiktok/tt-profile.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 200,
+          "height": 200,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["tiktok"]
+    },
+    {
+      "id": "page-sizes-yt-standard",
+      "label": {
+        "en": "Standard (16:9)",
+        "de": "Standard (16:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/youtube/yt-standard.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1920,
+          "height": 1080,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["youtube"]
+    },
+    {
+      "id": "page-sizes-yt-shorts",
+      "label": {
+        "en": "Shorts (9:16)",
+        "de": "Kurzvideos (9:16)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/youtube/yt-shorts.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1080,
+          "height": 1920,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["youtube"]
+    },
+    {
+      "id": "page-sizes-yt-profile",
+      "label": {
+        "en": "Profile Photo (1:1)",
+        "de": "Profilfoto (1:1)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/youtube/yt-profile.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 800,
+          "height": 800,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["youtube"]
+    },
+    {
+      "id": "page-sizes-hd-480p",
+      "label": {
+        "en": "SD (480p) (3:2)",
+        "de": "SD (480p) (3:2)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/hd/hd-480p.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 720,
+          "height": 480,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["hd-video"]
+    },
+    {
+      "id": "page-sizes-hd-720p",
+      "label": {
+        "en": "HD (720p) (16:9)",
+        "de": "HD (720p) (16:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/hd/hd-720p.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1280,
+          "height": 720,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["hd-video"]
+    },
+    {
+      "id": "page-sizes-hd-1080p",
+      "label": {
+        "en": "Full HD (1080p) (16:9)",
+        "de": "Full HD (1080p) (16:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/hd/hd-1080p.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 1920,
+          "height": 1080,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["hd-video"]
+    },
+    {
+      "id": "page-sizes-hd-2k",
+      "label": {
+        "en": "2K (17:9)",
+        "de": "2K (17:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/hd/hd-2k.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 2048,
+          "height": 1080,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["hd-video"]
+    },
+    {
+      "id": "page-sizes-hd-4k",
+      "label": {
+        "en": "4K (16:9)",
+        "de": "4K (16:9)"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/hd/hd-4k.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 3840,
+          "height": 2160,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["hd-video"]
+    },
+    {
+      "id": "page-sizes-hd-cinema-4k",
+      "label": {
+        "en": "Cinema 4K",
+        "de": "Cinema 4K"
+      },
+      "meta": {
+        "thumbUri": "{{base_url}}/ly.img.page.presets.video/thumbnails/hd/hd-cinema-4k.png"
+      },
+      "payload": {
+        "transformPreset": {
+          "type": "FixedSize",
+          "width": 4096,
+          "height": 2160,
+          "designUnit": "Pixel"
+        }
+      },
+      "groups": ["hd-video"]
+    }
+  ]
+}

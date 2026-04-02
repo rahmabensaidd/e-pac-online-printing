@@ -37,7 +37,7 @@ public class BookRequestDto {
 
     @NotNull(message = "Page count is required")
     @Min(value = 1, message = "Page count must be at least 1")
-    private Integer pageCount;
+    private Integer productionPage;
 
     @NotNull(message = "Height is required")
     @Positive(message = "Height must be positive")
@@ -115,8 +115,7 @@ public class BookRequestDto {
     private String spineType;
     private String labelType;
 
-    @NotBlank(message = "SIREN is required")
-    @Pattern(regexp = "^[0-9]{9}$", message = "SIREN must be 9 digits")
+
     private String siren;
 
     @NotNull(message = "Sale price is required")

@@ -9,4 +9,8 @@ export const serverRoutes: ServerRoute[] = [
     path: '**',
     renderMode: RenderMode.Prerender,
   },
+  {
+    path: 'backoffice/editor',
+    renderMode: RenderMode.Client,        // Désactive SSR
+  },
 ];
