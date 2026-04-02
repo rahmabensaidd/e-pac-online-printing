@@ -1,24 +1,12 @@
 package tn.epac.eprinting.model.entities;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.Builder;
-import tn.epac.eprinting.model.enums.AdminBookStatus;
-import tn.epac.eprinting.model.enums.UserBookStatus;
-
-/**
- * Book entity representing a printable document in the e-printing system.
- *
- * A book can be either:
- * - Added by an admin (pre-defined books available in the store)
- * - Created by a user (custom documents uploaded by users for printing)
- *
- * The entity tracks both creation source and status through dedicated fields:
- * - is_created_by_user / userbook_status for user-created books
- * - is_added_from_admin / stock_status for admin-added books
- */
+import tn.epac.eprinting.model.enums.*;
 
 @Table(name = "admin_books")
 @NoArgsConstructor
@@ -33,26 +21,35 @@ public class Book {
     private Long bookId;
 
     private String title;
-
     private String description;
 
 
     private boolean is_created_by_user;
+
     @Enumerated(EnumType.STRING)
     private UserBookStatus userbook_status;
-    @ManyToOne User creation_author;
 
+    @ManyToOne
+    private User creation_author;
 
     private boolean is_added_from_admin;
+
     @Enumerated(EnumType.STRING)
     private AdminBookStatus stock_status;
+
+    // authors doit être une collection
+    @ElementCollection
+    @CollectionTable(name = "book_authors", joinColumns = @JoinColumn(name = "book_id"))
+    @Column(name = "author")
     private String[] authors;
+
+    // ============ NUMERIC FIELDS (NUM_VARS) ============
 
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(name = "pageCount")
-    private Integer pageCount;
+    @Column(name = "production_page", nullable = false)
+    private Integer productionPage;
 
     @Column(nullable = false)
     private Integer height;
@@ -63,7 +60,8 @@ public class Book {
     @Column(nullable = false)
     private Integer width;
 
-    // Boolean fields treated as numeric (0/1)
+    // ============ BOOLEAN FIELDS ============
+
     @Column(name = "security_label", nullable = false)
     private Boolean securityLabel;
 
@@ -91,65 +89,81 @@ public class Book {
     @Column(name = "three_hole_drill", nullable = false)
     private Boolean threeHoleDrill;
 
-    // ============ CATEGORICAL FIELDS (CAT_COLS) ============
+    // ============ CATEGORICAL FIELDS ============
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "text_paper_type", nullable = false)
-    private String textPaperType;
+    private TextPaperType textPaperType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "text_color", nullable = false)
-    private String textColor;
+    private TextColor textColor;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "cover_finish_type", nullable = false)
-    private String coverFinishType;
+    private CoverFinishType coverFinishType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "cover_color", nullable = false)
-    private String coverColor;
+    private CoverColor coverColor;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "cover_size", nullable = false)
-    private String coverSize;
+    private CoverSize coverSize;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "cover_paper_type", nullable = false)
-    private String coverPaperType;
+    private CoverPaperType coverPaperType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "head_and_tail", nullable = false)
-    private String headAndTail;
+    private HeadAndTail headAndTail;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "priority_level", nullable = false)
-    private String priorityLevel;
+    private PriorityLevel priorityLevel;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "binding_type", nullable = false)
-    private String bindingType;
+    private BindingType bindingType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "coil_type")
-    private String coilType;
+    private CoilType coilType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "tab_color")
-    private String tabColor;
+    private TabColor tabColor;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "insert_paper_type")
-    private String insertPaperType;
+    private InsertPaperType insertPaperType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "case_finish_type")
-    private String caseFinishType;
+    private CaseFinishType caseFinishType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "spine_type")
-    private String spineType;
+    private SpineType spineType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "label_type")
-    private String labelType;
+    private LabelType labelType;
 
-    @Column(nullable = false)
-    private String siren;
+    // ============ OTHER FIELDS ============
 
     private float salePrice;
 
-    /**
-     * Validate required fields before persistence
-     */
+    @Column(name = "siren", nullable = true)  // ✅ nullable = true
+    private String siren;
+
     @PrePersist
     @PreUpdate
     public void validate() {
-
+        if (productionPage == null || productionPage <= 0) {
+            throw new IllegalStateException("Production page must be positive");
+        }
         if (height == null || height <= 0) {
             throw new IllegalStateException("Height must be positive");
         }
@@ -159,7 +173,5 @@ public class Book {
         if (thickness == null || thickness <= 0) {
             throw new IllegalStateException("Thickness must be positive");
         }
-
     }
-
 }

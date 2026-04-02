@@ -42,6 +42,19 @@ export const BACKOFFICE_ROUTES: Routes = [
           description: 'Track stock coverage, replenishment risk, and incoming materials.',
         },
       },
+      // Dans votre fichier de routes
+      {
+        path: 'editor',
+        // ✅ Chargez directement le composant page - il gère lui-même le chargement dynamique
+        loadComponent: () => import('./Templates/backoffice-Template-page').then(
+            (m) => m.BackofficeTemplatePageComponent
+        ),
+        data: {
+          title: 'Template Editor',
+          description: 'Create and edit custom templates for your designs.',
+        },
+      },
+
       {
         path: 'employees',
         loadComponent: () =>

@@ -18,6 +18,7 @@ interface NavItem {
   host: {
     '(document:keydown.escape)': 'onEscape()',
   },
+  standalone: true
 })
 export class NavbarComponent {
   readonly ui = inject(UiService);

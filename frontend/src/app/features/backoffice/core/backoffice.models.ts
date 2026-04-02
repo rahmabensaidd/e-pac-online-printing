@@ -18,7 +18,7 @@ export interface BackofficeNavItem {
   route: string;
   icon: string;
   description: string;
-  group: 'Operations' | 'Workspace';
+  group: 'Operations' | 'Workspace' |'Design';
   exact?: boolean;
   badge?: string;
 }

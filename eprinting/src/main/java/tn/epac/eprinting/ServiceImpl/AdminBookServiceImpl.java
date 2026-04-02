@@ -1,5 +1,151 @@
 package tn.epac.eprinting.ServiceImpl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import tn.epac.eprinting.model.dtos.BookOverviewDto;
+import tn.epac.eprinting.model.dtos.BookRequestDto;
+import tn.epac.eprinting.model.dtos.BookResponseDto;
+import tn.epac.eprinting.model.enums.AdminBookStatus;
+
+import java.util.List;
+
 public interface AdminBookServiceImpl {
 
+/** Retrieves global book statistics
+     * @return DTO containing statistics (total count, low stock, etc.)
+     */
+    BookOverviewDto getBookOverview();
+
+    /**
+     * Retrieves all books with pagination and optional filters
+     * @param pageable Pagination information
+     * @param search Search term (title or description)
+     * @param status Filter by stock status
+     * @param bindingType Filter by binding type
+     * @return Page of books
+     */
+    Page<BookResponseDto> getAllBooks(Pageable pageable, String search, AdminBookStatus status, String bindingType);
+
+    /**
+     * Retrieves a book by its ID
+     * @param bookId Book identifier
+     * @return DTO of the found book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto getBookById(Long bookId);
+
+    /**
+     * Creates a new book
+     * @param bookRequest DTO containing book information to create
+     * @return DTO of the created book
+     */
+    BookResponseDto createBook(BookRequestDto bookRequest);
+
+    /**
+     * Updates an existing book (full replacement)
+     * @param bookId Book identifier to update
+     * @param bookRequest DTO containing new information
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto updateBook(Long bookId, BookRequestDto bookRequest);
+
+    /**
+     * Partially updates an existing book
+     * @param bookId Book identifier to update
+     * @param bookRequest DTO containing fields to modify
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto patchBook(Long bookId, BookRequestDto bookRequest);
+
+    /**
+     * Deletes a book
+     * @param bookId Book identifier to delete
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    void deleteBook(Long bookId);
+
+    /**
+     * Updates a book's stock quantity
+     * @param bookId Book identifier
+     * @param quantity New quantity
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto updateStock(Long bookId, Integer quantity);
+
+    /**
+     * Retrieves all low stock books (quantity < 10)
+     * @return List of low stock books
+     */
+    List<BookResponseDto> getLowStockBooks();
+
+    /**
+     * Retrieves books by binding type
+     * @param bindingType Binding type
+     * @return List of matching books
+     */
+    List<BookResponseDto> getBooksByBindingType(String bindingType);
+
+    /**
+     * Checks if a book exists
+     * @param bookId Book identifier
+     * @return true if the book exists, false otherwise
+     */
+    boolean existsBookById(Long bookId);
+
+    /**
+     * Retrieves available stock of a book
+     * @param bookId Book identifier
+     * @return Available quantity
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    Integer getBookStock(Long bookId);
+
+    /**
+     * Activates or deactivates a book (soft delete)
+     * @param bookId Book identifier
+     * @param active Activation status
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto toggleBookStatus(Long bookId, boolean active);
+
+    /**
+     * Advanced book search with multiple criteria
+     * @param title Title (optional)
+     * @param author Author (optional)
+     * @param minPrice Minimum price (optional)
+     * @param maxPrice Maximum price (optional)
+     * @param bindingType Binding type (optional)
+     * @param pageable Pagination information
+     * @return Page of books matching the criteria
+     */
+    Page<BookResponseDto> searchBooks(String title, String author, Float minPrice,
+                                      Float maxPrice, String bindingType, Pageable pageable);
+
+    /**
+     * Updates a book's sale price
+     * @param bookId Book identifier
+     * @param newPrice New price
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto updateBookPrice(Long bookId, Float newPrice);
+
+    /**
+     * Retrieves books by status
+     * @param status Book status (IN_STOCK, LOW_STOCK, OUT_OF_STOCK)
+     * @param pageable Pagination information
+     * @return Page of books
+     */
+    Page<BookResponseDto> getBooksByStatus(AdminBookStatus status, Pageable pageable);
+
+    /**
+     * Validates book information before creation/update
+     * @param bookRequest DTO to validate
+     * @return true if valid, false otherwise
+     */
+    boolean validateBookData(BookRequestDto bookRequest);
 }
