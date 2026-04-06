@@ -87,6 +87,12 @@ public class Book {
     @Column(name = "three_hole_drill", nullable = false)
     private Boolean threeHoleDrill;
 
+    @Column(name = "pnl_cover", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean pnlCover = Boolean.FALSE;
+
+    @Column(name = "pnl_text", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean pnlText = Boolean.FALSE;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "text_paper_type", nullable = false)
     private TextPaperType textPaperType;

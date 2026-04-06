@@ -28,6 +28,8 @@ export interface BookRequestDto {
     doubleSidedCover: boolean;
     shrinkwrap: boolean;
     threeHoleDrill: boolean;
+    pnlCover: boolean;
+    pnlText: boolean;
     textPaperType: string;
     textColor: string;
     coverFinishType: string;
@@ -43,19 +45,61 @@ export interface BookRequestDto {
     caseFinishType?: string;
     spineType?: string;
     labelType?: string;
-    // ❌ PAS de siren
+    siren?: string;
     salePrice: number;
+    cover?: BookCoverPayload;
+    content?: BookContentPayload;
+    pnlInformations?: BookPnlInformationPayload[];
+}
+
+export interface BookCoverPayload {
+    title?: string;
+    barcodeId?: string;
+    images?: string[];
+    texts?: string[];
+    pdfFileName?: string;
+    pdfFileType?: string;
+    pdfFilePath?: string;
+    coverTemplateId?: number | null;
+}
+
+export interface BookContentPayload {
+    textContent?: string;
+    fileName?: string;
+    fileType?: string;
+    filePath?: string;
+    textTemplateId?: number | null;
+}
+
+export interface BookPnlLinePayload {
+    lineId?: number | null;
+    ordering?: number | null;
+    value?: string;
+    pnlFontType?: string;
+    pnlFontSize?: number | null;
+    pnlFontBold?: boolean;
+    pnlFontItalic?: boolean;
+}
+
+export interface BookPnlInformationPayload {
+    pnlPageNumber?: number | null;
+    pnlPrintingNumber?: number | null;
+    pnlHorizontalMargin?: number | null;
+    pnlVerticalMargin?: number | null;
+    pnlLineSpacing?: number | null;
+    pnlFontType?: string;
+    pnlFontSize?: number | null;
+    pnlExcluded?: boolean;
+    pnlLines?: BookPnlLinePayload[];
 }
 
 export interface Book {
     bookId: number;
     title: string;
     description: string;
-    is_created_by_user: boolean;
-    userbook_status: string | null;
-    creation_author: Author | null;
-    is_added_from_admin: boolean;
-    stock_status: string;
+    isCreatedByUser: boolean;
+    isAddedFromAdmin: boolean;
+    stockStatus: string;
     authors: string[];
     quantity: number;
     productionPage: number;  // ✅ Changé de pageCount à productionPage
@@ -71,6 +115,8 @@ export interface Book {
     doubleSidedCover: boolean;
     shrinkwrap: boolean;
     threeHoleDrill: boolean;
+    pnlCover: boolean;
+    pnlText: boolean;
     textPaperType: string;
     textColor: string;
     coverFinishType: string;
@@ -88,6 +134,26 @@ export interface Book {
     labelType: string | null;
     siren: string;
     salePrice: number;
+    cover?: {
+        coverId?: number;
+        title?: string;
+        barcodeId?: string;
+        images?: string[];
+        texts?: string[];
+        pdfFileName?: string;
+        pdfFileType?: string;
+        pdfFilePath?: string;
+        coverTemplateId?: number | null;
+    } | null;
+    content?: {
+        contentId?: number;
+        textContent?: string;
+        fileName?: string;
+        fileType?: string;
+        filePath?: string;
+        textTemplateId?: number | null;
+    } | null;
+    pnlInformations?: BookPnlInformationPayload[];
 }
 
 export interface BookOverview {
@@ -134,7 +200,7 @@ export class BookService {
         const books = this.books();
         if (!Array.isArray(books)) return [];
         return books.filter((book) => {
-            const status = book.stock_status?.toLowerCase() || '';
+            const status = book.stockStatus?.toLowerCase() || '';
             return status === 'low' || status === 'reorder' || book.quantity < 10;
         });
     });
@@ -168,12 +234,12 @@ export class BookService {
             description: book.description || '',
             authors: Array.isArray(book.authors) ? book.authors.join(', ') : '',
             quantity: book.quantity ?? 0,
-            stock_status: book.stock_status || 'unknown',
+            stock_status: book.stockStatus || 'unknown',
             salePrice: book.salePrice ?? 0,
             bindingType: book.bindingType || '',
             pageCount: book.productionPage ?? 0,
-            is_added_from_admin: book.is_added_from_admin ?? false,
-            created_by_user: book.is_created_by_user ?? false,
+            is_added_from_admin: book.isAddedFromAdmin ?? false,
+            created_by_user: book.isCreatedByUser ?? false,
         }));
     });
 

@@ -1,11 +1,11 @@
 package tn.epac.eprinting.model.dtos;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -78,7 +78,11 @@ public class BookRequestDto {
     @NotNull(message = "Three hole drill is required")
     private Boolean threeHoleDrill;
 
-    // ============ CATEGORICAL FIELDS ============
+    @NotNull(message = "PNL cover flag is required")
+    private Boolean pnlCover;
+
+    @NotNull(message = "PNL text flag is required")
+    private Boolean pnlText;
 
     @NotBlank(message = "Text paper type is required")
     private String textPaperType;
@@ -107,18 +111,81 @@ public class BookRequestDto {
     @NotBlank(message = "Binding type is required")
     private String bindingType;
 
-    // Optional fields
     private String coilType;
     private String tabColor;
     private String insertPaperType;
     private String caseFinishType;
     private String spineType;
     private String labelType;
-
-
     private String siren;
 
     @NotNull(message = "Sale price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Sale price must be greater than 0")
     private Float salePrice;
+
+    @Valid
+    private CoverPayloadDto cover;
+
+    @Valid
+    private ContentPayloadDto content;
+
+    @Valid
+    private List<PnlInformationPayloadDto> pnlInformations;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CoverPayloadDto {
+        private String title;
+        private String barcodeId;
+        private List<String> images;
+        private List<String> texts;
+        private String pdfFileName;
+        private String pdfFileType;
+        private String pdfFilePath;
+        private Long coverTemplateId;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ContentPayloadDto {
+        private String textContent;
+        private String fileName;
+        private String fileType;
+        private String filePath;
+        private Long textTemplateId;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PnlInformationPayloadDto {
+        private Integer pnlPageNumber;
+        private Integer pnlPrintingNumber;
+        private Double pnlHorizontalMargin;
+        private Double pnlVerticalMargin;
+        private Integer pnlLineSpacing;
+        private String pnlFontType;
+        private Integer pnlFontSize;
+        private Boolean pnlExcluded;
+        private List<PnlLinePayloadDto> pnlLines;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PnlLinePayloadDto {
+        private Integer lineId;
+        private Integer ordering;
+        private String value;
+        private String pnlFontType;
+        private Integer pnlFontSize;
+        private Boolean pnlFontBold;
+        private Boolean pnlFontItalic;
+    }
 }
