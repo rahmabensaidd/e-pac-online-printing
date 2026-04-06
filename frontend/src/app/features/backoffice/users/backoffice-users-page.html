@@ -1,0 +1,259 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+    [breadcrumb]="['Backoffice', 'Users']"
+    title="Users & roles"
+    description="Manage users and assign access roles."
+  >
+    <button
+      header-actions
+      type="button"
+      class="admin-focus-ring rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange"
+      (click)="openCreateModal()"
+    >
+      Create user
+    </button>
+  </app-backoffice-section-header>
+
+  @if (errorMessage()) {
+    <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <app-backoffice-stat-card
+      label="Total users"
+      [value]="totalUsers().toString()"
+      change="Synced"
+      hint="backend records"
+      icon="fa-users"
+      tone="neutral"
+    />
+    <app-backoffice-stat-card
+      label="Admins"
+      [value]="adminUsers().toString()"
+      change="Privileged"
+      hint="backoffice access"
+      icon="fa-user-shield"
+      tone="warning"
+    />
+    <app-backoffice-stat-card
+      label="Users with orders"
+      [value]="usersWithOrders().toString()"
+      change="Customers"
+      hint="at least one order"
+      icon="fa-user-check"
+      tone="positive"
+    />
+    <app-backoffice-stat-card
+      label="All orders"
+      [value]="allOrders().toString()"
+      change="Linked"
+      hint="sum over all users"
+      icon="fa-receipt"
+      tone="neutral"
+    />
+  </div>
+
+  <app-backoffice-card title="Role filters">
+    <div class="flex flex-wrap gap-2">
+      @for (filter of ['ALL', 'ADMIN', 'USER', 'VENDOR', 'MODERATOR']; track filter) {
+        <button type="button" [class]="filterButtonClass(filter)" (click)="setFilter(filter)">
+          {{ filter === 'ALL' ? 'All' : filter }}
+        </button>
+      }
+    </div>
+  </app-backoffice-card>
+
+  <app-backoffice-data-table
+    title="User directory"
+    description="Edit profile info or assign roles."
+    [columns]="tableColumns"
+    [rows]="tableRows()"
+    [rowActions]="tableActions"
+    [searchKeys]="['username', 'name', 'email', 'role', 'totalOrders']"
+    [loading]="loading()"
+    [emptyState]="{
+      icon: 'fa-users',
+      title: 'No users found',
+      description: 'Create a new user to get started.',
+      actionLabel: ''
+    }"
+    (rowAction)="onRowAction($event)"
+  />
+</div>
+
+@if (createModalOpen()) {
+  <button
+    type="button"
+    class="fixed inset-0 z-40 bg-brand-navy/40"
+    aria-label="Close create user modal"
+    (click)="closeCreateModal()"
+  ></button>
+
+  <section class="fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true">
+    <article class="admin-panel w-full max-w-2xl rounded-[1.25rem] p-5">
+      <header class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-brand-navy">Create user</h2>
+        <button type="button" class="admin-focus-ring admin-icon-button" (click)="closeCreateModal()">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </header>
+
+      <form class="grid gap-4 sm:grid-cols-2" [formGroup]="createForm" (ngSubmit)="saveCreate()">
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">First name</span>
+          <input class="admin-input w-full" formControlName="firstName" />
+        </label>
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">Last name</span>
+          <input class="admin-input w-full" formControlName="lastName" />
+        </label>
+        <label class="space-y-1 text-sm text-slate-600 sm:col-span-2">
+          <span class="admin-label">Email</span>
+          <input class="admin-input w-full" formControlName="email" />
+        </label>
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">Username</span>
+          <input class="admin-input w-full" formControlName="username" />
+        </label>
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">Role</span>
+          <select class="admin-select w-full" formControlName="role">
+            @for (role of roles; track role) {
+              <option [value]="role">{{ role }}</option>
+            }
+          </select>
+        </label>
+        <label class="space-y-1 text-sm text-slate-600 sm:col-span-2">
+          <span class="admin-label">Temporary password</span>
+          <input class="admin-input w-full" type="password" formControlName="password" />
+        </label>
+
+        <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            class="admin-focus-ring rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            (click)="closeCreateModal()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="admin-focus-ring rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange disabled:opacity-60"
+            [disabled]="saveLoading()"
+          >
+            {{ saveLoading() ? 'Saving...' : 'Create user' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
+
+@if (editModalOpen() && selectedUser(); as user) {
+  <button
+    type="button"
+    class="fixed inset-0 z-40 bg-brand-navy/40"
+    aria-label="Close edit user modal"
+    (click)="closeEditModal()"
+  ></button>
+
+  <section class="fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true">
+    <article class="admin-panel w-full max-w-2xl rounded-[1.25rem] p-5">
+      <header class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-brand-navy">Edit user</h2>
+        <button type="button" class="admin-focus-ring admin-icon-button" (click)="closeEditModal()">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </header>
+
+      <form class="grid gap-4 sm:grid-cols-2" [formGroup]="editForm" (ngSubmit)="saveEdit()">
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">First name</span>
+          <input class="admin-input w-full" formControlName="firstName" />
+        </label>
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">Last name</span>
+          <input class="admin-input w-full" formControlName="lastName" />
+        </label>
+        <label class="space-y-1 text-sm text-slate-600 sm:col-span-2">
+          <span class="admin-label">Email</span>
+          <input class="admin-input w-full" formControlName="email" />
+        </label>
+        <label class="space-y-1 text-sm text-slate-600 sm:col-span-2">
+          <span class="admin-label">Username</span>
+          <input class="admin-input w-full" formControlName="username" />
+        </label>
+
+        <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            class="admin-focus-ring rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            (click)="closeEditModal()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="admin-focus-ring rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange disabled:opacity-60"
+            [disabled]="saveLoading()"
+          >
+            {{ saveLoading() ? 'Saving...' : 'Save changes' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
+
+@if (roleModalOpen() && selectedUser(); as user) {
+  <button
+    type="button"
+    class="fixed inset-0 z-40 bg-brand-navy/40"
+    aria-label="Close role modal"
+    (click)="closeRoleModal()"
+  ></button>
+
+  <section class="fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true">
+    <article class="admin-panel w-full max-w-md rounded-[1.25rem] p-5">
+      <header class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-brand-navy">Assign role</h2>
+        <button type="button" class="admin-focus-ring admin-icon-button" (click)="closeRoleModal()">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </header>
+
+      <p class="mb-4 text-sm text-slate-500">
+        User: <span class="font-semibold text-brand-navy">{{ user.username }}</span>
+      </p>
+
+      <label class="space-y-1 text-sm text-slate-600">
+        <span class="admin-label">Role</span>
+        <select class="admin-select w-full" [value]="roleDraft()" (change)="onRoleDraftChange($event)">
+          @for (role of roles; track role) {
+            <option [value]="role">{{ role }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="mt-5 flex justify-end gap-2">
+        <button
+          type="button"
+          class="admin-focus-ring rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+          (click)="closeRoleModal()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="admin-focus-ring rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange disabled:opacity-60"
+          [disabled]="roleSaveLoading()"
+          (click)="saveRole()"
+        >
+          {{ roleSaveLoading() ? 'Saving...' : 'Update role' }}
+        </button>
+      </div>
+    </article>
+  </section>
+}
