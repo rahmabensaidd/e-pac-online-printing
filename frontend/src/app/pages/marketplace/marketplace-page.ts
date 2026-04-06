@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+// src/app/features/marketplace/marketplace-page.component.ts
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, NgOptimizedImage } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -6,12 +7,11 @@ import { map, startWith } from 'rxjs';
 import { CartService } from '../../core/services/cart.service';
 import { Product, ProductCategory } from '../../core/models/product';
 import { UiService } from '../../core/services/ui.service';
-import { MARKETPLACE_ITEMS } from './marketplace.data';
-import { MARKETPLACE_CATEGORIES, MarketplaceCategory, MarketplaceItem } from './marketplace.types';
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll.directive';
+import { MarketplaceService, MarketplaceBook } from './marketplace.service';
 
-type CategoryFilter = 'All' | MarketplaceCategory;
-type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'rating-desc' | 'reviews-desc' | 'title-asc';
+type CategoryFilter = 'All' | 'Books' | 'Brochures' | 'Flyers' | 'Posters' | 'Calendars' | 'Business Cards';
+type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'title-asc';
 
 interface SortItem {
   value: SortOption;
@@ -23,47 +23,60 @@ interface SortItem {
   imports: [CurrencyPipe, NgOptimizedImage, RevealOnScrollDirective],
   templateUrl: './marketplace-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true
 })
-export class MarketplacePageComponent {
+export class MarketplacePageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly cart = inject(CartService);
   private readonly ui = inject(UiService);
+  private readonly marketplaceService = inject(MarketplaceService);
 
-  private readonly productsCache = new Map<string, Product>();
-
-  readonly categoryFilters: readonly CategoryFilter[] = ['All', ...MARKETPLACE_CATEGORIES];
+  readonly categoryFilters: readonly CategoryFilter[] = ['All', 'Books', 'Brochures', 'Flyers', 'Posters', 'Calendars', 'Business Cards'];
   readonly sortItems: readonly SortItem[] = [
     { value: 'featured', label: 'Featured' },
     { value: 'price-asc', label: 'Price: Low to high' },
     { value: 'price-desc', label: 'Price: High to low' },
-    { value: 'rating-desc', label: 'Top rated' },
-    { value: 'reviews-desc', label: 'Most reviewed' },
     { value: 'title-asc', label: 'Title: A to Z' },
   ];
   readonly skeletonCards = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   readonly itemsPerPage = 9;
 
-  readonly minPriceBoundary = Math.floor(Math.min(...MARKETPLACE_ITEMS.map((item) => item.priceFrom)));
-  readonly maxPriceBoundary = Math.ceil(Math.max(...MARKETPLACE_ITEMS.map((item) => item.priceFrom)));
+  // Utiliser les vraies données du service
+  readonly isLoading = computed(() => this.marketplaceService.loading());
+  readonly items = computed(() => this.marketplaceService.marketplaceBooks());
 
-  readonly isLoading = signal(true);
-  readonly items = signal<MarketplaceItem[]>([]);
+  readonly minPriceBoundary = computed(() => {
+    const allItems = this.items();
+    if (allItems.length === 0) return 0;
+    return Math.floor(Math.min(...allItems.map((item) => item.priceFrom)));
+  });
+
+  readonly maxPriceBoundary = computed(() => {
+    const allItems = this.items();
+    if (allItems.length === 0) return 1000;
+    return Math.ceil(Math.max(...allItems.map((item) => item.priceFrom)));
+  });
+
+  // Filtres
   readonly searchQuery = signal('');
   readonly selectedCategory = signal<CategoryFilter>('All');
   readonly selectedSort = signal<SortOption>('featured');
   readonly availableOnly = signal(false);
-  readonly minPrice = signal(this.minPriceBoundary);
-  readonly maxPrice = signal(this.maxPriceBoundary);
+  readonly minPrice = signal(0);
+  readonly maxPrice = signal(1000);
   readonly selectedTags = signal<string[]>([]);
   readonly currentPage = signal(1);
 
-  readonly allTags = computed(() =>
-    Array.from(new Set(this.items().flatMap((item) => item.tags))).sort((left, right) =>
-      left.localeCompare(right),
-    ),
-  );
+  readonly allTags = computed(() => {
+    const allItems = this.items();
+    const tagsSet = new Set<string>();
+    allItems.forEach(item => {
+      item.tags.forEach(tag => tagsSet.add(tag));
+    });
+    return Array.from(tagsSet).sort((a, b) => a.localeCompare(b));
+  });
 
   readonly filteredItems = computed(() => {
     const query = this.searchQuery().trim().toLowerCase();
@@ -73,8 +86,11 @@ export class MarketplacePageComponent {
     const minPrice = this.minPrice();
     const maxPrice = this.maxPrice();
     const selectedTags = this.selectedTags();
+    const allItems = this.items();
 
-    const filtered = this.items().filter((item) => {
+    if (allItems.length === 0) return [];
+
+    const filtered = allItems.filter((item) => {
       if (category !== 'All' && item.category !== category) {
         return false;
       }
@@ -95,7 +111,7 @@ export class MarketplacePageComponent {
         return true;
       }
 
-      const haystack = `${item.title} ${item.category} ${item.shortDescription} ${item.tags.join(' ')}`.toLowerCase();
+      const haystack = `${item.title} ${item.category} ${item.shortDescription} ${item.tags.join(' ')} ${item.authors.join(' ')}`.toLowerCase();
       return haystack.includes(query);
     });
 
@@ -104,28 +120,30 @@ export class MarketplacePageComponent {
     switch (sort) {
       case 'price-asc':
         sorted.sort((left, right) => left.priceFrom - right.priceFrom);
-        return sorted;
+        break;
       case 'price-desc':
         sorted.sort((left, right) => right.priceFrom - left.priceFrom);
-        return sorted;
-      case 'rating-desc':
-        sorted.sort((left, right) => (right.rating ?? 0) - (left.rating ?? 0));
-        return sorted;
-      case 'reviews-desc':
-        sorted.sort((left, right) => (right.reviewsCount ?? 0) - (left.reviewsCount ?? 0));
-        return sorted;
+        break;
       case 'title-asc':
         sorted.sort((left, right) => left.title.localeCompare(right.title));
-        return sorted;
+        break;
       case 'featured':
       default:
-        return sorted;
+        // Garder l'ordre original ou trier par ID
+        sorted.sort((left, right) => parseInt(left.id) - parseInt(right.id));
+        break;
     }
+
+    return sorted;
   });
 
   readonly totalResults = computed(() => this.filteredItems().length);
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalResults() / this.itemsPerPage)));
-  readonly safeCurrentPage = computed(() => Math.min(this.currentPage(), this.totalPages()));
+  readonly safeCurrentPage = computed(() => {
+    const current = this.currentPage();
+    const total = this.totalPages();
+    return Math.min(Math.max(current, 1), total);
+  });
 
   readonly paginatedItems = computed(() => {
     const start = (this.safeCurrentPage() - 1) * this.itemsPerPage;
@@ -133,46 +151,53 @@ export class MarketplacePageComponent {
     return this.filteredItems().slice(start, end);
   });
 
-  readonly pageNumbers = computed(() => Array.from({ length: this.totalPages() }, (_, index) => index + 1));
+  readonly pageNumbers = computed(() => {
+    const total = this.totalPages();
+    return Array.from({ length: total }, (_, index) => index + 1);
+  });
+
   readonly visibleRangeStart = computed(() => {
     if (this.totalResults() === 0) return 0;
     return (this.safeCurrentPage() - 1) * this.itemsPerPage + 1;
   });
-  readonly visibleRangeEnd = computed(() => Math.min(this.safeCurrentPage() * this.itemsPerPage, this.totalResults()));
+
+  readonly visibleRangeEnd = computed(() => {
+    return Math.min(this.safeCurrentPage() * this.itemsPerPage, this.totalResults());
+  });
+
   readonly activeFilterCount = computed(() => {
     let count = 0;
-
-    if (this.searchQuery().trim().length > 0) count += 1;
-    if (this.selectedCategory() !== 'All') count += 1;
-    if (this.availableOnly()) count += 1;
-    if (this.minPrice() !== this.minPriceBoundary || this.maxPrice() !== this.maxPriceBoundary) count += 1;
+    if (this.searchQuery().trim().length > 0) count++;
+    if (this.selectedCategory() !== 'All') count++;
+    if (this.availableOnly()) count++;
+    if (this.minPrice() !== this.minPriceBoundary() || this.maxPrice() !== this.maxPriceBoundary()) count++;
     count += this.selectedTags().length;
-
     return count;
   });
+
   readonly hasActiveFilters = computed(() => this.activeFilterCount() > 0);
 
-  constructor() {
+  ngOnInit(): void {
+    // Initialiser les prix par défaut après que les données soient chargées
+    setTimeout(() => {
+      this.minPrice.set(this.minPriceBoundary());
+      this.maxPrice.set(this.maxPriceBoundary());
+    }, 100);
+
+    // Lire les paramètres d'URL
     this.route.queryParamMap
-      .pipe(
-        startWith(this.route.snapshot.queryParamMap),
-        map((params) => params.get('category')),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((categoryParam) => {
-        const nextCategory = this.resolveCategoryFromQuery(categoryParam);
-        if (this.selectedCategory() !== nextCategory) {
-          this.selectedCategory.set(nextCategory);
-          this.resetPagination();
-        }
-      });
-
-    const timer = setTimeout(() => {
-      this.items.set(MARKETPLACE_ITEMS);
-      this.isLoading.set(false);
-    }, 350);
-
-    this.destroyRef.onDestroy(() => clearTimeout(timer));
+        .pipe(
+            startWith(this.route.snapshot.queryParamMap),
+            map((params) => params.get('category')),
+            takeUntilDestroyed(this.destroyRef),
+        )
+        .subscribe((categoryParam) => {
+          const nextCategory = this.resolveCategoryFromQuery(categoryParam);
+          if (this.selectedCategory() !== nextCategory) {
+            this.selectedCategory.set(nextCategory);
+            this.resetPagination();
+          }
+        });
   }
 
   setCategory(category: CategoryFilter): void {
@@ -192,7 +217,6 @@ export class MarketplacePageComponent {
   onSortChange(event: Event): void {
     const value = this.readInputValue(event);
     const match = this.sortItems.find((item) => item.value === value);
-
     if (match) {
       this.selectedSort.set(match.value);
       this.resetPagination();
@@ -206,22 +230,22 @@ export class MarketplacePageComponent {
   }
 
   onMinPriceChange(event: Event): void {
-    const value = this.readNumericValue(event, this.minPriceBoundary);
-    const normalized = Math.min(Math.max(value, this.minPriceBoundary), this.maxPrice());
+    const value = this.readNumericValue(event, this.minPriceBoundary());
+    const normalized = Math.min(Math.max(value, this.minPriceBoundary()), this.maxPrice());
     this.minPrice.set(normalized);
     this.resetPagination();
   }
 
   onMaxPriceChange(event: Event): void {
-    const value = this.readNumericValue(event, this.maxPriceBoundary);
-    const normalized = Math.max(Math.min(value, this.maxPriceBoundary), this.minPrice());
+    const value = this.readNumericValue(event, this.maxPriceBoundary());
+    const normalized = Math.max(Math.min(value, this.maxPriceBoundary()), this.minPrice());
     this.maxPrice.set(normalized);
     this.resetPagination();
   }
 
   toggleTag(tag: string): void {
     this.selectedTags.update((current) =>
-      current.includes(tag) ? current.filter((existing) => existing !== tag) : [...current, tag],
+        current.includes(tag) ? current.filter((existing) => existing !== tag) : [...current, tag]
     );
     this.resetPagination();
   }
@@ -235,8 +259,8 @@ export class MarketplacePageComponent {
     this.selectedCategory.set('All');
     this.selectedSort.set('featured');
     this.availableOnly.set(false);
-    this.minPrice.set(this.minPriceBoundary);
-    this.maxPrice.set(this.maxPriceBoundary);
+    this.minPrice.set(this.minPriceBoundary());
+    this.maxPrice.set(this.maxPriceBoundary());
     this.selectedTags.set([]);
     this.resetPagination();
     this.syncCategoryQueryParam('All');
@@ -255,39 +279,47 @@ export class MarketplacePageComponent {
     this.currentPage.set(normalized);
   }
 
-  quickView(item: MarketplaceItem): void {
+  quickView(item: MarketplaceBook): void {
     this.router.navigate(['/products', item.id]);
   }
 
-  addToCart(item: MarketplaceItem): void {
+  async addToCart(item: MarketplaceBook): Promise<void> {
     if (!item.isAvailable) {
+      this.ui.showToast?.({
+        message: 'This product is currently out of stock',
+        type: 'warning'
+      });
       return;
     }
 
-    this.cart.add(this.toProduct(item), 1);
-    this.ui.openCart();
+    const product = this.toProduct(item);
+    try {
+      await this.cart.add(product, 1);
+      this.ui.openCart();
+    } catch {
+      this.ui.showToast?.({
+        message: 'Unable to add this product to cart right now',
+        type: 'error'
+      });
+    }
   }
 
-  categoryVisual(item: MarketplaceItem): string {
-    if (item.imageUrl) {
-      return 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)';
-    }
-
+  categoryVisual(item: MarketplaceBook): string {
     return this.categoryGradient(item.category);
   }
 
   categoryPillClass(category: CategoryFilter): string {
     const active = this.selectedCategory() === category;
     return active
-      ? 'bg-brand-navy text-white shadow-lg'
-      : 'bg-white text-gray-700 hover:bg-brand-orange hover:text-white';
+        ? 'bg-brand-navy text-white shadow-lg'
+        : 'bg-white text-gray-700 hover:bg-brand-orange hover:text-white';
   }
 
   tagPillClass(tag: string): string {
     const active = this.isTagSelected(tag);
     return active
-      ? 'bg-brand-navy text-white border-brand-navy'
-      : 'bg-white text-gray-700 border-gray-200 hover:border-brand-orange hover:text-brand-orange';
+        ? 'bg-brand-navy text-white border-brand-navy'
+        : 'bg-white text-gray-700 border-gray-200 hover:border-brand-orange hover:text-brand-orange';
   }
 
   private resetPagination(): void {
@@ -304,35 +336,30 @@ export class MarketplacePageComponent {
   }
 
   private resolveCategoryFromQuery(category: string | null): CategoryFilter {
-    return this.isMarketplaceCategory(category) ? category : 'All';
+    return this.isValidCategory(category) ? category : 'All';
   }
 
-  private isMarketplaceCategory(value: string | null): value is MarketplaceCategory {
-    return value !== null && (MARKETPLACE_CATEGORIES as readonly string[]).includes(value);
+  private isValidCategory(value: string | null): value is CategoryFilter {
+    return value !== null && (this.categoryFilters as readonly string[]).includes(value);
   }
 
-  private toProduct(item: MarketplaceItem): Product {
-    const cached = this.productsCache.get(item.id);
-    if (cached) return cached;
-
-    const product: Product = {
-      id: MARKETPLACE_ITEMS.findIndex((entry) => entry.id === item.id) + 1000,
+  private toProduct(item: MarketplaceBook): Product {
+    return {
+      id: parseInt(item.id) || 0,
       name: item.title,
       category: this.mapCategory(item.category),
       price: item.priceFrom,
       image: this.categoryGradient(item.category),
       description: item.shortDescription,
       specs: [
-        `${item.category} product`,
+        item.bindingType,
         ...item.tags.slice(0, 2),
+        `${item.quantity} in stock`
       ],
     };
-
-    this.productsCache.set(item.id, product);
-    return product;
   }
 
-  private mapCategory(category: MarketplaceCategory): ProductCategory {
+  private mapCategory(category: string): ProductCategory {
     switch (category) {
       case 'Business Cards':
       case 'Calendars':
@@ -347,7 +374,7 @@ export class MarketplacePageComponent {
     }
   }
 
-  private categoryGradient(category: MarketplaceCategory): string {
+  private categoryGradient(category: string): string {
     switch (category) {
       case 'Books':
         return 'linear-gradient(135deg, #FF6B9D 0%, #8338EC 100%)';

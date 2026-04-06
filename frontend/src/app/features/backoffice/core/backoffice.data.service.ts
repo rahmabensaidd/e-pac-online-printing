@@ -407,6 +407,13 @@ export class BackofficeDataService {
             group: 'Workspace',
         },
         {
+            label: 'Users',
+            route: '/backoffice/users',
+            icon: 'fa-user-shield',
+            description: 'Manage users and roles',
+            group: 'Workspace',
+        },
+        {
             label: 'Settings',
             route: '/backoffice/settings',
             icon: 'fa-sliders',

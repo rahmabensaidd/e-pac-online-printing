@@ -18,6 +18,7 @@ type ProductWithMarketplaceCategory = Product & {
   imports: [CurrencyPipe, RouterLink, RevealOnScrollDirective],
   templateUrl: './marketplace-section.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true
 })
 export class MarketplaceSectionComponent {
   readonly cart = inject(CartService);

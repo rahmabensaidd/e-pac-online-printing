@@ -3,13 +3,7 @@
     [breadcrumb]="['Backoffice', 'Orders']"
     title="Production orders"
     description="Track intake, status, and fulfillment."
-  >
-    <div header-actions>
-      <button type="button" class="admin-focus-ring admin-btn-primary" (click)="openCreateDrawer()">
-        New order
-      </button>
-    </div>
-  </app-backoffice-section-header>
+  />
 
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
     <app-backoffice-stat-card
@@ -29,18 +23,18 @@
       tone="positive"
     />
     <app-backoffice-stat-card
-      label="Delayed jobs"
-      [value]="delayedCount().toString()"
-      change="Needs action"
-      hint="blocked jobs"
+      label="Cancelled orders"
+      [value]="cancelledCount().toString()"
+      change="Monitor"
+      hint="failed or cancelled"
       icon="fa-triangle-exclamation"
       tone="danger"
     />
     <app-backoffice-stat-card
-      label="Ready to ship"
-      [value]="readyToShipCount().toString()"
-      change="Dispatchable"
-      hint="today"
+      label="Shipped"
+      [value]="shippedCount().toString()"
+      change="In transit"
+      hint="current period"
       icon="fa-truck-fast"
       tone="warning"
     />
@@ -58,7 +52,7 @@
 
   <app-backoffice-data-table
     title="Production queue"
-    description="Search, sort, and edit orders."
+    description="Search, sort, and view order details."
     [columns]="orderColumns"
     [rows]="tableRows()"
     [rowActions]="orderActions"
@@ -66,217 +60,113 @@
     [loading]="isLoading()"
     [emptyState]="emptyState"
     (rowAction)="handleRowAction($event)"
-    (emptyAction)="openCreateDrawer()"
   />
 </div>
 
-@if (drawerOpen()) {
+@if (detailsModalOpen() && selectedOrder(); as order) {
   <button
     type="button"
-    class="fixed inset-0 z-40 bg-brand-navy/35"
-    aria-label="Close order drawer"
-    (click)="closeDrawer()"
+    class="fixed inset-0 z-40 bg-brand-navy/40"
+    aria-label="Close order details"
+    (click)="closeDetailsModal()"
   ></button>
 
-  <aside
-    class="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col bg-transparent p-3 sm:p-4"
+  <section
+    class="fixed inset-0 z-50 grid place-items-center p-4"
     role="dialog"
     aria-modal="true"
-    [attr.aria-label]="editingOrderId() ? 'Edit order' : 'Create order'"
+    aria-label="Order details"
   >
-    <div class="admin-panel admin-scrollbar flex h-full flex-col overflow-y-auto rounded-[1.25rem]">
-      <div class="flex items-start justify-between gap-4 border-b border-slate-200/70 px-5 py-4">
+    <article class="admin-panel admin-scrollbar w-full max-w-3xl overflow-y-auto rounded-[1.25rem]">
+      <header class="flex items-start justify-between gap-4 border-b border-slate-200/70 px-5 py-4">
         <div>
-          <p class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Order editor
-          </p>
-          <h2 class="mt-1.5 text-[1.125rem] font-semibold text-brand-navy">
-            {{ editingOrderId() ? 'Edit production order' : 'Create a new order' }}
-          </h2>
-          <p class="mt-1.5 text-[0.8125rem] text-slate-500">Update the live workspace record.</p>
+          <p class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-400">Order details</p>
+          <h2 class="mt-1.5 text-[1.125rem] font-semibold text-brand-navy">{{ order.reference }}</h2>
+          <p class="mt-1 text-[0.8125rem] text-slate-500">Read-only details + quick status update.</p>
         </div>
-
         <button
           type="button"
           class="admin-focus-ring admin-icon-button"
-          (click)="closeDrawer()"
-          aria-label="Close order editor"
+          (click)="closeDetailsModal()"
+          aria-label="Close details modal"
         >
           <i class="fas fa-xmark"></i>
         </button>
-      </div>
+      </header>
 
-      <form
-        class="flex-1 space-y-5 px-5 py-5"
-        [formGroup]="form"
-        (ngSubmit)="onSubmit()"
-        novalidate
-      >
+      <div class="space-y-5 px-5 py-5">
         <section class="grid gap-4 sm:grid-cols-2">
           <div>
-            <label class="admin-label" for="order-reference">Reference</label>
-            <input id="order-reference" class="admin-input" formControlName="reference" />
-            @if (showError('reference')) {
-              <p class="admin-error">Reference is required and must be at least 8 characters.</p>
-            }
+            <p class="admin-label">Customer</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.customerName }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Company</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.companyName || '—' }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Channel</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.channel }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Owner</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.assignee || '—' }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Submitted</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.submittedAt }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Due date</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.dueDate }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Priority</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.priority }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Payment</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.paymentStatus }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Items</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.items }}</p>
+          </div>
+          <div>
+            <p class="admin-label">Shipping method</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.shippingMethod }}</p>
+          </div>
+          <div class="sm:col-span-2">
+            <p class="admin-label">Total</p>
+            <p class="text-sm font-semibold text-brand-navy">${{ order.total.toLocaleString() }}</p>
           </div>
 
-          <div>
-            <label class="admin-label" for="order-company">Company</label>
-            <input id="order-company" class="admin-input" formControlName="companyName" />
-            @if (showError('companyName')) {
-              <p class="admin-error">Company name is required.</p>
-            }
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-customer">Contact name</label>
-            <input id="order-customer" class="admin-input" formControlName="customerName" />
-            @if (showError('customerName')) {
-              <p class="admin-error">Customer contact is required.</p>
-            }
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-channel">Channel</label>
-            <select id="order-channel" class="admin-select" formControlName="channel">
-              @for (channel of channelOptions; track channel) {
-                <option [value]="channel">{{ channel }}</option>
-              }
-            </select>
-          </div>
         </section>
 
-        <section class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="admin-label" for="order-submitted-at">Submitted date</label>
-            <input
-              id="order-submitted-at"
-              type="date"
-              class="admin-input"
-              formControlName="submittedAt"
-            />
-            @if (showError('submittedAt')) {
-              <p class="admin-error">Submitted date is required.</p>
-            }
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-due-date">Due date</label>
-            <input id="order-due-date" type="date" class="admin-input" formControlName="dueDate" />
-            @if (showError('dueDate')) {
-              <p class="admin-error">Due date is required.</p>
-            }
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-status">Status</label>
-            <select id="order-status" class="admin-select" formControlName="status">
+        <section class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <p class="admin-label mb-2">Status</p>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <select
+              class="admin-select sm:max-w-[14rem]"
+              [value]="statusDraft()"
+              (change)="onStatusDraftChange($event)"
+            >
               @for (status of statusFilters.slice(1); track status) {
                 <option [value]="status">{{ status }}</option>
               }
             </select>
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-priority">Priority</label>
-            <select id="order-priority" class="admin-select" formControlName="priority">
-              @for (priority of priorityOptions; track priority) {
-                <option [value]="priority">{{ priority }}</option>
-              }
-            </select>
-          </div>
-        </section>
-
-        <section class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="admin-label" for="order-assignee">Owner</label>
-            <select id="order-assignee" class="admin-select" formControlName="assignee">
-              @for (assignee of assigneeOptions(); track assignee) {
-                <option [value]="assignee">{{ assignee }}</option>
-              }
-            </select>
-            @if (showError('assignee')) {
-              <p class="admin-error">Assign the order to a workspace owner.</p>
-            }
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-shipping">Shipping method</label>
-            <select id="order-shipping" class="admin-select" formControlName="shippingMethod">
-              @for (shipping of shippingOptions; track shipping) {
-                <option [value]="shipping">{{ shipping }}</option>
-              }
-            </select>
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-payment">Payment status</label>
-            <select id="order-payment" class="admin-select" formControlName="paymentStatus">
-              @for (payment of paymentOptions; track payment) {
-                <option [value]="payment">{{ payment }}</option>
-              }
-            </select>
-          </div>
-
-          <div>
-            <label class="admin-label" for="order-items">Line items</label>
-            <input
-              id="order-items"
-              type="number"
-              min="1"
-              class="admin-input"
-              formControlName="items"
-            />
-            @if (showError('items')) {
-              <p class="admin-error">At least one line item is required.</p>
-            }
-          </div>
-
-          <div class="sm:col-span-2">
-            <label class="admin-label" for="order-total">Order total</label>
-            <input
-              id="order-total"
-              type="number"
-              min="50"
-              class="admin-input"
-              formControlName="total"
-            />
-            @if (showError('total')) {
-              <p class="admin-error">Total must be at least $50.</p>
-            }
+            <button
+              type="button"
+              class="admin-focus-ring admin-btn-primary"
+              [disabled]="statusUpdating()"
+              (click)="updateStatus()"
+            >
+              {{ statusUpdating() ? 'Saving...' : 'Update order status' }}
+            </button>
           </div>
         </section>
-
-        <section>
-          <label class="admin-label" for="order-notes">Production notes</label>
-          <textarea
-            id="order-notes"
-            rows="5"
-            class="admin-textarea"
-            formControlName="notes"
-            placeholder="Add constraints, finishing notes, or customer instructions."
-          ></textarea>
-          <p class="admin-helper">
-            Notes are visible to prepress, production, and logistics reviewers.
-          </p>
-        </section>
-
-        <div
-          class="flex flex-col-reverse gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:justify-end"
-        >
-          <button
-            type="button"
-            class="admin-focus-ring admin-btn-secondary"
-            (click)="closeDrawer()"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="admin-focus-ring admin-btn-primary">
-            {{ editingOrderId() ? 'Save changes' : 'Create order' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </aside>
+      </div>
+    </article>
+  </section>
 }
+

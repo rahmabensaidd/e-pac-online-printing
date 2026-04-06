@@ -38,7 +38,7 @@
           <div class="text-sm">Add products or create a custom design.</div>
         </div>
       } @else {
-        @for (item of cart.items(); track item.product.id) {
+        @for (item of cart.items(); track item.orderLineId) {
           <div class="rounded-2xl border border-gray-100 p-4 flex gap-4">
             <div class="w-16 h-16 rounded-2xl" [style.background]="item.product.image"></div>
 
@@ -51,7 +51,7 @@
                   type="button"
                   class="w-9 h-9 rounded-xl border border-gray-200"
                   [attr.aria-label]="'Decrease quantity of ' + item.product.name"
-                  (click)="cart.setQuantity(item.product.id, item.quantity - 1)"
+                  (click)="cart.setQuantity(item.orderLineId, item.quantity - 1)"
                 >-</button>
 
                 <input
@@ -59,20 +59,20 @@
                   type="number"
                   [value]="item.quantity"
                   [attr.aria-label]="'Quantity for ' + item.product.name"
-                  (input)="cart.setQuantity(item.product.id, ($any($event.target).valueAsNumber))"
+                  (input)="cart.setQuantity(item.orderLineId, ($any($event.target).valueAsNumber))"
                 />
 
                 <button
                   type="button"
                   class="w-9 h-9 rounded-xl border border-gray-200"
                   [attr.aria-label]="'Increase quantity of ' + item.product.name"
-                  (click)="cart.setQuantity(item.product.id, item.quantity + 1)"
+                  (click)="cart.setQuantity(item.orderLineId, item.quantity + 1)"
                 >+</button>
 
                 <button
                   type="button"
                   class="ml-auto text-sm font-bold text-brand-pink hover:underline"
-                  (click)="cart.remove(item.product.id)"
+                  (click)="cart.remove(item.orderLineId)"
                 >
                   Remove
                 </button>

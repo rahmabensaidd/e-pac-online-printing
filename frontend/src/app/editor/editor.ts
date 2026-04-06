@@ -1,15 +1,30 @@
+import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, OnDestroy } from '@angular/core';
 import CreativeEditorSDK from '@cesdk/cesdk-js';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
-  templateUrl: './editor.html'
+  imports: [CommonModule],
+  templateUrl: './editor.html',
+  styleUrl: './editor.css'
 })
 export class Editor implements AfterViewInit, OnDestroy {
 
   cesdk: any;
   backgroundEngine: any;
+  currentLibraryEntry = 'ly.img.template';
+  isLibraryLoading = false;
+  libraryError = '';
+  libraryAssets: any[] = [];
+  readonly libraryTabs = [
+    { id: 'ly.img.template', title: 'Templates', sourceId: 'ly.img.template' },
+    { id: 'ly.img.image', title: 'Images', sourceId: 'ly.img.image' },
+    { id: 'ly.img.text', title: 'Text', sourceId: 'ly.img.textComponents' },
+    { id: 'ly.img.vectorpath', title: 'Shapes', sourceId: 'ly.img.vectorpath' },
+    { id: 'ly.img.sticker', title: 'Stickers', sourceId: 'ly.img.sticker' }
+  ] as const;
+
   async ngAfterViewInit(): Promise<void> {
     const version = CreativeEditorSDK.version;
     const localBaseURL = `/cesdk/${version}/`;
@@ -23,11 +38,18 @@ export class Editor implements AfterViewInit, OnDestroy {
     });
 
     const engine = this.cesdk.engine;
+    const editorRect = (document.getElementById('editor') as HTMLElement | null)?.getBoundingClientRect();
     console.log('✅ SDK initialisé');
+    if (editorRect) {
+      console.log(`📐 Taille du conteneur editor: ${Math.round(editorRect.width)}x${Math.round(editorRect.height)}`);
+    }
 
     // 2. Chargement des asset sources par défaut (obligatoire)
     console.log('🔄 Chargement des asset sources par défaut...');
     await this.cesdk.addDefaultAssetSources();
+    await this.cesdk.addDemoAssetSources({
+      sceneMode: 'Design'
+    });
 
     // 3. Création de la scène
     await this.cesdk.createDesignScene();
@@ -39,101 +61,510 @@ export class Editor implements AfterViewInit, OnDestroy {
     }
     console.log('✅ Scène créée');
 
-    // 4. Ajout des entrées personnalisées
-    console.log('🔧 Ajout des entrées à la librairie...');
-
-    const libraryEntries = [
+    // 4. Conserver le dock natif CE.SDK, mais forcer les entrées à ouvrir
+    // directement une grille. Dans 1.67, l'overview de groupes peut rester
+    // visuellement vide alors que les assets sont bien présents.
+    console.log('📚 Configuration minimale des entrées natives CE.SDK 1.67...');
+    const nativeLibraryEntries = [
       {
-        id: 'my.images',
-        sourceIds: ['ly.img.image'],
-        title: '📷 Images',
-        previewLength: 6,
-        gridColumns: 4,
-        gridItemHeight: 'square'
+        id: 'ly.img.template',
+        title: 'Templates',
+        sourceIds: ['ly.img.template']
       },
       {
-        id: 'my.stickers',
-        sourceIds: ['ly.img.sticker'],
-        title: '🎨 Stickers',
-        previewLength: 6,
-        gridColumns: 4,
-        gridItemHeight: 'square'
+        id: 'ly.img.sticker',
+        title: 'Stickers',
+        sourceIds: ['ly.img.sticker']
       },
       {
-        id: 'my.templates',
-        sourceIds: ['ly.img.template'],
-        title: '📄 Templates',
-        previewLength: 6,
-        gridColumns: 4,
-        gridItemHeight: 'square'
+        id: 'ly.img.vectorpath',
+        title: 'Shapes',
+        sourceIds: ['ly.img.vectorpath']
       },
       {
-        id: 'my.vectors',
-        sourceIds: ['ly.img.vectorpath'],
-        title: '✏️ Vecteurs',
-        previewLength: 6,
-        gridColumns: 4,
-        gridItemHeight: 'square'
+        id: 'ly.img.image',
+        title: 'Images',
+        sourceIds: ['ly.img.image']
+      },
+      {
+        id: 'ly.img.text',
+        title: 'Text',
+        sourceIds: ['ly.img.textComponents']
       }
-    ];
+    ] as const;
 
-    for (const entry of libraryEntries) {
+    for (const entry of nativeLibraryEntries) {
       try {
-        await this.cesdk.ui.addAssetLibraryEntry(entry);
-        console.log(`✅ Entry ajoutée: ${entry.id}`);
+        this.cesdk.ui.updateAssetLibraryEntry(entry.id, {
+          title: entry.title,
+          sourceIds: entry.sourceIds,
+          showGroupOverview: false,
+          gridColumns: 2,
+          gridItemHeight: 'auto'
+        });
+        console.log(`✅ Entry native ajustée: ${entry.id}`);
       } catch (error) {
-        console.warn(`⚠️ Entry ${entry.id}:`, error);
+        console.warn(`⚠️ Impossible d'ajuster l'entry native ${entry.id}:`, error);
       }
     }
 
-    // 5. Configuration du Dock (version compatible v1.67)
-    console.log('🔧 Configuration du dock...');
+    console.log('🗂️ Asset library entries natives:', this.cesdk.ui.findAllAssetLibraryEntries());
+    console.log('🧾 Entry ly.img.template:', this.cesdk.ui.getAssetLibraryEntry('ly.img.template'));
+    console.log('🧾 Entry ly.img.image:', this.cesdk.ui.getAssetLibraryEntry('ly.img.image'));
+    console.log('🧾 Entry ly.img.text:', this.cesdk.ui.getAssetLibraryEntry('ly.img.text'));
 
-    const currentDockOrder = this.cesdk.ui.getDockOrder();
+    await this.logAssetLibraryDiagnostics();
 
-    // Vérifier si notre dock personnalisé existe déjà
-    const hasCustomDock = currentDockOrder.some((item: any) =>
-        item.id === 'ly.img.assetLibrary.dock'
-    );
-
-    if (!hasCustomDock) {
-      const dockEntry = {
-        id: 'ly.img.assetLibrary.dock',
-        entries: ['my.images', 'my.stickers', 'my.templates', 'my.vectors'],
-        label: 'libraries.my-library.label'
-      };
-
-      // Ajouter notre groupe en premier dans le dock
-      this.cesdk.ui.setDockOrder([dockEntry, ...currentDockOrder]);
-      console.log('✅ Dock configuré avec nos entrées personnalisées');
-    } else {
-      console.log('✅ Dock personnalisé déjà présent');
-    }
-
-    // Traductions
-    this.cesdk.i18n.setTranslations({
-      en: { 'libraries.my-library.label': '📦 Mes Assets' },
-      fr: { 'libraries.my-library.label': '📦 Mes Assets' }
-    });
-
-    // 6. Tes créations d'éléments
+    // 5. Tes créations d'éléments
     await this.createSampleShapes();
-    this.customizeDockIcons();
     this.addCustomIconButton();
     await this.insertSampleImages();
 
-    // 7. Ouvrir le panel
-    setTimeout(async () => {
-      console.log('📚 Ouverture de la librairie...');
-      try {
-        await this.cesdk.ui.openPanel('ly.img.panel.assetLibrary');
-        console.log('✅ Panel Asset Library ouvert');
-      } catch (error) {
-        console.error('❌ Erreur ouverture panel:', error);
-      }
-    }, 1000);
+    // 6. Masquer le dock natif cassé en 1.67 sur ce montage et charger
+    // notre librairie Angular custom pilotée par engine.asset.findAssets().
+    this.cesdk.ui.setDockOrder([]);
+    await this.loadLibraryAssets(this.currentLibraryEntry);
 
     console.log('=== FIN INITIALISATION ===');
+  }
+
+  private getActiveLibraryTab() {
+    return this.libraryTabs.find((tab) => tab.id === this.currentLibraryEntry) ?? this.libraryTabs[0];
+  }
+
+  async selectLibraryTab(tabId: string): Promise<void> {
+    if (tabId === this.currentLibraryEntry && this.libraryAssets.length > 0) {
+      return;
+    }
+
+    this.currentLibraryEntry = tabId;
+    await this.loadLibraryAssets(tabId);
+  }
+
+  async loadLibraryAssets(tabId: string): Promise<void> {
+    const tab = this.libraryTabs.find((item) => item.id === tabId);
+
+    if (!tab || !this.cesdk?.engine) {
+      return;
+    }
+
+    this.isLibraryLoading = true;
+    this.libraryError = '';
+    this.libraryAssets = [];
+
+    try {
+      const result = await this.cesdk.engine.asset.findAssets(tab.sourceId, {
+        page: 0,
+        perPage: 48,
+        locale: 'en'
+      });
+
+      this.libraryAssets = result.assets ?? [];
+      console.log(`📚 Librairie Angular chargée pour ${tab.title}: ${this.libraryAssets.length} assets`);
+    } catch (error) {
+      console.error(`❌ Erreur chargement librairie ${tab.title}:`, error);
+      this.libraryError = `Unable to load ${tab.title.toLowerCase()}.`;
+    } finally {
+      this.isLibraryLoading = false;
+    }
+  }
+
+  async applyLibraryAsset(asset: any): Promise<void> {
+    const tab = this.getActiveLibraryTab();
+    const sourceId = tab.sourceId;
+
+    try {
+      if (sourceId === 'ly.img.template' && asset?.meta?.uri) {
+        await this.cesdk.engine.scene.loadFromURL(asset.meta.uri);
+        console.log(`✅ Template chargé: ${asset.label ?? asset.id}`);
+        return;
+      }
+
+      const blockId = await this.cesdk.engine.asset.apply(sourceId, asset);
+      if (blockId && this.cesdk.engine.block.isValid(blockId)) {
+        this.cesdk.engine.block.setSelected(blockId, true);
+      }
+
+      console.log(`✅ Asset appliqué depuis ${sourceId}: ${asset.label ?? asset.id}`);
+    } catch (error) {
+      console.error(`❌ Erreur application asset ${asset?.id ?? 'unknown'}:`, error);
+      this.libraryError = `Unable to apply ${(asset?.label ?? 'asset').toString()}.`;
+    }
+  }
+
+  async logAssetLibraryDiagnostics(): Promise<void> {
+    const sourcesToCheck = [
+      'ly.img.template',
+      'ly.img.sticker',
+      'ly.img.sticker.misc',
+      'ly.img.vectorpath',
+      'ly.img.image',
+      'ly.img.textComponents'
+    ];
+
+    const registeredSources = this.cesdk.engine.asset.findAllSources();
+    console.log('🧭 Sources enregistrées dans CE.SDK:', registeredSources);
+
+    for (const sourceId of sourcesToCheck) {
+      const exists = registeredSources.includes(sourceId);
+      console.log(`🔎 Source ${sourceId} ${exists ? 'trouvée' : 'absente'} dans le moteur`);
+
+      if (!exists) {
+        continue;
+      }
+
+      try {
+        const result = await this.cesdk.engine.asset.findAssets(sourceId, {
+          page: 0,
+          perPage: 5,
+          locale: 'en'
+        });
+
+        console.log(`📦 ${sourceId}: total=${result.total}, page=${result.currentPage}, returned=${result.assets.length}`);
+
+        if (result.assets.length > 0) {
+          console.log(`🖼️ Exemple asset ${sourceId}:`, {
+            id: result.assets[0].id,
+            label: result.assets[0].label,
+            thumbUri: result.assets[0].meta?.thumbUri,
+            uri: result.assets[0].meta?.uri
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Impossible d'interroger la source ${sourceId}:`, error);
+      }
+    }
+  }
+
+  openDefaultAssetLibrary(): void {
+    const assetLibraryPanelId = '//ly.img.panel/assetLibrary';
+    console.log('📚 Ouverture de la librairie native CE.SDK...');
+
+    try {
+      this.currentLibraryEntry = 'ly.img.template';
+
+      if (this.cesdk.ui.isPanelOpen(assetLibraryPanelId)) {
+        this.cesdk.ui.closePanel(assetLibraryPanelId);
+      }
+
+      this.cesdk.ui.openPanel(assetLibraryPanelId, {
+        payload: {
+          entries: ['ly.img.template']
+        }
+      });
+
+      window.dispatchEvent(new Event('resize'));
+
+      console.log(
+        this.cesdk.ui.isPanelOpen(assetLibraryPanelId)
+          ? '✅ Panel Asset Library natif réellement ouvert'
+          : '⚠️ openPanel appelé, mais le panel natif n\'est pas marqué comme ouvert'
+      );
+
+      window.setTimeout(() => {
+        this.inspectNativeLibraryRender('native-open@400ms');
+      }, 400);
+
+      window.setTimeout(() => {
+        this.inspectNativeLibraryRender('native-open@1500ms');
+      }, 1500);
+    } catch (error) {
+      console.error('❌ Erreur ouverture librairie native:', error);
+    }
+  }
+
+  inspectNativeLibraryRender(stage: string): void {
+    const editorHost = document.getElementById('editor') as HTMLElement | null;
+    const directChildren = editorHost ? Array.from(editorHost.children) as HTMLElement[] : [];
+    const primaryUiChild =
+      directChildren.find((child) => child.tagName !== 'LINK') ??
+      directChildren[0] ??
+      null;
+    const rootForSearch: ParentNode | null =
+      primaryUiChild ??
+      editorHost ??
+      document.querySelector('.ubq-public') ??
+      document.body;
+
+    const queryInRoot = (selector: string): HTMLElement[] =>
+      rootForSearch ? Array.from(rootForSearch.querySelectorAll(selector)) as HTMLElement[] : [];
+
+    const queryInDocument = (selector: string): HTMLElement[] =>
+      Array.from(document.querySelectorAll(selector)) as HTMLElement[];
+
+    const selectors = {
+      panelContent: '[class*="LibraryPanel-module__panelContent"]',
+      search: '[class*="AssetLibrarySearch-module__block"]',
+      content: '[class*="AssetLibraryContent-module__block"]',
+      motionWrapper: '[class*="AssetLibraryContent-module__motionWrapper"]',
+      overview: '[class*="AssetLibraryOverview-module__block"]',
+      grid: '[class*="AssetLibraryGrid-module__block"]',
+      gridSkeleton: '[class*="AssetLibraryGridSkeleton-module__grid"]',
+      sectionSkeleton: '[class*="AssetLibrarySectionSkeleton-module__block"]',
+      card: '[class*="AssetLibraryCard-module__wrapper"]',
+      empty: '[class*="AssetLibraryEmpty-module__block"]',
+      loading: '[class*="AssetLibraryLoading-module__block"]'
+    } as const;
+
+    const describeFirst = (elements: HTMLElement[]) => {
+      const first = elements[0];
+      if (!first) {
+        return null;
+      }
+
+      const rect = first.getBoundingClientRect();
+      const styles = window.getComputedStyle(first);
+      return {
+        count: elements.length,
+        tag: first.tagName,
+        className: first.className,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        display: styles.display,
+        position: styles.position,
+        overflow: styles.overflow,
+        overflowY: styles.overflowY,
+        flex: styles.flex,
+        minHeight: styles.minHeight,
+        visibility: styles.visibility,
+        opacity: styles.opacity
+      };
+    };
+
+    const panelContent = queryInRoot(selectors.panelContent);
+    const search = queryInRoot(selectors.search);
+    const content = queryInRoot(selectors.content);
+    const motionWrapper = queryInRoot(selectors.motionWrapper);
+    const overview = queryInRoot(selectors.overview);
+    const grid = queryInRoot(selectors.grid);
+    const gridSkeleton = queryInRoot(selectors.gridSkeleton);
+    const sectionSkeleton = queryInRoot(selectors.sectionSkeleton);
+    const cards = queryInRoot(selectors.card);
+    const empty = queryInRoot(selectors.empty);
+    const loading = queryInRoot(selectors.loading);
+
+    const docPanelContent = queryInDocument(selectors.panelContent);
+    const docSearch = queryInDocument(selectors.search);
+    const docContent = queryInDocument(selectors.content);
+    const docMotionWrapper = queryInDocument(selectors.motionWrapper);
+    const docOverview = queryInDocument(selectors.overview);
+    const docGrid = queryInDocument(selectors.grid);
+    const docGridSkeleton = queryInDocument(selectors.gridSkeleton);
+    const docSectionSkeleton = queryInDocument(selectors.sectionSkeleton);
+    const docCards = queryInDocument(selectors.card);
+    const docEmpty = queryInDocument(selectors.empty);
+    const docLoading = queryInDocument(selectors.loading);
+    const assetLabels = rootForSearch
+      ? Array.from(rootForSearch.querySelectorAll('[class*="AssetLibraryCard-module__label"]'))
+          .map((node) => (node.textContent || '').trim())
+          .filter(Boolean)
+          .slice(0, 10)
+      : [];
+
+    const resourceEntries = performance
+      .getEntriesByType('resource')
+      .filter((entry) =>
+        /(cdn\.img\.ly\/assets\/demo\/v3|\/cesdk\/1\.67\.0\/ly\.img\.|thumbnails\/|textComponents\/thumbnails\/|vectorpath\/thumbnails\/)/i.test(entry.name)
+      )
+      .slice(-15)
+      .map((entry) => entry.name);
+
+    const thumbnailEntries = performance
+      .getEntriesByType('resource')
+      .filter((entry) => /thumbnails\/|thumbUri|thumbnail/i.test(entry.name))
+      .slice(-15)
+      .map((entry) => entry.name);
+
+    const visibleTitleCandidates = Array.from(document.querySelectorAll('button, div, span, h1, h2, h3'))
+      .map((node) => node as HTMLElement)
+      .filter((node) => {
+        const text = (node.textContent || '').trim();
+        return text === 'Templates' || text === 'Images' || text === 'Text' || text === 'Stickers' || text === 'Shapes';
+      })
+      .slice(0, 10)
+      .map((node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          tag: node.tagName,
+          className: node.className,
+          text: node.textContent?.trim(),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height)
+        };
+      });
+
+    const iframeCount = document.querySelectorAll('iframe').length;
+
+    console.log(`🧪 Rendu librairie [${stage}]:`, {
+      currentLibraryEntry: this.currentLibraryEntry,
+      rootPanelContent: describeFirst(panelContent),
+      rootSearch: describeFirst(search),
+      rootContent: describeFirst(content),
+      rootMotionWrapper: describeFirst(motionWrapper),
+      rootOverview: describeFirst(overview),
+      rootGrid: describeFirst(grid),
+      rootGridSkeleton: describeFirst(gridSkeleton),
+      rootSectionSkeleton: describeFirst(sectionSkeleton),
+      rootCards: describeFirst(cards),
+      rootEmpty: describeFirst(empty),
+      rootLoading: describeFirst(loading),
+      docPanelContent: describeFirst(docPanelContent),
+      docSearch: describeFirst(docSearch),
+      docContent: describeFirst(docContent),
+      docMotionWrapper: describeFirst(docMotionWrapper),
+      docOverview: describeFirst(docOverview),
+      docGrid: describeFirst(docGrid),
+      docGridSkeleton: describeFirst(docGridSkeleton),
+      docSectionSkeleton: describeFirst(docSectionSkeleton),
+      docCards: describeFirst(docCards),
+      docEmpty: describeFirst(docEmpty),
+      docLoading: describeFirst(docLoading),
+      assetLabels,
+      visibleTitleCandidates,
+      iframeCount,
+      thumbnailRequestCount: thumbnailEntries.length,
+      recentResourceCount: resourceEntries.length
+    });
+
+    console.log(`🧾 Résumé librairie [${stage}]:`, {
+      rootPanelContentCount: panelContent.length,
+      rootGridCount: grid.length,
+      rootCardCount: cards.length,
+      docPanelContentCount: docPanelContent.length,
+      docGridCount: docGrid.length,
+      docCardCount: docCards.length,
+      docEmptyCount: docEmpty.length,
+      docLoadingCount: docLoading.length,
+      thumbnailRequestCount: thumbnailEntries.length,
+      iframeCount
+    });
+
+    if (resourceEntries.length > 0) {
+      console.log(`🌐 Ressources librairie récentes [${stage}]:`, resourceEntries);
+    }
+
+    if (thumbnailEntries.length > 0) {
+      console.log(`🖼️ Thumbnails librairie récentes [${stage}]:`, thumbnailEntries);
+    }
+  }
+
+  openLibraryEntry(entryId: string, title: string): void {
+    const assetLibraryPanelId = '//ly.img.panel/assetLibrary';
+    this.currentLibraryEntry = entryId;
+    const expectedAssetLabels: Record<string, string> = {
+      'ly.img.template': 'Blank Document',
+      'ly.img.sticker': 'Vomiting',
+      'ly.img.vectorpath': 'Square',
+      'ly.img.image': 'Clear blue beach at an island from above',
+      'ly.img.text': 'Box'
+    };
+
+    console.log(`📚 Ouverture de la librairie pour ${title} (${entryId})...`);
+
+    try {
+      if (this.cesdk.ui.isPanelOpen(assetLibraryPanelId)) {
+        this.cesdk.ui.closePanel(assetLibraryPanelId);
+      }
+
+      this.cesdk.ui.openPanel(assetLibraryPanelId, {
+        payload: {
+          title,
+          entries: [entryId]
+        }
+      });
+
+      // Force a relayout for CE.SDK virtualized panels after route/layout changes.
+      window.dispatchEvent(new Event('resize'));
+
+      console.log(
+        this.cesdk.ui.isPanelOpen(assetLibraryPanelId)
+          ? `✅ Panel ${title} réellement ouvert`
+          : `⚠️ openPanel appelé pour ${title}, mais le panel n'est pas marqué comme ouvert`
+      );
+
+      window.setTimeout(() => {
+        this.inspectLibraryDom(title, expectedAssetLabels[entryId] ?? title);
+      }, 400);
+    } catch (error) {
+      console.error(`❌ Erreur ouverture panel ${title}:`, error);
+    }
+  }
+
+  inspectLibraryDom(title: string, expectedLabel: string): void {
+    const editorHost = document.getElementById('editor') as HTMLElement | null;
+    const directChildren = editorHost ? Array.from(editorHost.children) as HTMLElement[] : [];
+    const firstChild = directChildren[0] ?? null;
+    const primaryUiChild =
+      directChildren.find((child) => child.tagName !== 'LINK') ??
+      firstChild;
+    const openShadowRoot =
+      editorHost?.shadowRoot ??
+      ((primaryUiChild as HTMLElement | null)?.shadowRoot ?? null);
+
+    const rootForSearch: ParentNode | null =
+      openShadowRoot ??
+      primaryUiChild ??
+      editorHost ??
+      document.querySelector('.ubq-public') ??
+      document.body;
+
+    const allElements = rootForSearch ? Array.from(rootForSearch.querySelectorAll('*')) : [];
+    const matchingTextElement = allElements.find((element) =>
+      (element.textContent || '').includes(expectedLabel)
+    ) as HTMLElement | undefined;
+
+    const panelHeading = allElements.find((element) =>
+      (element.textContent || '').trim() === title
+    ) as HTMLElement | undefined;
+
+    console.log(`🧪 Inspection DOM pour ${title}:`, {
+      expectedLabel,
+      editorChildCount: directChildren.length,
+      firstChildTag: firstChild?.tagName ?? null,
+      primaryUiChildTag: primaryUiChild?.tagName ?? null,
+      editorHasShadowRoot: !!editorHost?.shadowRoot,
+      primaryUiChildHasShadowRoot: !!(primaryUiChild as HTMLElement | null)?.shadowRoot,
+      usingShadowRoot: !!openShadowRoot,
+      nodeCount: allElements.length,
+      labelFoundInDom: !!matchingTextElement,
+      titleFoundInDom: !!panelHeading
+    });
+
+    if (primaryUiChild) {
+      const rect = primaryUiChild.getBoundingClientRect();
+      console.log('🧱 Enfant UI principal du host editor:', {
+        tagName: primaryUiChild.tagName,
+        className: primaryUiChild.className,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      });
+    }
+
+    if (panelHeading) {
+      const rect = panelHeading.getBoundingClientRect();
+      console.log(`🧭 Heading DOM trouvé pour ${title}:`, {
+        tagName: panelHeading.tagName,
+        className: panelHeading.className,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        text: panelHeading.textContent?.trim()
+      });
+    }
+
+    if (matchingTextElement) {
+      const rect = matchingTextElement.getBoundingClientRect();
+      const computedStyle = window.getComputedStyle(matchingTextElement);
+      console.log(`🧱 Élément DOM trouvé pour ${expectedLabel}:`, {
+        tagName: matchingTextElement.tagName,
+        className: matchingTextElement.className,
+        text: matchingTextElement.textContent?.trim(),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        display: computedStyle.display,
+        visibility: computedStyle.visibility,
+        opacity: computedStyle.opacity
+      });
+    }
   }
 
 // 🔍 Méthode de débogage améliorée
@@ -245,10 +676,9 @@ export class Editor implements AfterViewInit, OnDestroy {
 
     // Définir les entrées de la librairie avec les IDs corrects
     const entries = [
-      'ly.img.image',
-      'ly.img.sticker',
       'ly.img.template',
       'ly.img.vectorpath',
+      'ly.img.image',
       'ly.img.textComponents'
     ];
 
@@ -272,7 +702,14 @@ export class Editor implements AfterViewInit, OnDestroy {
     // Essayer différentes méthodes pour forcer l'affichage
     try {
       // Re-configurer les entrées
-      const entries = ['ly.img.image', 'ly.img.sticker', 'ly.img.template', 'ly.img.vectorpath'];
+      const entries = [
+        'ly.img.template',
+        'ly.img.vectorpath',
+        'ly.img.image',
+        'ly.img.textComponents',
+        'ly.img.sticker',
+        'ly.img.sticker.misc'
+      ];
       for (const entryId of entries) {
         this.cesdk.ui.updateAssetLibraryEntry(entryId, {
           sourceIds: [entryId]
@@ -415,22 +852,46 @@ export class Editor implements AfterViewInit, OnDestroy {
     console.log('✓ Sticker ajouté');
   }
 
-  // Méthode pour personnaliser les icônes du dock
-  customizeDockIcons(): void {
-    const dockOrder = this.cesdk.ui.getDockOrder();
-
-    const newDockOrder = dockOrder.map((entry: any) => {
-      if (entry.key === 'ly.img.image') {
-        return { ...entry, icon: '@imgly/ShapeStar' };
+  // Utiliser explicitement le Dock API de CE.SDK 1.67 pour lier les boutons
+  // aux entrées custom de la librairie.
+  configureAssetLibraryDock(): void {
+    this.cesdk.ui.setDockOrder([
+      {
+        id: 'ly.img.assetLibrary.dock',
+        key: 'templates',
+        label: 'Templates',
+        icon: '@imgly/Template',
+        entries: ['ly.img.template']
+      },
+      {
+        id: 'ly.img.assetLibrary.dock',
+        key: 'stickers',
+        label: 'Stickers',
+        icon: '@imgly/Sticker',
+        entries: ['ly.img.sticker']
+      },
+      {
+        id: 'ly.img.assetLibrary.dock',
+        key: 'elements',
+        label: 'Elements',
+        icon: '@imgly/Shapes',
+        entries: ['ly.img.vectorpath']
+      },
+      {
+        id: 'ly.img.assetLibrary.dock',
+        key: 'images',
+        label: 'Images',
+        icon: '@imgly/Image',
+        entries: ['ly.img.image']
+      },
+      {
+        id: 'ly.img.assetLibrary.dock',
+        key: 'text',
+        label: 'Text',
+        icon: '@imgly/Text',
+        entries: ['ly.img.text']
       }
-      if (entry.key === 'ly.img.text') {
-        return { ...entry, icon: '@imgly/Edit' };
-      }
-
-      return entry;
-    });
-
-    this.cesdk.ui.setDockOrder(newDockOrder);
+    ]);
   }
 
   // Méthode pour ajouter un bouton personnalisé avec icône

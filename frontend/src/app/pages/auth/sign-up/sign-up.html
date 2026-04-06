@@ -37,6 +37,12 @@
           </div>
 
           <form class="mt-8 space-y-5" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+            @if (errorMessage()) {
+              <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+                {{ errorMessage() }}
+              </div>
+            }
+
             <div>
               <label for="sign-up-name" class="block text-sm font-bold text-brand-navy mb-2">Full name</label>
               <input
@@ -153,9 +159,10 @@
             <div class="pt-2">
               <button
                 type="submit"
+                [disabled]="loading()"
                 class="w-full inline-flex justify-center items-center gap-2 px-6 py-3.5 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
               >
-                Create account
+                {{ loading() ? 'Creating account...' : 'Create account' }}
               </button>
             </div>
           </form>

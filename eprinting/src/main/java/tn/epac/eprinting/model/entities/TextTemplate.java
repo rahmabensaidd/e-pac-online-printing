@@ -26,4 +26,11 @@ public class TextTemplate  {
     private String fonts;
 
     private String margins;
+
+    @Column(name = "is_created_by_admin")
+    private Boolean createdByAdmin = Boolean.FALSE;
+
+    @ManyToOne
+    @JoinColumn(name = "creation_author_id")
+    private User creationAuthor;
 }

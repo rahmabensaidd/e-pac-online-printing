@@ -1,28 +1,21 @@
 // backoffice-inventory-page.component.ts (version corrigée)
 import { ChangeDetectionStrategy, Component, computed, inject, signal, OnInit } from '@angular/core';
 import { BackofficeDataService } from '../core/backoffice.data.service';
-import { BookService, BookRequestDto } from '../core/book.service';
-import { BackofficeCardComponent } from '../shared/backoffice-card';
-import { BackofficeDataTableComponent } from '../shared/backoffice-data-table';
+import { BookService, BookRequestDto } from '../../../core/services/book.service';
 import {
   BackofficeDataTableAction,
   BackofficeDataTableColumn,
   BackofficeDataTableRowActionEvent,
 } from '../shared/backoffice-data-table.models';
-import { BackofficeEmptyStateComponent } from '../shared/backoffice-empty-state';
 import { BackofficeSectionHeaderComponent } from '../shared/backoffice-section-header';
 import { BackofficeStatCardComponent } from '../shared/backoffice-stat-card';
 import { Bookstable } from "./Components/bookstable/bookstable";
 import { ActivatedRoute, Router } from "@angular/router";
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from "@angular/forms";
-import { OrderPriority, OrderStatus, PaymentStatus } from "../core/backoffice.models";
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 
 @Component({
   selector: 'app-backoffice-inventory-page',
   imports: [
-    BackofficeCardComponent,
-    BackofficeDataTableComponent,
-    BackofficeEmptyStateComponent,
     BackofficeSectionHeaderComponent,
     BackofficeStatCardComponent,
     Bookstable,

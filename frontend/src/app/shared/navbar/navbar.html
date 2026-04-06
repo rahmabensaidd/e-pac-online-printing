@@ -34,14 +34,24 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-3">
-          <a
-            [routerLink]="loginNav.path"
-            routerLinkActive="bg-brand-orange"
-            [routerLinkActiveOptions]="{ exact: loginNav.exact ?? false }"
-            class="hidden sm:inline-flex items-center gap-2 px-5 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-          >
-            {{ loginNav.label }}
-          </a>
+          @if (auth.isAuthenticated()) {
+            <button
+              type="button"
+              class="hidden sm:inline-flex items-center gap-2 px-5 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              (click)="onAuthAction()"
+            >
+              {{ authActionLabel() }}
+            </button>
+          } @else {
+            <a
+              [routerLink]="loginNav.path"
+              routerLinkActive="bg-brand-orange"
+              [routerLinkActiveOptions]="{ exact: loginNav.exact ?? false }"
+              class="hidden sm:inline-flex items-center gap-2 px-5 py-3 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+            >
+              {{ authActionLabel() }}
+            </a>
+          }
 
           <button
             type="button"
@@ -91,15 +101,25 @@
               {{ item.label }}
             </a>
           }
-          <a
-            [routerLink]="loginNav.path"
-            routerLinkActive="bg-brand-orange"
-            [routerLinkActiveOptions]="{ exact: loginNav.exact ?? false }"
-            class="text-left px-4 py-3 rounded-xl bg-brand-navy text-white font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-            (click)="closeMobile()"
-          >
-            {{ loginNav.label }}
-          </a>
+          @if (auth.isAuthenticated()) {
+            <button
+              type="button"
+              class="text-left px-4 py-3 rounded-xl bg-brand-navy text-white font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              (click)="onAuthAction()"
+            >
+              {{ authActionLabel() }}
+            </button>
+          } @else {
+            <a
+              [routerLink]="loginNav.path"
+              routerLinkActive="bg-brand-orange"
+              [routerLinkActiveOptions]="{ exact: loginNav.exact ?? false }"
+              class="text-left px-4 py-3 rounded-xl bg-brand-navy text-white font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              (click)="closeMobile()"
+            >
+              {{ authActionLabel() }}
+            </a>
+          }
         </div>
       </div>
     </div>

@@ -19,31 +19,6 @@ services:
     networks:
       - eprinting-network
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.3.1
-    container_name: keycloak
-    restart: unless-stopped
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin123
-      KC_HOSTNAME: localhost
-      KC_HTTP_PORT: 8081
-      KC_HTTP_ENABLED: true
-
-    command:
-      - start-dev
-      - --import-realm   # ✅ TRÈS IMPORTANT
-
-    ports:
-      - "8081:8081"
-
-    volumes:
-      - keycloak-data:/opt/keycloak/data
-      - ./keycloak-config/import/eprinting-realm.json:/opt/keycloak/data/import/realm.json  # ✅ BON CHEMIN
-
-    networks:
-      - eprinting-network
-
   backend:
     build:
       context: ./eprinting
@@ -55,20 +30,14 @@ services:
       SPRING_DATASOURCE_USERNAME: eprinting_user
       SPRING_DATASOURCE_PASSWORD: eprinting_pass123
 
-      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8081
-      KEYCLOAK_REALM: eprinting
-      KEYCLOAK_RESOURCE: eprinting-backend
-      KEYCLOAK_CREDENTIALS_SECRET: your-client-secret
-
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8081/realms/eprinting
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8081/realms/eprinting/protocol/openid-connect/certs
+      SECURITY_AUTHENTICATION_MODE: jwt
+      SECURITY_JWT_SECRET: change-me-please-change-me-please-123456789
 
     ports:
       - "8080:8080"
 
     depends_on:
       - mysql-app
-      - keycloak
 
     networks:
       - eprinting-network
@@ -83,9 +52,6 @@ services:
       - "4200:80"
     environment:
       API_URL: http://localhost:8080
-      KEYCLOAK_URL: http://localhost:8081
-      KEYCLOAK_REALM: eprinting
-      KEYCLOAK_CLIENT_ID: eprinting-frontend
     depends_on:
       - backend
     networks:
@@ -97,4 +63,3 @@ networks:
 
 volumes:
   mysql-app-data:
-  keycloak-data:

@@ -53,5 +53,7 @@ public class BookResponseDto {
     private String[] authors;
 
     // Status
+    private Boolean isAddedFromAdmin;
+    private Boolean isCreatedByUser;
     private AdminBookStatus stockStatus;
 }

@@ -77,6 +77,12 @@
         novalidate
       >
         <div class="lg:col-span-3 space-y-5">
+          @if (submissionError()) {
+            <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+              {{ submissionError() }}
+            </div>
+          }
+
           <section class="rounded-3xl border border-gray-200 bg-white/95 p-5 sm:p-6 shadow-lg">
             <h2 class="font-display font-extrabold text-2xl text-brand-navy">Contact</h2>
             <div class="mt-4 grid sm:grid-cols-2 gap-4">
@@ -406,7 +412,7 @@
             <h2 class="font-display font-extrabold text-2xl text-brand-navy">Order summary</h2>
 
             <div class="mt-4 space-y-3">
-              @for (item of cart.items(); track item.product.id) {
+              @for (item of cart.items(); track item.orderLineId) {
                 <div class="rounded-2xl border border-gray-200 bg-brand-cream/35 p-4">
                   <div class="flex gap-3">
                     <div class="w-12 h-12 rounded-xl shrink-0" [style.background]="item.product.image"></div>
@@ -420,7 +426,7 @@
                         <button
                           type="button"
                           class="w-8 h-8 rounded-lg border border-gray-300 hover:border-brand-orange transition"
-                          (click)="cart.setQuantity(item.product.id, item.quantity - 1)"
+                          (click)="cart.setQuantity(item.orderLineId, item.quantity - 1)"
                         >
                           -
                         </button>
@@ -428,19 +434,19 @@
                           type="number"
                           class="w-14 text-center rounded-lg border border-gray-300 py-1.5"
                           [value]="item.quantity"
-                          (input)="cart.setQuantity(item.product.id, ($any($event.target).valueAsNumber))"
+                          (input)="cart.setQuantity(item.orderLineId, ($any($event.target).valueAsNumber))"
                         />
                         <button
                           type="button"
                           class="w-8 h-8 rounded-lg border border-gray-300 hover:border-brand-orange transition"
-                          (click)="cart.setQuantity(item.product.id, item.quantity + 1)"
+                          (click)="cart.setQuantity(item.orderLineId, item.quantity + 1)"
                         >
                           +
                         </button>
                         <button
                           type="button"
                           class="ml-auto text-xs font-bold text-brand-pink hover:underline"
-                          (click)="cart.remove(item.product.id)"
+                          (click)="cart.remove(item.orderLineId)"
                         >
                           Remove
                         </button>
@@ -483,9 +489,9 @@
             <button
               type="submit"
               class="mt-5 w-full inline-flex items-center justify-center px-6 py-3.5 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-              [disabled]="!hasItems()"
+              [disabled]="!hasItems() || placingOrder()"
             >
-              Place order
+              {{ placingOrder() ? 'Placing order...' : 'Place order' }}
             </button>
 
             <p class="mt-3 text-xs text-gray-500 text-center">

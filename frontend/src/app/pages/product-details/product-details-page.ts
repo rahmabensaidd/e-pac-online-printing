@@ -52,14 +52,21 @@ export class ProductDetailsPageComponent {
     return { background: detail.imageStyle };
   });
 
-  addToCart(): void {
+  async addToCart(): Promise<void> {
     const detail = this.details();
     if (!detail || !detail.isAvailable) {
       return;
     }
 
-    this.cart.add(detail.cartProduct, 1);
-    this.ui.openCart();
+    try {
+      await this.cart.add(detail.cartProduct, 1);
+      this.ui.openCart();
+    } catch {
+      this.ui.showToast?.({
+        message: 'Unable to add this product to cart right now',
+        type: 'error'
+      });
+    }
   }
 
   browseCatalog(): void {

@@ -13,6 +13,8 @@ import java.util.List;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
 
+    boolean existsByTitleIgnoreCase(String title);
+
     // Recherche par titre ou description (utilisée dans getAllBooks)
     Page<Book> findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
             String title, String description, Pageable pageable);
@@ -64,4 +66,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
                                   @Param("status") AdminBookStatus status,
                                   @Param("bindingType") BindingType bindingType,
                                   Pageable pageable);
+
+    @Query("SELECT b FROM Book b WHERE b.is_added_from_admin = true AND (" +
+            ":search IS NULL OR TRIM(:search) = '' OR " +
+            "LOWER(b.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(COALESCE(b.description, '')) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Book> findMarketplaceBooks(@Param("search") String search, Pageable pageable);
+
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.is_added_from_admin = true")
+    long countMarketplaceBooks();
 }

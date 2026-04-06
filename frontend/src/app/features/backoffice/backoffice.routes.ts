@@ -67,6 +67,28 @@ export const BACKOFFICE_ROUTES: Routes = [
         },
       },
       {
+        path: 'users/:userId/orders',
+        loadComponent: () =>
+          import('./users/backoffice-user-orders-page').then(
+            (m) => m.BackofficeUserOrdersPageComponent,
+          ),
+        data: {
+          title: 'User Orders',
+          description: 'View user profile and all linked orders.',
+        },
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./users/backoffice-users-page').then(
+            (m) => m.BackofficeUsersPageComponent,
+          ),
+        data: {
+          title: 'Users',
+          description: 'Manage users, assign roles, and maintain account access.',
+        },
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./settings/backoffice-settings-page').then(

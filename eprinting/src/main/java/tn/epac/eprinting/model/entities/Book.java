@@ -8,6 +8,9 @@ import lombok.Setter;
 import lombok.Builder;
 import tn.epac.eprinting.model.enums.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Table(name = "admin_books")
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,13 +19,13 @@ import tn.epac.eprinting.model.enums.*;
 @Setter
 @Entity
 public class Book {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long bookId;
 
     private String title;
     private String description;
-
 
     private boolean is_created_by_user;
 
@@ -37,13 +40,10 @@ public class Book {
     @Enumerated(EnumType.STRING)
     private AdminBookStatus stock_status;
 
-    // authors doit être une collection
     @ElementCollection
     @CollectionTable(name = "book_authors", joinColumns = @JoinColumn(name = "book_id"))
     @Column(name = "author")
-    private String[] authors;
-
-    // ============ NUMERIC FIELDS (NUM_VARS) ============
+    private List<String> authors;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -59,8 +59,6 @@ public class Book {
 
     @Column(nullable = false)
     private Integer width;
-
-    // ============ BOOLEAN FIELDS ============
 
     @Column(name = "security_label", nullable = false)
     private Boolean securityLabel;
@@ -88,8 +86,6 @@ public class Book {
 
     @Column(name = "three_hole_drill", nullable = false)
     private Boolean threeHoleDrill;
-
-    // ============ CATEGORICAL FIELDS ============
 
     @Enumerated(EnumType.STRING)
     @Column(name = "text_paper_type", nullable = false)
@@ -151,12 +147,21 @@ public class Book {
     @Column(name = "label_type")
     private LabelType labelType;
 
-    // ============ OTHER FIELDS ============
-
     private float salePrice;
 
-    @Column(name = "siren", nullable = true)  // ✅ nullable = true
+    @Column(name = "siren", nullable = true)
     private String siren;
+
+    @OneToOne(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Cover cover;
+
+    @OneToOne(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Content content;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "book_id")
+    @Builder.Default
+    private List<PnlInformation> pnlInformations = new ArrayList<>();
 
     @PrePersist
     @PreUpdate
@@ -174,4 +179,6 @@ public class Book {
             throw new IllegalStateException("Thickness must be positive");
         }
     }
+
+
 }
