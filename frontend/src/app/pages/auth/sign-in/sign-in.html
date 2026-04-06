@@ -46,25 +46,27 @@
           </div>
 
           <form class="mt-8 space-y-5" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+            @if (authError()) {
+              <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+                {{ authError() }}
+              </div>
+            }
+
             <div>
-              <label for="sign-in-email" class="block text-sm font-bold text-brand-navy mb-2">Email</label>
+              <label for="sign-in-identifier" class="block text-sm font-bold text-brand-navy mb-2">Email or username</label>
               <input
-                id="sign-in-email"
-                type="email"
-                formControlName="email"
-                autocomplete="email"
+                id="sign-in-identifier"
+                type="text"
+                formControlName="identifier"
+                autocomplete="username"
                 class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
-                placeholder="you@company.com"
-                [attr.aria-invalid]="showError('email') ? 'true' : 'false'"
-                [attr.aria-describedby]="showError('email') ? 'sign-in-email-error' : null"
+                placeholder="you@company.com or your username"
+                [attr.aria-invalid]="showError('identifier') ? 'true' : 'false'"
+                [attr.aria-describedby]="showError('identifier') ? 'sign-in-identifier-error' : null"
               />
-              @if (showError('email')) {
-                <p id="sign-in-email-error" class="mt-2 text-sm text-brand-pink">
-                  @if (form.controls.email.hasError('required')) {
-                    Email is required.
-                  } @else {
-                    Enter a valid email address.
-                  }
+              @if (showError('identifier')) {
+                <p id="sign-in-identifier-error" class="mt-2 text-sm text-brand-pink">
+                  Email or username is required.
                 </p>
               }
             </div>
@@ -110,9 +112,10 @@
             <div class="pt-2">
               <button
                 type="submit"
+                [disabled]="submitting()"
                 class="w-full inline-flex justify-center items-center gap-2 px-6 py-3.5 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
               >
-                Sign in
+                {{ submitting() ? 'Signing in...' : 'Sign in' }}
               </button>
             </div>
           </form>

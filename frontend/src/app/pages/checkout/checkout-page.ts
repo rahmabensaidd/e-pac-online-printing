@@ -5,6 +5,9 @@ import { RouterLink } from '@angular/router';
 import { startWith } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CartItem, CartService } from '../../core/services/cart.service';
+import { AuthService } from '../../core/services/auth.service';
+import { OrderService } from '../../core/services/order.service';
+import { UiService } from '../../core/services/ui.service';
 
 type ShippingMethod = 'standard' | 'express';
 type PaymentMethod = 'card' | 'invoice';
@@ -31,12 +34,17 @@ type CheckoutField =
 })
 export class CheckoutPageComponent {
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly auth = inject(AuthService);
   readonly cart = inject(CartService);
+  private readonly orderService = inject(OrderService);
+  private readonly ui = inject(UiService);
 
   readonly submitted = signal(false);
   readonly orderPlaced = signal(false);
   readonly orderNumber = signal('');
   readonly placedTotal = signal(0);
+  readonly submissionError = signal<string | null>(null);
+  readonly placingOrder = signal(false);
 
   readonly shippingMethod = signal<ShippingMethod>('standard');
   readonly paymentMethod = signal<PaymentMethod>('card');
@@ -94,21 +102,59 @@ export class CheckoutPageComponent {
   }
 
   lineTotal(item: CartItem): number {
-    return item.product.price * item.quantity;
+    return item.lineTotal;
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     this.submitted.set(true);
+    this.submissionError.set(null);
     this.form.markAllAsTouched();
 
     if (this.form.invalid || !this.hasItems()) {
       return;
     }
 
-    this.placedTotal.set(this.orderTotal());
-    this.orderNumber.set(`EP-${Date.now().toString().slice(-8)}`);
-    this.orderPlaced.set(true);
-    this.cart.clear();
+    const cartId = this.cart.cartId();
+    if (!cartId) {
+      this.submissionError.set('Your cart session is no longer available. Please add your items again.');
+      return;
+    }
+
+    this.placingOrder.set(true);
+    try {
+      const order = await this.orderService.checkout({
+        cartId,
+        fullName: this.form.getRawValue().fullName,
+        email: this.auth.userEmail() || this.form.getRawValue().email,
+        phone: this.form.getRawValue().phone,
+        company: this.form.getRawValue().company,
+        addressLine1: this.form.getRawValue().addressLine1,
+        addressLine2: this.form.getRawValue().addressLine2,
+        city: this.form.getRawValue().city,
+        state: this.form.getRawValue().state,
+        postalCode: this.form.getRawValue().postalCode,
+        notes: this.form.getRawValue().notes,
+        shippingMethod: this.form.getRawValue().shippingMethod,
+        paymentMethod: this.form.getRawValue().paymentMethod,
+      });
+
+      this.placedTotal.set(order.totalAmount);
+      this.orderNumber.set(`EP-${order.orderId}`);
+      this.orderPlaced.set(true);
+      await this.cart.refresh();
+      this.ui.showToast?.({
+        message: 'Order placed successfully.',
+        type: 'success'
+      });
+    } catch {
+      this.submissionError.set('Unable to place your order right now. Please make sure you are signed in and try again.');
+      this.ui.showToast?.({
+        message: 'Order placement failed.',
+        type: 'error'
+      });
+    } finally {
+      this.placingOrder.set(false);
+    }
   }
 
   startNewOrder(): void {

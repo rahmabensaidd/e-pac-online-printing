@@ -1,0 +1,212 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor-shell {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: #f3f4f6;
+}
+
+.library-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid #d7dce5;
+  background: linear-gradient(180deg, #fbfbfc 0%, #f1f3f7 100%);
+}
+
+.library-header {
+  padding: 1rem 1rem 0.75rem;
+}
+
+.library-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.library-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.library-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0 1rem 1rem;
+}
+
+.library-tab {
+  border: 1px solid #d1d5db;
+  border-radius: 0.9rem;
+  background: #ffffff;
+  color: #1f2937;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.7rem 0.8rem;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.library-tab:hover {
+  border-color: #9ca3af;
+}
+
+.library-tab.is-active {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.16);
+}
+
+.library-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 1rem 1rem;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.library-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  border: 1px solid #d9dee7;
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 0.55rem;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.library-card:hover {
+  transform: translateY(-2px);
+  border-color: #9ca3af;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+.library-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  background: #eef2f7;
+}
+
+.library-thumb-placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #6b7280;
+  background: linear-gradient(135deg, #eef2ff 0%, #e5f4ff 100%);
+}
+
+.library-label {
+  display: block;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2rem;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.library-state {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  padding: 1rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.65);
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.library-state-error {
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.3);
+  background: rgba(254, 242, 242, 0.95);
+}
+
+.editor-canvas {
+  min-width: 0;
+  min-height: 0;
+}
+
+#editor {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * CE.SDK's asset library relies on nested flex/grid containers with overflow.
+ * In Angular/Tailwind layouts, a missing min-height can make the library
+ * viewport collapse to 0px, which prevents the virtualized grid from rendering.
+ */
+#editor .ubq-public,
+#editor [class*='UBQ_Editor-module__block'],
+#editor [class*='UBQ_Editor-module__layout'],
+#editor [class*='UBQ_Editor-module__body'],
+#editor [class*='UBQ_Editor-module__canvasViewport'],
+#editor [class*='UBQ_Editor-module__canvasAndTimelineWrapper'],
+#editor [class*='UBQ_Editor-module__canvasContainer'],
+#editor [class*='LibraryPanel-module__panelContent'],
+#editor [class*='AssetLibraryContent-module__block'],
+#editor [class*='AssetLibraryContent-module__motionWrapper'],
+#editor [class*='AssetLibraryGrid-module__block'],
+#editor [class*='AssetLibraryOverview-module__block'] {
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (max-width: 1100px) {
+  .editor-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 320px minmax(0, 1fr);
+  }
+
+  .library-sidebar {
+    border-right: none;
+    border-bottom: 1px solid #d7dce5;
+  }
+}

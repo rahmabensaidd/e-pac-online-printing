@@ -7,7 +7,9 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
+import { UiService } from '../../../core/services/ui.service';
 
 type SignUpField = 'fullName' | 'email' | 'password' | 'confirmPassword' | 'acceptTerms';
 
@@ -30,8 +32,13 @@ const passwordMatchValidator: ValidatorFn = (control: AbstractControl): Validati
 })
 export class SignUpComponent {
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly ui = inject(UiService);
 
   readonly submitted = signal(false);
+  readonly loading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
 
   readonly form = this.fb.group(
     {
@@ -54,12 +61,46 @@ export class SignUpComponent {
     return (this.submitted() || confirmTouched) && this.form.hasError('passwordMismatch');
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     this.submitted.set(true);
     this.form.markAllAsTouched();
+    this.errorMessage.set(null);
 
     if (this.form.invalid) {
       return;
     }
+
+    this.loading.set(true);
+    try {
+      const fullName = this.form.controls.fullName.getRawValue().trim();
+      const [firstName, ...rest] = fullName.split(/\s+/).filter(Boolean);
+      const email = this.form.controls.email.getRawValue().trim().toLowerCase();
+      const username = this.buildUsernameFromEmail(email);
+      const password = this.form.controls.password.getRawValue();
+
+      await this.authService.signup({
+        firstName: firstName || fullName,
+        lastName: rest.join(' ') || '-',
+        email,
+        username,
+        password,
+      });
+
+      await this.authService.login(email, password, true);
+      this.ui.showToast?.({
+        message: 'Account created successfully.',
+        type: 'success',
+      });
+      await this.router.navigate(['/marketplace']);
+    } catch (error) {
+      this.errorMessage.set(error instanceof Error ? error.message : 'Sign up failed');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  private buildUsernameFromEmail(email: string): string {
+    const localPart = email.split('@')[0]?.trim() || 'user';
+    return localPart.replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase() || `user${Date.now()}`;
   }
 }

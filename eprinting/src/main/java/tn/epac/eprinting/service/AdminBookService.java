@@ -1,357 +1,166 @@
 package tn.epac.eprinting.service;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tn.epac.eprinting.ServiceImpl.AdminBookServiceImpl;
-import tn.epac.eprinting.exception.ResourceNotFoundException;
+import tn.epac.eprinting.model.dtos.BookOverviewDto;
 import tn.epac.eprinting.model.dtos.BookRequestDto;
 import tn.epac.eprinting.model.dtos.BookResponseDto;
-import tn.epac.eprinting.model.dtos.BookOverviewDto;
-import tn.epac.eprinting.model.entities.Book;
-import tn.epac.eprinting.model.enums.*;
-import tn.epac.eprinting.repository.BookRepository;
-import tn.epac.eprinting.repository.UserRepository;
+import tn.epac.eprinting.model.enums.AdminBookStatus;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Service
-@RequiredArgsConstructor
-@Transactional
-public class AdminBookService implements AdminBookServiceImpl {
+public interface AdminBookService {
 
-    private final BookRepository bookRepository;
-    private final UserRepository userRepository;
+/** Retrieves global book statistics
+     * @return DTO containing statistics (total count, low stock, etc.)
+     */
+    BookOverviewDto getBookOverview();
 
-    @Override
-    public BookOverviewDto getBookOverview() {
-        // Implementation
-        List<Book> allBooks = bookRepository.findAll();
+    /**
+     * Retrieves all books with pagination and optional filters
+     * @param pageable Pagination information
+     * @param search Search term (title or description)
+     * @param status Filter by stock status
+     * @param bindingType Filter by binding type
+     * @return Page of books
+     */
+    Page<BookResponseDto> getAllBooks(Pageable pageable, String search, AdminBookStatus status, String bindingType);
 
-        long totalBooks = allBooks.size();
-        long lowStockCount = allBooks.stream()
-                .filter(book -> book.getQuantity() != null && book.getQuantity() < 10)
-                .count();
+    /**
+     * Retrieves books visible in the marketplace.
+     * Only books added by admins should be returned.
+     * @param pageable Pagination information
+     * @param search Search term (title or description)
+     * @return Page of marketplace books
+     */
+    /**
+     *
+     * @param pageable
+     * @param search
+     * @return
+     */
+    Page<BookResponseDto> getMarketplaceBooks(Pageable pageable, String search);
 
-        double avgCoverageDays = allBooks.stream()
-                .filter(book -> book.getQuantity() != null && book.getQuantity() > 0)
-                .mapToDouble(this::calculateCoverageDays)
-                .average()
-                .orElse(0.0);
+    /**
+     * Retrieves a book by its ID
+     * @param bookId Book identifier
+     * @return DTO of the found book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto getBookById(Long bookId);
 
-        long incomingUnits = allBooks.stream()
-                .mapToLong(book -> book.getQuantity() != null ? book.getQuantity() : 0)
-                .sum();
+    /**
+     * Creates a new book
+     * @param bookRequest DTO containing book information to create
+     * @return DTO of the created book
+     */
+    BookResponseDto createBook(BookRequestDto bookRequest);
 
-        return BookOverviewDto.builder()
-                .totalBooks(totalBooks)
-                .lowStockBooks(lowStockCount)
-                .avgCoverageDays(Math.round(avgCoverageDays))
-                .incomingUnits(incomingUnits)
-                .build();
-    }
+    /**
+     * Updates an existing book (full replacement)
+     * @param bookId Book identifier to update
+     * @param bookRequest DTO containing new information
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto updateBook(Long bookId, BookRequestDto bookRequest);
 
-    @Override
-    public Page<BookResponseDto> getAllBooks(Pageable pageable, String search,
-                                             AdminBookStatus status, String bindingType) {
-        Page<Book> books;
+    /**
+     * Partially updates an existing book
+     * @param bookId Book identifier to update
+     * @param bookRequest DTO containing fields to modify
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto patchBook(Long bookId, BookRequestDto bookRequest);
 
-        if (search != null && !search.isEmpty()) {
-            books = bookRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
-                    search, search, pageable);
-        }  else {
-            books = bookRepository.findAll(pageable);
-        }
+    /**
+     * Deletes a book
+     * @param bookId Book identifier to delete
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    void deleteBook(Long bookId);
 
-        return books.map(this::mapToResponseDto);
-    }
+    /**
+     * Updates a book's stock quantity
+     * @param bookId Book identifier
+     * @param quantity New quantity
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto updateStock(Long bookId, Integer quantity);
 
-    @Override
-    public BookResponseDto getBookById(Long bookId) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        return mapToResponseDto(book);
-    }
+    /**
+     * Retrieves all low stock books (quantity < 10)
+     * @return List of low stock books
+     */
+    List<BookResponseDto> getLowStockBooks();
 
-    @Override
-    public BookResponseDto createBook(BookRequestDto bookRequest) {
-        Book book = mapToEntity(bookRequest);
+    /**
+     * Retrieves books by binding type
+     * @param bindingType Binding type
+     * @return List of matching books
+     */
+    List<BookResponseDto> getBooksByBindingType(String bindingType);
 
-        book.set_added_from_admin(true);
-        book.setStock_status(AdminBookStatus.IN_STOCK);
-        book.set_created_by_user(false);
+    /**
+     * Checks if a book exists
+     * @param bookId Book identifier
+     * @return true if the book exists, false otherwise
+     */
+    boolean existsBookById(Long bookId);
 
-        if (book.getProductionPage() == null) {
-            book.setProductionPage(bookRequest.getProductionPage());
-        }
+    /**
+     * Retrieves available stock of a book
+     * @param bookId Book identifier
+     * @return Available quantity
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    Integer getBookStock(Long bookId);
 
-        Book savedBook = bookRepository.save(book);
-        return mapToResponseDto(savedBook);
-    }
+    /**
+     * Activates or deactivates a book (soft delete)
+     * @param bookId Book identifier
+     * @param active Activation status
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto toggleBookStatus(Long bookId, boolean active);
 
-    @Override
-    public BookResponseDto updateBook(Long bookId, BookRequestDto bookRequest) {
-        Book existingBook = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+    /**
+     * Advanced book search with multiple criteria
+     * @param title Title (optional)
+     * @param author Author (optional)
+     * @param minPrice Minimum price (optional)
+     * @param maxPrice Maximum price (optional)
+     * @param bindingType Binding type (optional)
+     * @param pageable Pagination information
+     * @return Page of books matching the criteria
+     */
+    Page<BookResponseDto> searchBooks(String title, String author, Float minPrice,
+                                      Float maxPrice, String bindingType, Pageable pageable);
 
-        updateEntityFromDto(existingBook, bookRequest);
-        updateStockStatus(existingBook);
+    /**
+     * Updates a book's sale price
+     * @param bookId Book identifier
+     * @param newPrice New price
+     * @return DTO of the updated book
+     * @throws tn.epac.eprinting.exception.ResourceNotFoundException if the book does not exist
+     */
+    BookResponseDto updateBookPrice(Long bookId, Float newPrice);
 
-        Book updatedBook = bookRepository.save(existingBook);
-        return mapToResponseDto(updatedBook);
-    }
+    /**
+     * Retrieves books by status
+     * @param status Book status (IN_STOCK, LOW_STOCK, OUT_OF_STOCK)
+     * @param pageable Pagination information
+     * @return Page of books
+     */
+    Page<BookResponseDto> getBooksByStatus(AdminBookStatus status, Pageable pageable);
 
-    @Override
-    public BookResponseDto patchBook(Long bookId, BookRequestDto bookRequest) {
-        Book existingBook = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-
-        patchEntityFromDto(existingBook, bookRequest);
-        updateStockStatus(existingBook);
-
-        Book updatedBook = bookRepository.save(existingBook);
-        return mapToResponseDto(updatedBook);
-    }
-
-    @Override
-    public void deleteBook(Long bookId) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        bookRepository.delete(book);
-    }
-
-    @Override
-    public BookResponseDto updateStock(Long bookId, Integer quantity) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-
-        book.setQuantity(quantity);
-        updateStockStatus(book);
-
-        Book updatedBook = bookRepository.save(book);
-        return mapToResponseDto(updatedBook);
-    }
-
-    @Override
-    public List<BookResponseDto> getLowStockBooks() {
-        return bookRepository.findByQuantityLessThan(10)
-                .stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<BookResponseDto> getBooksByBindingType(String bindingType) {
-        return List.of();
-    }
-
-
-    @Override
-    public boolean existsBookById(Long bookId) {
-        return bookRepository.existsById(bookId);
-    }
-
-    @Override
-    public Integer getBookStock(Long bookId) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        return book.getQuantity();
-    }
-
-    @Override
-    public BookResponseDto toggleBookStatus(Long bookId, boolean active) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-
-        // Uncomment if you have an 'active' field in your entity
-        // book.setActive(active);
-
-        Book updatedBook = bookRepository.save(book);
-        return mapToResponseDto(updatedBook);
-    }
-
-    @Override
-    public Page<BookResponseDto> searchBooks(String title, String author, Float minPrice,
-                                             Float maxPrice, String bindingType, Pageable pageable) {
-        Page<Book> books = bookRepository.searchBooks(title, author, minPrice, maxPrice,
-                bindingType != null ? BindingType.valueOf(bindingType) : null,
-                pageable);
-        return books.map(this::mapToResponseDto);
-    }
-
-    @Override
-    public BookResponseDto updateBookPrice(Long bookId, Float newPrice) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-
-        book.setSalePrice(newPrice);
-        Book updatedBook = bookRepository.save(book);
-        return mapToResponseDto(updatedBook);
-    }
-
-    @Override
-    public Page<BookResponseDto> getBooksByStatus(AdminBookStatus status, Pageable pageable) {
-        return null;
-    }
-
-
-    @Override
-    public boolean validateBookData(BookRequestDto bookRequest) {
-        if (bookRequest == null) {
-            return false;
-        }
-
-        // Required field validation
-        if (bookRequest.getTitle() == null || bookRequest.getTitle().trim().isEmpty()) {
-            return false;
-        }
-
-        if (bookRequest.getAuthors() == null || bookRequest.getAuthors().isEmpty()) {
-            return false;
-        }
-
-        if (bookRequest.getQuantity() == null || bookRequest.getQuantity() < 0) {
-            return false;
-        }
-
-        if (bookRequest.getProductionPage() == null || bookRequest.getProductionPage() <= 0) {
-            return false;
-        }
-
-        if (bookRequest.getSalePrice() == null || bookRequest.getSalePrice() <= 0) {
-            return false;
-        }
-
-        // Enum validation
-        try {
-            if (bookRequest.getBindingType() != null) {
-                BindingType.valueOf(bookRequest.getBindingType());
-            }
-            if (bookRequest.getCoverColor() != null) {
-                CoverColor.valueOf(bookRequest.getCoverColor());
-            }
-            // Add other enum validations as needed
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-
-        return true;
-    }
-
-    // Helper methods
-    private double calculateCoverageDays(Book book) {
-        return book.getQuantity() != null ? book.getQuantity().doubleValue() : 0;
-    }
-
-    private void updateStockStatus(Book book) {
-        if (book.getQuantity() == null || book.getQuantity() <= 0) {
-            book.setStock_status(AdminBookStatus.OUT_OF_STOCK);
-        } else if (book.getQuantity() < 10) {
-            book.setStock_status(AdminBookStatus.LOW_STOCK);
-        } else {
-            book.setStock_status(AdminBookStatus.IN_STOCK);
-        }
-    }
-
-    private Book mapToEntity(BookRequestDto dto) {
-        // Implementation as before
-        return Book.builder()
-                .title(dto.getTitle())
-                .description(dto.getDescription())
-                .productionPage(dto.getProductionPage())
-                .salePrice(dto.getSalePrice())
-                .quantity(dto.getQuantity())
-                .height(dto.getHeight())
-                .thickness(dto.getThickness())
-                .width(dto.getWidth())
-                .securityLabel(dto.getSecurityLabel())
-                .hasCoil(dto.getHasCoil())
-                .hasInsert(dto.getHasInsert())
-                .hasTab(dto.getHasTab())
-                .hasBackcover(dto.getHasBackcover())
-                .perf(dto.getPerf())
-                .doubleSidedCover(dto.getDoubleSidedCover())
-                .shrinkwrap(dto.getShrinkwrap())
-                .threeHoleDrill(dto.getThreeHoleDrill())
-                .textPaperType(TextPaperType.valueOf(dto.getTextPaperType()))
-                .textColor(TextColor.valueOf(dto.getTextColor()))
-                .coverFinishType(CoverFinishType.valueOf(dto.getCoverFinishType()))
-                .coverColor(CoverColor.valueOf(dto.getCoverColor()))
-                .coverSize(CoverSize.valueOf(dto.getCoverSize()))
-                .coverPaperType(CoverPaperType.valueOf(dto.getCoverPaperType()))
-                .headAndTail(HeadAndTail.valueOf(dto.getHeadAndTail()))
-                .priorityLevel(PriorityLevel.valueOf(dto.getPriorityLevel()))
-                .bindingType(BindingType.valueOf(dto.getBindingType()))
-                .coilType(dto.getCoilType() != null ? CoilType.valueOf(dto.getCoilType()) : null)
-                .tabColor(dto.getTabColor() != null ? TabColor.valueOf(dto.getTabColor()) : null)
-                .insertPaperType(dto.getInsertPaperType() != null ? InsertPaperType.valueOf(dto.getInsertPaperType()) : null)
-                .caseFinishType(dto.getCaseFinishType() != null ? CaseFinishType.valueOf(dto.getCaseFinishType()) : null)
-                .spineType(dto.getSpineType() != null ? SpineType.valueOf(dto.getSpineType()) : null)
-                .labelType(dto.getLabelType() != null ? LabelType.valueOf(dto.getLabelType()) : null)
-                .siren(dto.getSiren())
-                .authors(dto.getAuthors().toArray(new String[0]))
-                .build();
-    }
-
-    private void updateEntityFromDto(Book book, BookRequestDto dto) {
-        // Implementation as before
-        if (dto.getTitle() != null) book.setTitle(dto.getTitle());
-        if (dto.getDescription() != null) book.setDescription(dto.getDescription());
-        if (dto.getProductionPage() != null) {
-
-            book.setProductionPage(dto.getProductionPage());
-        }
-        if (dto.getSalePrice() != null) book.setSalePrice(dto.getSalePrice());
-        if (dto.getQuantity() != null) book.setQuantity(dto.getQuantity());
-        // ... rest of the implementation
-    }
-
-    private void patchEntityFromDto(Book book, BookRequestDto dto) {
-        updateEntityFromDto(book, dto);
-    }
-
-    private BookResponseDto mapToResponseDto(Book book) {
-        // Implementation as before
-        return BookResponseDto.builder()
-                .bookId(book.getBookId())
-                .title(book.getTitle())
-                .description(book.getDescription())
-                .productionPage(book.getProductionPage())
-                .salePrice(book.getSalePrice())
-                .quantity(book.getQuantity())
-                .height(book.getHeight())
-                .thickness(book.getThickness())
-                .width(book.getWidth())
-                .securityLabel(book.getSecurityLabel())
-                .hasCoil(book.getHasCoil())
-                .hasInsert(book.getHasInsert())
-                .hasTab(book.getHasTab())
-                .hasBackcover(book.getHasBackcover())
-                .perf(book.getPerf())
-                .doubleSidedCover(book.getDoubleSidedCover())
-                .shrinkwrap(book.getShrinkwrap())
-                .threeHoleDrill(book.getThreeHoleDrill())
-                .textPaperType(book.getTextPaperType() != null ? book.getTextPaperType().name() : null)
-                .textColor(book.getTextColor() != null ? book.getTextColor().name() : null)
-                .coverFinishType(book.getCoverFinishType() != null ? book.getCoverFinishType().name() : null)
-                .coverColor(book.getCoverColor() != null ? book.getCoverColor().name() : null)
-                .coverSize(book.getCoverSize() != null ? book.getCoverSize().name() : null)
-                .coverPaperType(book.getCoverPaperType() != null ? book.getCoverPaperType().name() : null)
-                .headAndTail(book.getHeadAndTail() != null ? book.getHeadAndTail().name() : null)
-                .priorityLevel(book.getPriorityLevel() != null ? book.getPriorityLevel().name() : null)
-                .bindingType(book.getBindingType() != null ? book.getBindingType().name() : null)
-                .coilType(book.getCoilType() != null ? book.getCoilType().name() : null)
-                .tabColor(book.getTabColor() != null ? book.getTabColor().name() : null)
-                .insertPaperType(book.getInsertPaperType() != null ? book.getInsertPaperType().name() : null)
-                .caseFinishType(book.getCaseFinishType() != null ? book.getCaseFinishType().name() : null)
-                .spineType(book.getSpineType() != null ? book.getSpineType().name() : null)
-                .labelType(book.getLabelType() != null ? book.getLabelType().name() : null)
-                .siren(book.getSiren())
-                .authors(book.getAuthors())
-                .stockStatus(book.getStock_status())
-                .build();
-    }
+    /**
+     * Validates book information before creation/update
+     * @param bookRequest DTO to validate
+     * @return true if valid, false otherwise
+     */
+    boolean validateBookData(BookRequestDto bookRequest);
 }

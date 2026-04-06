@@ -47,7 +47,8 @@ public class Cart {
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "cart_id")
     @Builder.Default
     private List<OrderLine> items = new ArrayList<>();
 
@@ -56,13 +57,11 @@ public class Cart {
 
     public void addItem(OrderLine item) {
         items.add(item);
-        item.setCart(this);
         calculateTotal();
     }
 
     public void removeItem(OrderLine item) {
         items.remove(item);
-        item.setCart(null);
         calculateTotal();
     }
 

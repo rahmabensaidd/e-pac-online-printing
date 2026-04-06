@@ -1,1 +1,60 @@
-<div id="editor" style="width: 100%; height: 100vh;"></div>
+<div class="editor-shell">
+  <aside class="library-sidebar">
+    <div class="library-header">
+      <p class="library-eyebrow">CE.SDK Assets</p>
+      <h2 class="library-title">Library</h2>
+    </div>
+
+    <div class="library-tabs">
+      @for (tab of libraryTabs; track tab.id) {
+        <button
+          type="button"
+          class="library-tab"
+          [class.is-active]="currentLibraryEntry === tab.id"
+          (click)="selectLibraryTab(tab.id)"
+        >
+          {{ tab.title }}
+        </button>
+      }
+    </div>
+
+    <div class="library-panel">
+      @if (isLibraryLoading) {
+        <div class="library-state">Loading assets...</div>
+      } @else if (libraryError) {
+        <div class="library-state library-state-error">{{ libraryError }}</div>
+      } @else if (libraryAssets.length === 0) {
+        <div class="library-state">No assets found.</div>
+      } @else {
+        <div class="library-grid">
+          @for (asset of libraryAssets; track asset.id) {
+            <button
+              type="button"
+              class="library-card"
+              (click)="applyLibraryAsset(asset)"
+              [title]="asset.label || asset.id"
+            >
+              @if (asset.meta?.thumbUri) {
+                <img
+                  class="library-thumb"
+                  [src]="asset.meta.thumbUri"
+                  [alt]="asset.label || asset.id"
+                  loading="lazy"
+                />
+              } @else {
+                <div class="library-thumb library-thumb-placeholder">
+                  {{ (asset.label || asset.id || '?').slice(0, 1) }}
+                </div>
+              }
+              <span class="library-label">{{ asset.label || asset.id }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </aside>
+
+  <div class="editor-canvas">
+    <div id="editor"></div>
+  </div>
+</div>

@@ -4,7 +4,8 @@ import { Directive, DestroyRef, ElementRef, PLATFORM_ID, Renderer2, effect, inje
 type RevealOrigin = 'up' | 'down' | 'left' | 'right';
 
 @Directive({
-  selector: '[appReveal]',
+    selector: '[appReveal]',
+    standalone: true
 })
 export class RevealOnScrollDirective {
   readonly revealDelay = input(0);

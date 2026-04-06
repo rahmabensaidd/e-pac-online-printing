@@ -1,24 +1,30 @@
 package tn.epac.eprinting.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import tn.epac.eprinting.model.dtos.AdminOrderResponseDto;
+import tn.epac.eprinting.model.dtos.CheckoutOrderRequestDto;
+import tn.epac.eprinting.model.dtos.OrderResponseDto;
+import tn.epac.eprinting.model.dtos.OrderStatsDto;
+import tn.epac.eprinting.model.dtos.OrderUpdateRequestDto;
 import tn.epac.eprinting.model.entities.Order;
-import tn.epac.eprinting.service.OrderService;
+import tn.epac.eprinting.serviceimpl.OrderServiceImpl;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderService orderService;
+    private final OrderServiceImpl orderService;
 
 
     // ✅ Accessible uniquement aux admins
@@ -27,5 +33,73 @@ public class OrderController {
     public ResponseEntity<List<Order>> getAllOrders() {
         List<Order> orders = orderService.getAllOrders();
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<Page<AdminOrderResponseDto>> getAllOrdersAdmin(
+            @PageableDefault(size = 20, sort = "orderDate") Pageable pageable,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search
+    ) {
+        return ResponseEntity.ok(orderService.getAllOrdersAdmin(pageable, status, search));
+    }
+
+    @GetMapping("/admin/stats")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<OrderStatsDto> getOrderStats() {
+        return ResponseEntity.ok(orderService.getOrderStats());
+    }
+
+    @GetMapping("/admin/{orderId}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminOrderResponseDto> getOrderByIdForAdmin(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getOrderByIdForAdmin(orderId));
+    }
+
+    @PostMapping("/admin")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminOrderResponseDto> createOrder(@RequestBody OrderUpdateRequestDto request) {
+        return ResponseEntity.ok(orderService.createOrder(request));
+    }
+
+    @PutMapping("/admin/{orderId}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminOrderResponseDto> updateOrder(
+            @PathVariable Long orderId,
+            @RequestBody OrderUpdateRequestDto request
+    ) {
+        return ResponseEntity.ok(orderService.updateOrder(orderId, request));
+    }
+
+    @DeleteMapping("/admin/{orderId}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long orderId) {
+        orderService.deleteOrder(orderId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/checkout")
+    @PreAuthorize("hasAnyRole('user','admin')")
+    public ResponseEntity<OrderResponseDto> checkout(
+            @RequestBody CheckoutOrderRequestDto request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        List<String> roles = List.of();
+        Object rolesClaim = jwt.getClaim("roles");
+        if (rolesClaim instanceof List<?> rawRoles) {
+            roles = rawRoles.stream().map(String::valueOf).toList();
+        }
+
+        String email = jwt.getClaimAsString("email");
+        String username = jwt.getClaimAsString("preferred_username");
+        if ((username == null || username.isBlank()) && jwt.getSubject() != null) {
+            username = jwt.getSubject();
+        }
+        if ((email == null || email.isBlank()) && username != null && !username.isBlank()) {
+            email = username;
+        }
+
+        return ResponseEntity.ok(orderService.checkout(request.getCartId(), request, email, username, roles));
     }
 }

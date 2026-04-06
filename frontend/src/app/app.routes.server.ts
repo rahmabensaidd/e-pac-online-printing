@@ -5,12 +5,25 @@ export const serverRoutes: ServerRoute[] = [
     path: 'products/:id',
     renderMode: RenderMode.Server,
   },
+
+  {
+    path: 'backoffice/**',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'login',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'checkout',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'marketplace',
+    renderMode: RenderMode.Server,
+  },
   {
     path: '**',
     renderMode: RenderMode.Prerender,
-  },
-  {
-    path: 'backoffice/editor',
-    renderMode: RenderMode.Client,        // Désactive SSR
   },
 ];

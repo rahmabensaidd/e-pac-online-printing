@@ -1,21 +1,11 @@
 package tn.epac.eprinting.model.entities;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 
 import tn.epac.eprinting.model.enums.OrderStatus;
+import tn.epac.eprinting.model.enums.OrderPriority;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,8 +25,14 @@ public class Order {
 
     private LocalDate orderDate;
 
+    @Column(name = "reference", unique = true)
+    private String reference;
+
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
+
+    @Enumerated(EnumType.STRING)
+    private OrderPriority priority;
 
     private float totalAmount;
 
@@ -49,7 +45,8 @@ public class Order {
     @OneToOne(cascade = CascadeType.ALL)
     private Shipping shipping;
 
-    // Ajouter la relation OneToMany avec OrderLine
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // Relation unidirectionnelle Order -> OrderLine
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "order_id")
     private List<OrderLine> orderLines = new ArrayList<>();
 }

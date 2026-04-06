@@ -11,6 +11,7 @@ import tn.epac.eprinting.model.enums.TemplateType;
 @Entity
 @Getter
 @Setter
+@Table(name = "cover_templates")
 public class CoverTemplate  {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,4 +26,11 @@ public class CoverTemplate  {
     private String frontModel;
 
     private String textAreas;
+
+    @Column(name = "is_created_by_admin")
+    private Boolean createdByAdmin = Boolean.FALSE;
+
+    @ManyToOne
+    @JoinColumn(name = "creation_author_id")
+    private User creationAuthor;
 }

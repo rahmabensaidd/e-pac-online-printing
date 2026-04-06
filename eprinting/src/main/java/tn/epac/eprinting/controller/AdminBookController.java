@@ -13,17 +13,17 @@ import tn.epac.eprinting.model.dtos.BookRequestDto;
 import tn.epac.eprinting.model.dtos.BookResponseDto;
 import tn.epac.eprinting.model.dtos.BookOverviewDto;
 import tn.epac.eprinting.model.enums.AdminBookStatus;
-import tn.epac.eprinting.ServiceImpl.AdminBookServiceImpl;  // Use interface instead of implementation
+import tn.epac.eprinting.service.AdminBookService;  // Use interface instead of implementation
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/books")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")  // Uncomment and ensure role is correct
+@PreAuthorize("hasRole('admin')")  // Uncomment and ensure role is correct
 public class AdminBookController {
 
-    private final AdminBookServiceImpl adminBookService;  // Use interface type
+    private final AdminBookService adminBookService;  // Use interface type
 
     /**
      * Get book overview statistics

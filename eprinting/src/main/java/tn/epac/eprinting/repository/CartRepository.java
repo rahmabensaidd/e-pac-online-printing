@@ -22,6 +22,9 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     @Query("SELECT c FROM Cart c WHERE c.user.userId = :userId AND c.order IS NULL")
     Optional<Cart> findActiveCartByUserId(@Param("userId") Integer userId);
 
+    @Query("SELECT c FROM Cart c WHERE c.cartId = :cartId AND c.order IS NULL")
+    Optional<Cart> findActiveCartById(@Param("cartId") Long cartId);
+
     // Supprimer le panier d'un utilisateur
     void deleteByUser(User user);
 }
