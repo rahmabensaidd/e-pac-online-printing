@@ -75,4 +75,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("SELECT COUNT(b) FROM Book b WHERE b.is_added_from_admin = true")
     long countMarketplaceBooks();
+
+    @Query("SELECT b FROM Book b WHERE b.is_created_by_user = true AND b.creation_author.userId = :userId ORDER BY b.bookId DESC")
+    List<Book> findUserCreatedBooks(@Param("userId") Long userId);
 }

@@ -58,6 +58,7 @@ public class SecurityConfig {
                                 "/api/books/marketplace/**",
                                 "/api/cart/**",
                                 "/api/auth/signup",
+                                "/api/auth/register-organization",
                                 "/api/auth/login"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("admin")

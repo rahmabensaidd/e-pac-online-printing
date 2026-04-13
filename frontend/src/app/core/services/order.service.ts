@@ -16,6 +16,7 @@ export interface CheckoutOrderRequest {
   notes: string;
   shippingMethod: string;
   paymentMethod: string;
+  confirmPriceUpdate?: boolean;
 }
 
 export interface OrderLineResponse {

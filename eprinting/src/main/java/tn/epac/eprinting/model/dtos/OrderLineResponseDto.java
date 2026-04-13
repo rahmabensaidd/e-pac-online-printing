@@ -13,7 +13,10 @@ public class OrderLineResponseDto {
     private Long orderLineId;
     private Long bookId;
     private String title;
+    private String itemSource;
     private Integer quantity;
     private Float unitPrice;
     private Float totalPrice;
+    private Boolean isEstimated;
+    private String currency;
 }

@@ -14,17 +14,16 @@ public class Content {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long contentId;
 
-    @Lob
-    @Column(name = "text_content")
-    private String textContent;
-
     // nom original du fichier
+    @Column(nullable = false)
     private String fileName;
 
     // type MIME : application/pdf
+    @Column(nullable = false)
     private String fileType;
 
     // emplacement du fichier sur serveur
+    @Column(nullable = false)
     private String filePath;
 
     @OneToOne
@@ -38,14 +37,13 @@ public class Content {
     @PrePersist
     @PreUpdate
     public void validateContent() {
-        boolean hasText = textContent != null && !textContent.trim().isEmpty();
         boolean hasPdf = filePath != null && !filePath.trim().isEmpty();
 
-        if (!hasText && !hasPdf) {
-            throw new IllegalStateException("Content must contain either text or a PDF file");
+        if (!hasPdf) {
+            throw new IllegalStateException("Content must contain a PDF file");
         }
 
-        if (hasPdf && fileType != null && !fileType.equalsIgnoreCase("application/pdf")) {
+        if (fileType == null || !fileType.equalsIgnoreCase("application/pdf")) {
             throw new IllegalStateException("Only PDF files are allowed");
         }
     }

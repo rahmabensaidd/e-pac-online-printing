@@ -11,6 +11,10 @@ interface NavItem {
   exact?: boolean;
 }
 
+interface IconNavItem extends NavItem {
+  icon: string;
+}
+
 @Component({
   selector: 'app-navbar',
   imports: [NgOptimizedImage, RouterLink, RouterLinkActive],
@@ -31,6 +35,18 @@ export class NavbarComponent {
     { label: 'Marketplace', path: '/marketplace', exact: true },
     { label: 'Price Simulator', path: '/price-simulator', exact: true },
   ];
+  readonly designStudioNav: IconNavItem = {
+    label: 'Design Studio',
+    path: '/design-studio',
+    icon: 'fa-compass-drafting',
+    exact: true,
+  };
+  readonly myCustomBooksNav: IconNavItem = {
+    label: 'My Custom Books',
+    path: '/my-custom-books',
+    icon: 'fa-book',
+    exact: true,
+  };
   readonly loginNav: NavItem = { label: 'Login', path: '/login', exact: true };
 
   readonly mobileOpen = signal(false);

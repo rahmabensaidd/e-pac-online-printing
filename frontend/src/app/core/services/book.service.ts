@@ -180,6 +180,7 @@ export interface PageResponse<T> {
 export class BookService {
     private http = inject(HttpClient);
     private apiUrl = '/api/admin/books';
+    private userApiUrl = '/api/user/books';
 
     // State signals
     private booksSignal = signal<Book[]>([]);
@@ -373,6 +374,29 @@ export class BookService {
                     console.error('Error message:', error.error.message);
                 }
             }
+            throw error;
+        }
+    }
+
+    async createUserBook(book: BookRequestDto): Promise<Book> {
+        try {
+            const newBook = await this.http.post<Book>(this.userApiUrl, book).toPromise();
+            if (newBook) {
+                this.booksSignal.update(books => [...books, newBook]);
+                this.loadOverview();
+            }
+            return newBook!;
+        } catch (error) {
+            console.error('Error creating user book:', error);
+            throw error;
+        }
+    }
+
+    async getMyCustomBooks(): Promise<Book[]> {
+        try {
+            return await this.http.get<Book[]>(`${this.userApiUrl}/my`).toPromise() || [];
+        } catch (error) {
+            console.error('Error loading current user custom books:', error);
             throw error;
         }
     }

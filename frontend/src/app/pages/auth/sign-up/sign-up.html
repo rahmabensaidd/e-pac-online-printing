@@ -44,23 +44,109 @@
             }
 
             <div>
-              <label for="sign-up-name" class="block text-sm font-bold text-brand-navy mb-2">Full name</label>
-              <input
-                id="sign-up-name"
-                type="text"
-                formControlName="fullName"
-                autocomplete="name"
-                class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
-                placeholder="Alex Morgan"
-                [attr.aria-invalid]="showError('fullName') ? 'true' : 'false'"
-                [attr.aria-describedby]="showError('fullName') ? 'sign-up-name-error' : null"
-              />
-              @if (showError('fullName')) {
-                <p id="sign-up-name-error" class="mt-2 text-sm text-brand-pink">
-                  Full name is required.
-                </p>
-              }
+              <p class="block text-sm font-bold text-brand-navy mb-2">Account type</p>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <label class="rounded-2xl border px-4 py-3 cursor-pointer transition"
+                       [class.border-brand-orange]="form.controls.accountType.getRawValue() === 'normal'"
+                       [class.bg-brand-cream]="form.controls.accountType.getRawValue() === 'normal'"
+                       [class.border-gray-300]="form.controls.accountType.getRawValue() !== 'normal'">
+                  <input type="radio" class="sr-only" formControlName="accountType" value="normal" />
+                  <span class="block font-bold text-brand-navy">Normal account</span>
+                  <span class="block text-xs text-gray-600 mt-1">For personal purchases and standard checkout.</span>
+                </label>
+
+                <label class="rounded-2xl border px-4 py-3 cursor-pointer transition"
+                       [class.border-brand-orange]="form.controls.accountType.getRawValue() === 'organization'"
+                       [class.bg-brand-cream]="form.controls.accountType.getRawValue() === 'organization'"
+                       [class.border-gray-300]="form.controls.accountType.getRawValue() !== 'organization'">
+                  <input type="radio" class="sr-only" formControlName="accountType" value="organization" />
+                  <span class="block font-bold text-brand-navy">Organization account</span>
+                  <span class="block text-xs text-gray-600 mt-1">Claim access with organization SIREN and verification token.</span>
+                </label>
+              </div>
             </div>
+
+            @if (!isOrganizationAccount()) {
+              <div>
+                <label for="sign-up-name" class="block text-sm font-bold text-brand-navy mb-2">Full name</label>
+                <input
+                  id="sign-up-name"
+                  type="text"
+                  formControlName="fullName"
+                  autocomplete="name"
+                  class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  placeholder="Alex Morgan"
+                  [attr.aria-invalid]="showError('fullName') ? 'true' : 'false'"
+                  [attr.aria-describedby]="showError('fullName') ? 'sign-up-name-error' : null"
+                />
+                @if (showError('fullName')) {
+                  <p id="sign-up-name-error" class="mt-2 text-sm text-brand-pink">
+                    Full name is required.
+                  </p>
+                }
+              </div>
+            } @else {
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                  <label for="sign-up-org-name" class="block text-sm font-bold text-brand-navy mb-2">Organization name</label>
+                  <input
+                    id="sign-up-org-name"
+                    type="text"
+                    formControlName="organizationName"
+                    autocomplete="organization"
+                    class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                    placeholder="ACME Printing Group"
+                    [attr.aria-invalid]="showError('organizationName') ? 'true' : 'false'"
+                  />
+                  @if (showError('organizationName')) {
+                    <p class="mt-2 text-sm text-brand-pink">Organization name is required.</p>
+                  }
+                </div>
+
+                <div>
+                  <label for="sign-up-siren" class="block text-sm font-bold text-brand-navy mb-2">SIREN</label>
+                  <input
+                    id="sign-up-siren"
+                    type="text"
+                    formControlName="siren"
+                    inputmode="numeric"
+                    class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                    placeholder="123456789"
+                    [attr.aria-invalid]="showError('siren') ? 'true' : 'false'"
+                  />
+                  @if (showError('siren')) {
+                    <p class="mt-2 text-sm text-brand-pink">
+                      @if (form.controls.siren.hasError('required')) {
+                        SIREN is required.
+                      } @else {
+                        SIREN must contain exactly 9 digits.
+                      }
+                    </p>
+                  }
+                </div>
+
+                <div>
+                  <label for="sign-up-token" class="block text-sm font-bold text-brand-navy mb-2">Verification token</label>
+                  <input
+                    id="sign-up-token"
+                    type="text"
+                    formControlName="verificationToken"
+                    class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                    placeholder="Enter the token provided by your admin"
+                    [attr.aria-invalid]="showError('verificationToken') ? 'true' : 'false'"
+                  />
+                  @if (showError('verificationToken')) {
+                    <p class="mt-2 text-sm text-brand-pink">
+                      @if (form.controls.verificationToken.hasError('required')) {
+                        Verification token is required.
+                      } @else {
+                        Verification token seems too short.
+                      }
+                    </p>
+                  }
+                </div>
+              </div>
+            }
 
             <div>
               <label for="sign-up-email" class="block text-sm font-bold text-brand-navy mb-2">Email</label>

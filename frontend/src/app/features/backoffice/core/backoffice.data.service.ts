@@ -414,6 +414,13 @@ export class BackofficeDataService {
             group: 'Workspace',
         },
         {
+            label: 'Organizations',
+            route: '/backoffice/organizations',
+            icon: 'fa-building',
+            description: 'Manage organizations and verification tokens',
+            group: 'Workspace',
+        },
+        {
             label: 'Settings',
             route: '/backoffice/settings',
             icon: 'fa-sliders',

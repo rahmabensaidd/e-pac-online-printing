@@ -57,6 +57,21 @@ public interface AdminBookService {
     BookResponseDto createBook(BookRequestDto bookRequest);
 
     /**
+     * Creates a new book from a logged-in user flow (non-admin creation path).
+     * @param bookRequest DTO containing book information to create
+     * @param creatorUserId authenticated user id from JWT
+     * @return DTO of the created book
+     */
+    BookResponseDto createUserBook(BookRequestDto bookRequest, Long creatorUserId);
+
+    /**
+     * Retrieves books created by the authenticated user.
+     * @param creatorUserId authenticated user id
+     * @return list of user's custom books
+     */
+    List<BookResponseDto> getUserCreatedBooks(Long creatorUserId);
+
+    /**
      * Updates an existing book (full replacement)
      * @param bookId Book identifier to update
      * @param bookRequest DTO containing new information

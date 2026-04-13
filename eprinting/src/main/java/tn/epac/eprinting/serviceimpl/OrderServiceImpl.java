@@ -14,6 +14,7 @@ import tn.epac.eprinting.model.entities.Order;
 import tn.epac.eprinting.model.entities.OrderLine;
 import tn.epac.eprinting.model.entities.Shipping;
 import tn.epac.eprinting.model.entities.User;
+import tn.epac.eprinting.model.enums.CartItemSource;
 import tn.epac.eprinting.model.enums.OrderPriority;
 import tn.epac.eprinting.model.enums.OrderStatus;
 import tn.epac.eprinting.model.enums.PaymentStatus;
@@ -26,6 +27,8 @@ import tn.epac.eprinting.repository.CartRepository;
 import tn.epac.eprinting.repository.OrderRepository;
 import tn.epac.eprinting.repository.ShippingRepository;
 import tn.epac.eprinting.repository.UserRepository;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -42,6 +45,7 @@ public class OrderServiceImpl {
     private final AdressRepository adressRepository;
     private final BillingRepository billingRepository;
     private final ShippingRepository shippingRepository;
+    private final CustomBookPricingService customBookPricingService;
 
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
@@ -60,6 +64,7 @@ public class OrderServiceImpl {
         if (cart.getItems() == null || cart.getItems().isEmpty()) {
             throw new IllegalStateException("Cannot checkout an empty cart");
         }
+        revalidateCustomPricing(cart, request);
 
         User user = resolveUser(email, username, request, roles);
 
@@ -194,6 +199,10 @@ public class OrderServiceImpl {
                 .quantity(cartLine.getQuantity())
                 .unitPrice(cartLine.getUnitPrice())
                 .totalPrice(cartLine.getTotalPrice())
+                .itemSource(cartLine.getItemSource())
+                .isEstimated(cartLine.getIsEstimated())
+                .currency(cartLine.getCurrency())
+                .calculatedAt(cartLine.getCalculatedAt())
                 .build();
     }
 
@@ -202,10 +211,72 @@ public class OrderServiceImpl {
                 .orderLineId(line.getOrderLineId())
                 .bookId(line.getBook() != null ? line.getBook().getBookId() : null)
                 .title(line.getBook() != null ? line.getBook().getTitle() : null)
+                .itemSource(line.getItemSource() != null ? line.getItemSource().name() : CartItemSource.MARKETPLACE.name())
                 .quantity(line.getQuantity())
                 .unitPrice(line.getUnitPrice() != null ? line.getUnitPrice().floatValue() : 0f)
                 .totalPrice(line.getTotalPrice() != null ? line.getTotalPrice().floatValue() : 0f)
+                .isEstimated(Boolean.TRUE.equals(line.getIsEstimated()))
+                .currency(line.getCurrency())
                 .build();
+    }
+
+    private void revalidateCustomPricing(Cart cart, CheckoutOrderRequestDto request) {
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            return;
+        }
+
+        boolean confirmPriceUpdate = Boolean.TRUE.equals(request.getConfirmPriceUpdate());
+        boolean hasPriceDiff = false;
+
+        for (OrderLine line : cart.getItems()) {
+            if (line == null || line.getBook() == null || line.getBook().getBookId() == null) {
+                continue;
+            }
+            if (line.getItemSource() != CartItemSource.CUSTOM) {
+                continue;
+            }
+
+            CustomBookPricingService.PricingQuote quote = customBookPricingService.calculateQuote(
+                    line.getBook().getBookId(),
+                    line.getQuantity()
+            );
+
+            boolean changed = hasPriceChanged(line.getUnitPrice(), quote.getUnitPrice())
+                    || hasPriceChanged(line.getTotalPrice(), quote.getTotalPrice());
+
+            if (changed) {
+                hasPriceDiff = true;
+            }
+
+            if (!changed && !Boolean.TRUE.equals(line.getIsEstimated())) {
+                continue;
+            }
+
+            line.setUnitPrice(quote.getUnitPrice());
+            line.setTotalPrice(quote.getTotalPrice());
+            line.setIsEstimated(quote.isEstimated());
+            line.setCurrency(quote.getCurrency());
+            line.setCalculatedAt(quote.getCalculatedAt());
+        }
+
+        if (hasPriceDiff) {
+            cart.calculateTotal();
+            cartRepository.save(cart);
+            if (!confirmPriceUpdate) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Final price updated, please confirm"
+                );
+            }
+        }
+    }
+
+    private boolean hasPriceChanged(BigDecimal left, BigDecimal right) {
+        if (left == null || right == null) {
+            return true;
+        }
+        return left.setScale(2, java.math.RoundingMode.HALF_UP)
+                .compareTo(right.setScale(2, java.math.RoundingMode.HALF_UP)) != 0;
     }
 
     /**

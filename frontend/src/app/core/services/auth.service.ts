@@ -3,11 +3,14 @@ import { isPlatformBrowser } from '@angular/common';
 
 interface JwtClaims {
   exp?: number;
+  sub?: string;
+  user_id?: number | string;
   email?: string;
   preferred_username?: string;
   given_name?: string;
   family_name?: string;
   roles?: string[];
+  user_type?: string;
 }
 
 interface LoginResponse {
@@ -24,6 +27,14 @@ export interface SignupRequest {
   email: string;
   username: string;
   password: string;
+}
+
+export interface OrganizationSignupRequest {
+  email: string;
+  password: string;
+  organizationName: string;
+  siren: string;
+  verificationToken: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -61,6 +72,18 @@ export class AuthService {
   });
 
   readonly userRoles = computed(() => this.profileSignal()?.roles ?? []);
+  readonly userType = computed(() => this.profileSignal()?.user_type ?? 'simple');
+  readonly userId = computed(() => {
+    const value = this.profileSignal()?.user_id;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  });
 
   constructor() {
     if (!isPlatformBrowser(this.platformId)) {
@@ -94,15 +117,7 @@ export class AuthService {
 
       if (!response.ok) {
         const rawBody = await response.text();
-        let message = 'Invalid credentials';
-        try {
-          const parsed = JSON.parse(rawBody) as { message?: string; error?: string };
-          message = parsed.message || parsed.error || message;
-        } catch {
-          if (rawBody.trim().length > 0) {
-            message = rawBody;
-          }
-        }
+        const message = this.parseErrorMessage(rawBody, 'Invalid credentials');
         throw new Error(message);
       }
 
@@ -130,15 +145,25 @@ export class AuthService {
     }
 
     const rawBody = await response.text();
-    let message = 'Unable to create account';
-    try {
-      const parsed = JSON.parse(rawBody) as { message?: string; error?: string };
-      message = parsed.message || parsed.error || message;
-    } catch {
-      if (rawBody.trim().length > 0) {
-        message = rawBody;
-      }
+    const message = this.parseErrorMessage(rawBody, 'Unable to create account');
+    throw new Error(message);
+  }
+
+  async signupOrganization(payload: OrganizationSignupRequest): Promise<void> {
+    const response = await fetch('/api/auth/register-organization', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      return;
     }
+
+    const rawBody = await response.text();
+    const message = this.parseErrorMessage(rawBody, 'Unable to create organization account');
     throw new Error(message);
   }
 
@@ -212,6 +237,20 @@ export class AuthService {
       return JSON.parse(decoded) as JwtClaims;
     } catch {
       return null;
+    }
+  }
+
+  private parseErrorMessage(rawBody: string, fallback: string): string {
+    try {
+      const parsed = JSON.parse(rawBody) as {
+        message?: string;
+        error?: string;
+        detail?: string;
+        title?: string;
+      };
+      return parsed.message || parsed.detail || parsed.error || parsed.title || fallback;
+    } catch {
+      return rawBody.trim().length > 0 ? rawBody : fallback;
     }
   }
 }

@@ -62,21 +62,18 @@
 
             <div class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 lg:p-8">
                 <section
-                        class="flex h-[90vh] w-[92vw] max-w-[1600px] flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl"
+                        class="flex h-[95vh] w-[96vw] max-w-[1850px] flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl"
                         role="dialog"
                         aria-modal="true"
                         [attr.aria-label]="editingBookId() ? 'Edit book' : 'Create book'"
                 >
                     <!-- Header -->
-                    <div class="flex items-center justify-between border-b border-slate-200/70 px-6 py-4">
-                        <div>
-                            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                Book creation flow
-                            </p>
-                            <h2 class="mt-1 text-[1.35rem] font-semibold text-brand-navy">
+                    <div class="flex items-center justify-between border-b border-slate-200/70 px-4 py-1.5">
+                        <div class="flex items-end gap-3">
+                            <h2 class="text-[1.05rem] font-semibold text-brand-navy">
                                 {{ editingBookId() ? 'Edit book' : 'Create a new book' }}
                             </h2>
-                            <p class="mt-1 text-[0.84rem] text-slate-500">
+                            <p class="text-[0.72rem] text-slate-500">
                                 Step {{ currentStep() + 1 }} / {{ totalVisibleSteps }}
                             </p>
                         </div>
@@ -114,28 +111,26 @@
                     </div>
 
                     <!-- Step tabs -->
-                    <div class="border-b border-slate-200/70 bg-slate-50 px-6 py-4">
-                        <div class="grid gap-3 md:grid-cols-4">
+                    <div class="border-b border-slate-200/70 bg-slate-50 px-4 py-1">
+                        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                             @for (step of visibleCreationSteps; track step.id; let i = $index) {
                                 <button
                                         type="button"
-                                        class="rounded-2xl border px-4 py-3 text-left transition"
-                                        [class.border-brand-navy]="currentStep() === i"
-                                        [class.bg-brand-navy]="currentStep() === i"
-                                        [class.text-white]="currentStep() === i"
-                                        [class.border-slate-200]="currentStep() !== i"
-                                        [class.bg-white]="currentStep() !== i"
-                                        [class.text-slate-600]="currentStep() !== i"
+                                        class="text-[0.6rem] font-semibold uppercase tracking-[0.08em] transition"
+                                        [class.text-brand-navy]="currentStep() === i"
+                                        [class.text-slate-400]="currentStep() !== i"
                                         (click)="goToStep(i)"
                                 >
-                                    <div class="text-[0.72rem] font-semibold uppercase tracking-[0.14em] opacity-80">
-                                        Step {{ i + 1 }}
-                                    </div>
-                                    <div class="mt-1 text-[0.95rem] font-semibold">
-                                        {{ step.label }}
-                                    </div>
+                                    {{ i + 1 }} • {{ step.label }}
                                 </button>
                             }
+                        </div>
+
+                        <div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-slate-200">
+                            <div
+                                    class="h-full rounded-full bg-brand-navy transition-all duration-300 ease-out"
+                                    [style.width.%]="stepProgressPercent"
+                            ></div>
                         </div>
                     </div>
 
@@ -146,8 +141,8 @@
                             (ngSubmit)="onSubmit()"
                             novalidate
                     >
-                        <div class="flex-1 overflow-y-auto px-6 py-6">
-                            <div class="mx-auto w-full max-w-[1500px] space-y-6">
+                        <div class="flex-1 overflow-y-auto px-4 py-3">
+                            <div class="mx-auto w-full space-y-5">
 
                                 <!-- STEP 1 : ATTRIBUTS -->
                                 @if (isCurrentStep('attributes')) {
@@ -627,42 +622,11 @@
                                             <div class="mt-6" [formGroup]="coverGroup">
                                                 @if (coverGroup.get('mode')?.value === 'manual') {
                                                     <div class="grid gap-4">
-                                                        <div>
-                                                            <label class="admin-label">Cover Title</label>
-                                                            <input class="admin-input" formControlName="title" placeholder="Cover title" />
-                                                        </div>
 
-                                                        <div>
-                                                            <div class="mb-2 flex items-center justify-between">
-                                                                <label class="admin-label mb-0">Images</label>
-                                                                <button type="button" class="admin-btn-secondary" (click)="addCoverImage()">+ Image</button>
-                                                            </div>
 
-                                                            <div formArrayName="images" class="space-y-3">
-                                                                @for (imgCtrl of coverImages.controls; track $index; let i = $index) {
-                                                                    <div class="flex gap-2">
-                                                                        <input class="admin-input" [formControlName]="$index" placeholder="Image path / URL / server path" />
-                                                                        <button type="button" class="admin-btn-secondary" (click)="removeCoverImage(i)">Remove</button>
-                                                                    </div>
-                                                                }
-                                                            </div>
-                                                        </div>
 
-                                                        <div>
-                                                            <div class="mb-2 flex items-center justify-between">
-                                                                <label class="admin-label mb-0">Texts</label>
-                                                                <button type="button" class="admin-btn-secondary" (click)="addCoverText()">+ Text</button>
-                                                            </div>
 
-                                                            <div formArrayName="texts" class="space-y-3">
-                                                                @for (textCtrl of coverTexts.controls; track $index; let i = $index) {
-                                                                    <div class="flex gap-2">
-                                                                        <textarea class="admin-textarea" rows="2" [formControlName]="$index" placeholder="Cover text"></textarea>
-                                                                        <button type="button" class="admin-btn-secondary" (click)="removeCoverText(i)">Remove</button>
-                                                                    </div>
-                                                                }
-                                                            </div>
-                                                        </div>
+
                                                     </div>
                                                 } @else {
                                                     <div class="grid gap-4">
@@ -685,21 +649,11 @@
                                             <div class="flex items-center justify-between gap-4">
                                                 <div>
                                                     <h3 class="text-[1rem] font-semibold text-brand-navy">Content</h3>
-                                                    <p class="mt-1 text-[0.85rem] text-slate-500">
-                                                        Provide either plain text content or a ready PDF file.
-                                                    </p>
+
                                                 </div>
 
                                                 <div class="flex gap-2">
-                                                    <button
-                                                            type="button"
-                                                            class="rounded-xl border px-3 py-2 text-sm"
-                                                            [class.bg-brand-navy]="contentGroup.get('mode')?.value === 'text'"
-                                                            [class.text-white]="contentGroup.get('mode')?.value === 'text'"
-                                                            (click)="onContentModeChange('text')"
-                                                    >
-                                                        Text
-                                                    </button>
+
 
                                                     <button
                                                             type="button"
@@ -714,19 +668,8 @@
                                             </div>
 
                                             <div class="mt-6" [formGroup]="contentGroup">
-                                                @if (contentGroup.get('mode')?.value === 'text') {
-                                                    <div class="grid gap-4">
-                                                        <div>
-                                                            <label class="admin-label">Text content</label>
-                                                            <textarea
-                                                                    class="admin-textarea"
-                                                                    rows="14"
-                                                                    formControlName="textContent"
-                                                    placeholder="Paste text content here..."
-                                                            ></textarea>
-                                                        </div>
-                                                    </div>
-                                                } @else {
+                                                @if (contentGroup.get('mode')?.value === 'pdf') {
+
                                                     <div class="grid gap-4">
                                                         <div>
                                                             <label class="admin-label">PDF file name</label>
@@ -861,48 +804,47 @@
 
                                 <!-- STEP 4 : TEMPLATE -->
                                 @if (isCurrentStep('template')) {
-                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm" [formGroup]="templateGroup">
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm" [formGroup]="templateGroup">
                                         <div class="flex items-center justify-between gap-4">
                                             <div>
                                                 <h3 class="text-[1rem] font-semibold text-brand-navy">Template</h3>
                                                 <p class="mt-1 text-[0.85rem] text-slate-500">
-                                                    Select the cover template and text template.
+                                                    Use the CE.SDK editor to load, customize and associate a cover template.
                                                 </p>
-                                            </div>
-
-                                            <div class="flex gap-2">
-                                                <button
-                                                        type="button"
-                                                        class="rounded-xl border px-3 py-2 text-sm"
-                                                        [class.bg-brand-navy]="templateGroup.get('action')?.value === 'select'"
-                                                        [class.text-white]="templateGroup.get('action')?.value === 'select'"
-                                                        (click)="templateGroup.get('action')?.setValue('select')"
-                                                >
-                                                    Select
-                                                </button>
-
-                                                <button
-                                                        type="button"
-                                                        class="rounded-xl border px-3 py-2 text-sm"
-                                                        [class.bg-brand-navy]="templateGroup.get('action')?.value === 'edit'"
-                                                        [class.text-white]="templateGroup.get('action')?.value === 'edit'"
-                                                        (click)="templateGroup.get('action')?.setValue('edit')"
-                                                >
-                                                    Edit
-                                                </button>
                                             </div>
                                         </div>
 
-                                        <div class="mt-6 grid gap-6 xl:grid-cols-2">
-                                            <div class="rounded-2xl border border-slate-200 p-4" [formGroup]="coverGroup">
+                                        <div class="mt-4 space-y-4">
+                                            <div class="rounded-2xl border border-slate-200 p-3" [formGroup]="coverGroup">
                                                 <h4 class="font-semibold text-brand-navy">Cover template</h4>
-                                                <div class="mt-4">
-                                                    <label class="admin-label">Cover Template ID</label>
-                                                    <input class="admin-input" type="number" formControlName="coverTemplateId" />
+                                                <p class="mt-1 text-[0.82rem] text-slate-500">
+                                                    Compatible templates are filtered by Binding Type and Cover Color.
+                                                </p>
+
+                                                <div class="mt-3">
+                                                    <div class="h-[52vh] min-h-[460px] overflow-hidden rounded-2xl border border-slate-200">
+                                                        <app-editor
+                                                                [mode]="'bookCreation'"
+                                                                [bookBindingType]="bookForm.get('bindingType')?.value"
+                                                                [bookCoverColor]="bookForm.get('coverColor')?.value"
+                                                                [bookWidth]="bookForm.get('width')?.value"
+                                                                [bookHeight]="bookForm.get('height')?.value"
+                                                                [bookThickness]="bookForm.get('thickness')?.value"
+                                                                [initialTemplateId]="coverGroup.get('coverTemplateId')?.value"
+                                                                (templateAssociated)="onEditorTemplateAssociated($event)"
+                                                                (templateSelectionCleared)="onEditorTemplateSelectionCleared()"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-2.5 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-[0.8rem] text-slate-700">
+                                                    <p><strong>Selected coverTemplateId:</strong> {{ coverGroup.get('coverTemplateId')?.value || 'Not selected' }}</p>
+                                                    <p><strong>Template name:</strong> {{ validatedCoverTemplateName || 'N/A' }}</p>
+                                                    <p><strong>Template family:</strong> {{ validatedCoverTemplateFamily || 'N/A' }}</p>
                                                 </div>
                                             </div>
 
-                                            <div class="rounded-2xl border border-slate-200 p-4" [formGroup]="contentGroup">
+                                            <div class="rounded-2xl border border-slate-200 p-3" [formGroup]="contentGroup">
                                                 <h4 class="font-semibold text-brand-navy">Text template</h4>
                                                 <div class="mt-4">
                                                     <label class="admin-label">Text Template ID</label>
@@ -910,20 +852,13 @@
                                                 </div>
                                             </div>
                                         </div>
-
-                                        @if (templateGroup.get('action')?.value === 'edit') {
-                                            <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-[0.9rem] text-amber-800">
-                                                Edit mode is prepared. To expose full template editing fields, connect
-                                                <strong>CoverTemplate</strong> and <strong>TextTemplate</strong> entities.
-                                            </div>
-                                        }
                                     </section>
                                 }
                             </div>
                         </div>
 
                         <!-- Footer -->
-                        <div class="border-t border-slate-200/70 bg-white px-6 py-4">
+                        <div class="border-t border-slate-200/70 bg-white px-5 py-3">
                             <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <button
                                         type="button"

@@ -18,6 +18,10 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import {
+  Editor,
+  EditorTemplateAssociationEvent
+} from '../../../editor/editor';
 
 @Component({
   selector: 'app-backoffice-inventory-page',
@@ -25,7 +29,8 @@ import {
     BackofficeSectionHeaderComponent,
     BackofficeStatCardComponent,
     Bookstable,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    Editor
   ],
   templateUrl: './backoffice-inventory-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,12 +49,15 @@ export class BackofficeInventoryPageComponent implements OnInit {
 
   private readonly baseCreationSteps = [
     { id: 'attributes', label: 'Attributes' },
-    { id: 'content', label: 'Content' },
     { id: 'pnl', label: 'PNL' },
+    { id: 'content', label: 'Content' },
     { id: 'template', label: 'Templates' },
   ] as const;
 
   readonly currentStep = signal(0);
+  validatedCoverTemplateName: string | null = null;
+  validatedCoverTemplateFamily: string | null = null;
+  validatedCoverTemplateSceneString: string | null = null;
 
   bookForm: FormGroup;
 
@@ -176,28 +184,13 @@ export class BackofficeInventoryPageComponent implements OnInit {
 
       // STEP 2 : COVER
       cover: this.fb.group({
-        mode: ['manual'], // manual | pdf
-        title: [''],
-        barcodeId: [''],
-        images: this.fb.array([]),
-        texts: this.fb.array([]),
+        mode: ['manual'],
         pdfFileName: [''],
         pdfFileType: ['application/pdf'],
         pdfFilePath: [''],
         coverTemplateId: [null],
       }),
-
-      // STEP 2 : CONTENT
-      content: this.fb.group({
-        mode: ['text'], // text | pdf
-        textContent: [''],
-        fileName: [''],
-        fileType: ['application/pdf'],
-        filePath: [''],
-        textTemplateId: [null],
-      }),
-
-      // STEP 3 : PNL
+      // STEP 2 : PNL
       pnl: this.fb.group({
         pnlPageNumber: [1, [Validators.min(1)]],
         pnlPrintingNumber: [1, [Validators.min(1)]],
@@ -209,6 +202,17 @@ export class BackofficeInventoryPageComponent implements OnInit {
         pnlExcluded: [false],
         lines: this.fb.array([])
       }),
+      // STEP 3: CONTENT
+      content: this.fb.group({
+        mode: ['pdf'],
+        textContent: [''],
+        fileName: [''],
+        fileType: ['application/pdf'],
+        filePath: [''],
+        textTemplateId: [null],
+      }),
+
+
 
       // STEP 4 : TEMPLATE UI
       template: this.fb.group({
@@ -251,13 +255,15 @@ export class BackofficeInventoryPageComponent implements OnInit {
     return this.visibleCreationSteps.length;
   }
 
-  get coverImages(): FormArray<FormControl<string | null>> {
-    return this.coverGroup.get('images') as FormArray<FormControl<string | null>>;
+  get stepProgressPercent(): number {
+    const steps = this.totalVisibleSteps;
+    if (steps <= 1) {
+      return 100;
+    }
+
+    return Math.min(100, Math.max(0, ((this.currentStep() + 1) / steps) * 100));
   }
 
-  get coverTexts(): FormArray<FormControl<string | null>> {
-    return this.coverGroup.get('texts') as FormArray<FormControl<string | null>>;
-  }
 
   get pnlLines(): FormArray<FormGroup> {
     return this.pnlGroup.get('lines') as FormArray<FormGroup>;
@@ -290,21 +296,7 @@ export class BackofficeInventoryPageComponent implements OnInit {
     return this.visibleCreationSteps[this.currentStep()]?.id === stepId;
   }
 
-  addCoverImage(value: string = ''): void {
-    this.coverImages.push(this.fb.control(value));
-  }
 
-  removeCoverImage(index: number): void {
-    this.coverImages.removeAt(index);
-  }
-
-  addCoverText(value: string = ''): void {
-    this.coverTexts.push(this.fb.control(value));
-  }
-
-  removeCoverText(index: number): void {
-    this.coverTexts.removeAt(index);
-  }
 
   createPnlLineGroup(data?: any): FormGroup {
     return this.fb.group({
@@ -338,13 +330,7 @@ export class BackofficeInventoryPageComponent implements OnInit {
   onCoverModeChange(mode: 'manual' | 'pdf'): void {
     this.coverGroup.get('mode')?.setValue(mode);
 
-    if (mode === 'pdf') {
-      this.coverGroup.patchValue({
-        title: '',
-      });
-      this.clearFormArray(this.coverImages);
-      this.clearFormArray(this.coverTexts);
-    } else {
+    if (mode === 'manual') {
       this.coverGroup.patchValue({
         pdfFileName: '',
         pdfFileType: 'application/pdf',
@@ -352,23 +338,28 @@ export class BackofficeInventoryPageComponent implements OnInit {
       });
     }
   }
-
-  onContentModeChange(mode: 'text' | 'pdf'): void {
-    this.contentGroup.get('mode')?.setValue(mode);
-
-    if (mode === 'pdf') {
-      this.contentGroup.patchValue({
-        textContent: '',
-      });
-    } else {
-      this.contentGroup.patchValue({
-        fileName: '',
-        fileType: 'application/pdf',
-        filePath: '',
-      });
-    }
-
+  onContentModeChange(mode: 'pdf'): void {
+    this.contentGroup.get('mode')?.setValue('pdf');
     this.ensureCurrentStepInBounds();
+  }
+
+  onEditorTemplateAssociated(event: EditorTemplateAssociationEvent): void {
+    this.coverGroup.patchValue({
+      coverTemplateId: event.templateId
+    });
+
+    this.validatedCoverTemplateName = event.templateName;
+    this.validatedCoverTemplateFamily = event.templateFamily;
+    this.validatedCoverTemplateSceneString = event.sceneString;
+  }
+
+  onEditorTemplateSelectionCleared(): void {
+    this.coverGroup.patchValue({
+      coverTemplateId: null
+    });
+    this.validatedCoverTemplateName = null;
+    this.validatedCoverTemplateFamily = null;
+    this.validatedCoverTemplateSceneString = null;
   }
 
   onPnlOptionsChange(): void {
@@ -403,7 +394,6 @@ export class BackofficeInventoryPageComponent implements OnInit {
 
   openCreateDrawer(syncQuery: boolean = true): void {
     this.bookForm.reset({
-      title: '',
       description: '',
       authors: '',
       bindingType: '',
@@ -456,7 +446,7 @@ export class BackofficeInventoryPageComponent implements OnInit {
       },
 
       content: {
-        mode: 'text',
+        mode: 'pdf',
         textContent: '',
         fileName: '',
         fileType: 'application/pdf',
@@ -480,9 +470,11 @@ export class BackofficeInventoryPageComponent implements OnInit {
       }
     });
 
-    this.clearFormArray(this.coverImages);
-    this.clearFormArray(this.coverTexts);
+
     this.clearFormArray(this.pnlLines);
+    this.validatedCoverTemplateName = null;
+    this.validatedCoverTemplateFamily = null;
+    this.validatedCoverTemplateSceneString = null;
 
     this.currentStep.set(0);
     this.drawerOpen.set(true);
@@ -502,7 +494,6 @@ export class BackofficeInventoryPageComponent implements OnInit {
       const bookAny = book as any;
 
       this.bookForm.patchValue({
-        title: bookAny.title ?? '',
         description: bookAny.description ?? '',
         authors: Array.isArray(bookAny.authors) ? bookAny.authors.join(', ') : '',
         bindingType: bookAny.bindingType ?? '',
@@ -539,8 +530,6 @@ export class BackofficeInventoryPageComponent implements OnInit {
         labelType: bookAny.labelType ?? '',
       });
 
-      this.clearFormArray(this.coverImages);
-      this.clearFormArray(this.coverTexts);
       this.clearFormArray(this.pnlLines);
 
       const cover = bookAny.cover ?? null;
@@ -556,16 +545,18 @@ export class BackofficeInventoryPageComponent implements OnInit {
           coverTemplateId: cover.coverTemplate?.coverTemplateId ?? cover.coverTemplateId ?? null,
         });
 
-        (cover.images ?? []).forEach((img: string) => this.addCoverImage(img));
-        (cover.texts ?? []).forEach((txt: string) => this.addCoverText(txt));
+
+
+        this.validatedCoverTemplateName = cover.coverTemplate?.name ?? null;
+        this.validatedCoverTemplateFamily = cover.coverTemplate?.family ?? null;
+        this.validatedCoverTemplateSceneString = null;
       }
 
       const content = bookAny.content ?? null;
       if (content) {
         const hasContentPdf = !!content.filePath;
         this.contentGroup.patchValue({
-          mode: hasContentPdf ? 'pdf' : 'text',
-          textContent: content.textContent ?? '',
+          mode: 'pdf',
           fileName: content.fileName ?? '',
           fileType: content.fileType ?? 'application/pdf',
           filePath: content.filePath ?? '',
@@ -671,16 +662,13 @@ export class BackofficeInventoryPageComponent implements OnInit {
       labelType: formValue.labelType || undefined,
       salePrice: formValue.salePrice,
       cover: {
-        title: formValue.cover.title || undefined,
-        images: (formValue.cover.images ?? []).filter((v: string) => !!v?.trim()),
-        texts: (formValue.cover.texts ?? []).filter((v: string) => !!v?.trim()),
+
         pdfFileName: formValue.cover.pdfFileName || undefined,
         pdfFileType: undefined,
         pdfFilePath: undefined,
         coverTemplateId: shouldIncludeTemplates ? (formValue.cover.coverTemplateId ?? undefined) : undefined,
       },
       content: {
-        textContent: formValue.content.textContent || undefined,
         fileName: formValue.content.fileName || undefined,
         fileType: undefined,
         filePath: undefined,
@@ -730,6 +718,9 @@ export class BackofficeInventoryPageComponent implements OnInit {
     this.submitted.set(false);
     this.currentStep.set(0);
     this.bookForm.reset();
+    this.validatedCoverTemplateName = null;
+    this.validatedCoverTemplateFamily = null;
+    this.validatedCoverTemplateSceneString = null;
 
     if (syncQuery) {
       this.updateQuery(null);
@@ -802,7 +793,7 @@ export class BackofficeInventoryPageComponent implements OnInit {
   }
 
   shouldShowTemplateTab(): boolean {
-    return this.contentGroup.get('mode')?.value !== 'pdf';
+    return this.coverGroup.get('mode')?.value === 'manual';
   }
 
   shouldShowTabColor(): boolean {

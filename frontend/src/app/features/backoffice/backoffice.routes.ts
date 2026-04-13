@@ -89,6 +89,17 @@ export const BACKOFFICE_ROUTES: Routes = [
         },
       },
       {
+        path: 'organizations',
+        loadComponent: () =>
+          import('./organizations/backoffice-organizations-page').then(
+            (m) => m.BackofficeOrganizationsPageComponent,
+          ),
+        data: {
+          title: 'Organizations',
+          description: 'Create organizations and generate one-time verification tokens.',
+        },
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./settings/backoffice-settings-page').then(

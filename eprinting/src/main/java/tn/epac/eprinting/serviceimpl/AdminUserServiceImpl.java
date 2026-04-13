@@ -16,6 +16,7 @@ import tn.epac.eprinting.model.dtos.AdminUserUpdateRequestDto;
 import tn.epac.eprinting.model.entities.Order;
 import tn.epac.eprinting.model.entities.User;
 import tn.epac.eprinting.model.enums.Role;
+import tn.epac.eprinting.model.enums.UserType;
 import tn.epac.eprinting.repository.OrderRepository;
 import tn.epac.eprinting.repository.UserRepository;
 
@@ -56,6 +57,7 @@ public class AdminUserServiceImpl {
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(parseRole(request.getRole()));
+        user.setUserType(UserType.SIMPLE);
         user.setEnabled(Boolean.TRUE);
         user.setRegistrationDate(LocalDate.now());
         return toDto(userRepository.save(user));

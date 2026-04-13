@@ -11,6 +11,7 @@ import tn.epac.eprinting.model.dtos.AuthTokenResponseDto;
 import tn.epac.eprinting.model.dtos.SignupRequestDto;
 import tn.epac.eprinting.model.entities.User;
 import tn.epac.eprinting.model.enums.Role;
+import tn.epac.eprinting.model.enums.UserType;
 import tn.epac.eprinting.repository.UserRepository;
 import tn.epac.eprinting.security.JwtTokenService;
 
@@ -42,6 +43,7 @@ public class AuthSignupService {
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.USER);
+        user.setUserType(UserType.SIMPLE);
         user.setEnabled(Boolean.TRUE);
         user.setRegistrationDate(LocalDate.now());
         userRepository.save(user);

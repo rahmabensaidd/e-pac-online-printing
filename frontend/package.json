@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --no-hmr",
+    "start": "ng serve --no-hmr --live-reload=false",
     "start:hmr": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
@@ -27,6 +27,7 @@
   "private": true,
   "packageManager": "npm@11.5.2",
   "dependencies": {
+    "@angular/cdk": "^21.2.6",
     "@angular/common": "^21.1.0",
     "@angular/compiler": "^21.1.0",
     "@angular/core": "^21.1.0",
@@ -38,6 +39,7 @@
     "@cesdk/cesdk-js": "^1.67.0",
     "express": "^5.1.0",
     "rxjs": "~7.8.0",
+    "three": "^0.183.2",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
   },

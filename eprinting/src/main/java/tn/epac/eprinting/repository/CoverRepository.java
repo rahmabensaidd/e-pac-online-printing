@@ -9,4 +9,8 @@ import java.util.Optional;
 public interface CoverRepository extends JpaRepository<Cover, Long> {
 
     Optional<Cover> findByBook(Book book);
+
+    boolean existsByCoverTemplate_TemplateId(Long templateId);
+
+    long countByCoverTemplate_TemplateId(Long templateId);
 }

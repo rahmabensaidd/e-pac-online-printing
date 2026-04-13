@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import tn.epac.eprinting.model.enums.Role;
+import tn.epac.eprinting.model.enums.UserType;
 import java.time.LocalDate;
 import java.util.List;
 /**
@@ -52,6 +53,10 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_type", length = 24)
+    private UserType userType = UserType.SIMPLE;
+
     // AJOUTER la relation avec Cart
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Cart cart;
@@ -59,4 +64,8 @@ public class User {
     // Relation existante avec Orders
     @OneToMany(mappedBy = "user")
     private List<Order> orders;
+
+    @OneToMany(mappedBy = "creationAuthor")
+    private List<CoverTemplate> coverTemplates;
+
 }

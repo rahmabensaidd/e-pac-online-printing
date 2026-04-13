@@ -1,18 +1,26 @@
 package tn.epac.eprinting.model.entities;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Table;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.Builder;
-import lombok.Data;
+import tn.epac.eprinting.model.enums.CartItemSource;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 /**
  * OrderLine entity - represents a line item in a cart or order.
  * Links a book with quantity and pricing information.
@@ -41,21 +49,34 @@ public class OrderLine {
 
     private BigDecimal totalPrice;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "item_source", nullable = false, length = 20)
+    @Builder.Default
+    private CartItemSource itemSource = CartItemSource.MARKETPLACE;
 
+    @Column(name = "is_estimated", nullable = false)
+    @Builder.Default
+    private Boolean isEstimated = Boolean.FALSE;
 
-    // Méthode pour obtenir le prix du livre
+    @Column(name = "currency", nullable = false, length = 8)
+    @Builder.Default
+    private String currency = "USD";
+
+    @Column(name = "calculated_at")
+    private LocalDateTime calculatedAt;
+
+    // Method to get the source book unit price
     public float getBookPrice() {
-        if (book != null) return book.getSalePrice();
-
+        if (book != null) {
+            return book.getSalePrice();
+        }
         return 0;
     }
 
-    // Méthode pour recalculer le total
+    // Method to recalculate line total
     public void calculateTotalPrice() {
         if (quantity != null && unitPrice != null) {
             this.totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
         }
     }
-
-
 }

@@ -4,12 +4,30 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Product, ProductCategory } from '../models/product';
 
+export type CartItemSource = 'MARKETPLACE' | 'CUSTOM';
+
 export interface CartItem {
   orderLineId: number;
   bookId: number;
   product: Product;
   quantity: number;
+  unitPrice: number;
   lineTotal: number;
+  itemSource: CartItemSource;
+  isEstimated: boolean;
+  currency: string;
+  calculatedAt: string | null;
+}
+
+export interface CustomBookPriceQuote {
+  bookId: number;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  isEstimated: boolean;
+  currency: string;
+  calculatedAt: string;
+  message?: string | null;
 }
 
 interface CartApiItem {
@@ -18,9 +36,13 @@ interface CartApiItem {
   title: string;
   description: string;
   bindingType: string | null;
+  itemSource: CartItemSource | null;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  isEstimated: boolean | null;
+  currency: string | null;
+  calculatedAt: string | null;
 }
 
 interface CartApiResponse {
@@ -35,6 +57,17 @@ interface AddToCartRequest {
   cartId: number | null;
   bookId: number;
   quantity: number;
+}
+
+interface AddPricedCustomItemRequest {
+  cartId: number | null;
+  bookId: number;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  isEstimated: boolean;
+  currency: string;
+  calculatedAt: string;
 }
 
 interface UpdateCartItemQuantityRequest {
@@ -106,6 +139,51 @@ export class CartService {
       this.applyCartResponse(response);
     } catch (error) {
       console.error('Error adding product to cart:', error);
+      throw error;
+    } finally {
+      this.syncingSignal.set(false);
+    }
+  }
+
+  async calculateCustomBookPrice(bookId: number, quantity: number): Promise<CustomBookPriceQuote> {
+    const payload = {
+      bookId,
+      quantity: Math.max(1, Math.floor(quantity || 1)),
+    };
+
+    return await firstValueFrom(
+      this.http.post<CustomBookPriceQuote>(`${this.cartApiUrl}/custom-pricing`, payload)
+    );
+  }
+
+  async addPricedCustomItem(input: {
+    bookId: number;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    isEstimated: boolean;
+    currency: string;
+    calculatedAt: string;
+  }): Promise<void> {
+    const payload: AddPricedCustomItemRequest = {
+      cartId: this.cartIdSignal(),
+      bookId: input.bookId,
+      quantity: Math.max(1, Math.floor(input.quantity || 1)),
+      unitPrice: input.unitPrice,
+      totalPrice: input.totalPrice,
+      isEstimated: input.isEstimated,
+      currency: input.currency || 'USD',
+      calculatedAt: input.calculatedAt,
+    };
+
+    this.syncingSignal.set(true);
+    try {
+      const response = await firstValueFrom(
+        this.http.post<CartApiResponse>(`${this.cartApiUrl}/custom-items/priced`, payload)
+      );
+      this.applyCartResponse(response);
+    } catch (error) {
+      console.error('Error adding priced custom item to cart:', error);
       throw error;
     } finally {
       this.syncingSignal.set(false);
@@ -188,24 +266,34 @@ export class CartService {
   }
 
   private mapCartItem(item: CartApiItem): CartItem {
+    const itemSource: CartItemSource = item.itemSource === 'CUSTOM' ? 'CUSTOM' : 'MARKETPLACE';
     return {
       orderLineId: item.orderLineId,
       bookId: item.bookId,
       quantity: item.quantity,
+      unitPrice: item.unitPrice,
       lineTotal: item.lineTotal,
+      itemSource,
+      isEstimated: !!item.isEstimated,
+      currency: item.currency || 'USD',
+      calculatedAt: item.calculatedAt,
       product: {
         id: item.bookId,
         name: item.title,
-        category: this.mapBindingTypeToCategory(item.bindingType),
+        category: this.mapBindingTypeToCategory(item.bindingType, itemSource),
         price: item.unitPrice,
-        image: this.gradientForBindingType(item.bindingType),
+        image: this.gradientForBindingType(item.bindingType, itemSource),
         description: item.description || '',
-        specs: this.specsForBindingType(item.bindingType),
+        specs: this.specsForBindingType(item.bindingType, itemSource),
       },
     };
   }
 
-  private mapBindingTypeToCategory(bindingType: string | null): ProductCategory {
+  private mapBindingTypeToCategory(bindingType: string | null, itemSource: CartItemSource): ProductCategory {
+    if (itemSource === 'CUSTOM') {
+      return 'custom';
+    }
+
     switch ((bindingType || '').toUpperCase()) {
       case 'CARD':
         return 'business';
@@ -225,8 +313,12 @@ export class CartService {
     }
   }
 
-  private gradientForBindingType(bindingType: string | null): string {
-    switch (this.mapBindingTypeToCategory(bindingType)) {
+  private gradientForBindingType(bindingType: string | null, itemSource: CartItemSource): string {
+    if (itemSource === 'CUSTOM') {
+      return 'linear-gradient(135deg, #0F172A 0%, #1D4ED8 100%)';
+    }
+
+    switch (this.mapBindingTypeToCategory(bindingType, itemSource)) {
       case 'business':
         return 'linear-gradient(135deg, #1A1A2E 0%, #3A86FF 100%)';
       case 'marketing':
@@ -241,7 +333,11 @@ export class CartService {
     }
   }
 
-  private specsForBindingType(bindingType: string | null): string[] {
+  private specsForBindingType(bindingType: string | null, itemSource: CartItemSource): string[] {
+    if (itemSource === 'CUSTOM') {
+      return [bindingType?.replaceAll('_', ' ') || 'Custom book'];
+    }
+
     if (!bindingType) {
       return ['Marketplace product'];
     }

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { HomePageComponent } from './pages/home/home-page';
 import { authGuard } from './core/guards/auth.guard';
+import { SignInComponent } from './pages/auth/sign-in/sign-in';
 
 export const routes: Routes = [
   { path: '', component: HomePageComponent, pathMatch: 'full' },
@@ -14,13 +15,30 @@ export const routes: Routes = [
       import('./pages/price-simulator/price-simulator-page').then((m) => m.PriceSimulatorPageComponent),
   },
   {
+    path: 'design-studio',
+    loadComponent: () =>
+      import('./pages/design-studio/design-studio-page').then((m) => m.DesignStudioPageComponent),
+  },
+  {
+    path: 'design-your-book',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/design-your-book/design-your-book-page').then((m) => m.DesignYourBookPageComponent),
+  },
+  {
+    path: 'my-custom-books',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/my-custom-books/my-custom-books-page').then((m) => m.MyCustomBooksPageComponent),
+  },
+  {
     path: 'products/:id',
     loadComponent: () =>
       import('./pages/product-details/product-details-page').then((m) => m.ProductDetailsPageComponent),
   },
   {
     path: 'login',
-    loadComponent: () => import('./pages/auth/sign-in/sign-in').then((m) => m.SignInComponent),
+    component: SignInComponent,
   },
   {
     path: 'checkout',

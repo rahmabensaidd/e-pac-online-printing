@@ -4,6 +4,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { startWith } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CartItem, CartService } from '../../core/services/cart.service';
 import { AuthService } from '../../core/services/auth.service';
 import { OrderService } from '../../core/services/order.service';
@@ -45,6 +46,7 @@ export class CheckoutPageComponent {
   readonly placedTotal = signal(0);
   readonly submissionError = signal<string | null>(null);
   readonly placingOrder = signal(false);
+  readonly needsFinalPriceConfirmation = signal(false);
 
   readonly shippingMethod = signal<ShippingMethod>('standard');
   readonly paymentMethod = signal<PaymentMethod>('card');
@@ -136,22 +138,34 @@ export class CheckoutPageComponent {
         notes: this.form.getRawValue().notes,
         shippingMethod: this.form.getRawValue().shippingMethod,
         paymentMethod: this.form.getRawValue().paymentMethod,
+        confirmPriceUpdate: this.needsFinalPriceConfirmation(),
       });
 
       this.placedTotal.set(order.totalAmount);
       this.orderNumber.set(`EP-${order.orderId}`);
       this.orderPlaced.set(true);
+      this.needsFinalPriceConfirmation.set(false);
       await this.cart.refresh();
       this.ui.showToast?.({
         message: 'Order placed successfully.',
         type: 'success'
       });
-    } catch {
-      this.submissionError.set('Unable to place your order right now. Please make sure you are signed in and try again.');
-      this.ui.showToast?.({
-        message: 'Order placement failed.',
-        type: 'error'
-      });
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 409) {
+        this.needsFinalPriceConfirmation.set(true);
+        this.submissionError.set('Final price updated, please review and click Place order again to confirm.');
+        await this.cart.refresh();
+        this.ui.showToast?.({
+          message: 'Final price updated. Please confirm order.',
+          type: 'warning'
+        });
+      } else {
+        this.submissionError.set('Unable to place your order right now. Please make sure you are signed in and try again.');
+        this.ui.showToast?.({
+          message: 'Order placement failed.',
+          type: 'error'
+        });
+      }
     } finally {
       this.placingOrder.set(false);
     }
@@ -160,6 +174,7 @@ export class CheckoutPageComponent {
   startNewOrder(): void {
     this.orderPlaced.set(false);
     this.submitted.set(false);
+    this.needsFinalPriceConfirmation.set(false);
     this.form.reset({
       fullName: '',
       email: '',

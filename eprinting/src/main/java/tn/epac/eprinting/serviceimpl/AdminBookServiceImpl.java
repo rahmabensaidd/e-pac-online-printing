@@ -33,6 +33,7 @@ import tn.epac.eprinting.model.enums.UserBookStatus;
 import tn.epac.eprinting.repository.BookRepository;
 import tn.epac.eprinting.repository.CoverTemplateRepository;
 import tn.epac.eprinting.repository.TextTemplateRepository;
+import tn.epac.eprinting.repository.UserRepository;
 import tn.epac.eprinting.service.AdminBookService;
 
 import java.util.ArrayList;
@@ -48,6 +49,7 @@ public class AdminBookServiceImpl implements AdminBookService {
     private final BookRepository bookRepository;
     private final CoverTemplateRepository coverTemplateRepository;
     private final TextTemplateRepository textTemplateRepository;
+    private final UserRepository userRepository;
 
     @Override
     public BookOverviewDto getBookOverview() {
@@ -117,6 +119,41 @@ public class AdminBookServiceImpl implements AdminBookService {
 
         Book savedBook = bookRepository.save(book);
         return mapToResponseDto(savedBook);
+    }
+
+    @Override
+    public BookResponseDto createUserBook(BookRequestDto bookRequest, Long creatorUserId) {
+        if (!validateBookData(bookRequest)) {
+            throw new IllegalArgumentException("Invalid book request payload");
+        }
+
+        Book book = new Book();
+        applyBookFields(book, bookRequest, false);
+        applyBookRelations(book, bookRequest, false);
+
+        book.set_added_from_admin(false);
+        book.set_created_by_user(true);
+        book.setUserbook_status(UserBookStatus.DRAFT);
+        if (creatorUserId != null) {
+            userRepository.findById(creatorUserId).ifPresent(book::setCreation_author);
+        }
+        updateStockStatus(book);
+
+        Book savedBook = bookRepository.save(book);
+        return mapToResponseDto(savedBook);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookResponseDto> getUserCreatedBooks(Long creatorUserId) {
+        if (creatorUserId == null) {
+            return List.of();
+        }
+
+        return bookRepository.findUserCreatedBooks(creatorUserId)
+                .stream()
+                .map(this::mapToResponseDto)
+                .toList();
     }
 
     @Override
@@ -332,9 +369,6 @@ public class AdminBookServiceImpl implements AdminBookService {
 
         Cover cover = book.getCover() != null ? book.getCover() : new Cover();
         cover.setTitle(normalizeBlankToNull(coverDto.getTitle()));
-        cover.setBarcodeId(normalizeBlankToNull(coverDto.getBarcodeId()));
-        cover.setImages(cleanStringList(coverDto.getImages()));
-        cover.setTexts(cleanStringList(coverDto.getTexts()));
         cover.setPdfFileName(normalizeBlankToNull(coverDto.getPdfFileName()));
         cover.setPdfFileType(normalizeBlankToNull(coverDto.getPdfFileType()));
         cover.setPdfFilePath(normalizeBlankToNull(coverDto.getPdfFilePath()));
@@ -358,10 +392,20 @@ public class AdminBookServiceImpl implements AdminBookService {
         }
 
         Content content = book.getContent() != null ? book.getContent() : new Content();
-        content.setTextContent(normalizeBlankToNull(contentDto.getTextContent()));
-        content.setFileName(normalizeBlankToNull(contentDto.getFileName()));
-        content.setFileType(normalizeBlankToNull(contentDto.getFileType()));
-        content.setFilePath(normalizeBlankToNull(contentDto.getFilePath()));
+        String fileName = normalizeBlankToNull(contentDto.getFileName());
+        String fileType = normalizeBlankToNull(contentDto.getFileType());
+        String filePath = normalizeBlankToNull(contentDto.getFilePath());
+        String textContent = normalizeBlankToNull(contentDto.getTextContent());
+
+        if (filePath == null && (textContent != null || contentDto.getTextTemplateId() != null)) {
+            fileName = fileName != null ? fileName : "generated-from-text.pdf";
+            fileType = "application/pdf";
+            filePath = "/generated/from-text";
+        }
+
+        content.setFileName(fileName);
+        content.setFileType(fileType);
+        content.setFilePath(filePath);
         content.setBook(book);
 
         if (contentDto.getTextTemplateId() != null) {
@@ -471,9 +515,6 @@ public class AdminBookServiceImpl implements AdminBookService {
         return BookResponseDto.CoverPayloadDto.builder()
                 .coverId(cover.getCoverId())
                 .title(cover.getTitle())
-                .barcodeId(cover.getBarcodeId())
-                .images(cover.getImages())
-                .texts(cover.getTexts())
                 .pdfFileName(cover.getPdfFileName())
                 .pdfFileType(cover.getPdfFileType())
                 .pdfFilePath(cover.getPdfFilePath())
@@ -485,7 +526,6 @@ public class AdminBookServiceImpl implements AdminBookService {
         if (content == null) return null;
         return BookResponseDto.ContentPayloadDto.builder()
                 .contentId(content.getContentId())
-                .textContent(content.getTextContent())
                 .fileName(content.getFileName())
                 .fileType(content.getFileType())
                 .filePath(content.getFilePath())
@@ -560,12 +600,14 @@ public class AdminBookServiceImpl implements AdminBookService {
                 && normalizeBlankToNull(coverDto.getBarcodeId()) == null
                 && cleanStringList(coverDto.getImages()).isEmpty()
                 && cleanStringList(coverDto.getTexts()).isEmpty()
-                && normalizeBlankToNull(coverDto.getPdfFilePath()) == null;
+                && normalizeBlankToNull(coverDto.getPdfFilePath()) == null
+                && coverDto.getCoverTemplateId() == null;
     }
 
     private boolean isContentEmpty(BookRequestDto.ContentPayloadDto contentDto) {
         return normalizeBlankToNull(contentDto.getTextContent()) == null
-                && normalizeBlankToNull(contentDto.getFilePath()) == null;
+                && normalizeBlankToNull(contentDto.getFilePath()) == null
+                && contentDto.getTextTemplateId() == null;
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String rawValue, E defaultValue) {

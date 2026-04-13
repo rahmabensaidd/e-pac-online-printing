@@ -34,6 +34,30 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-3">
+          <a
+            [routerLink]="designStudioNav.path"
+            routerLinkActive="bg-brand-navy text-white border-brand-navy"
+            [routerLinkActiveOptions]="{ exact: designStudioNav.exact ?? false }"
+            class="hidden sm:inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-brand-navy transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+            [attr.aria-label]="designStudioNav.label"
+          >
+            <i class="fa-solid {{ designStudioNav.icon }}"></i>
+            <span class="hidden xl:inline">{{ designStudioNav.label }}</span>
+          </a>
+
+          @if (auth.isAuthenticated()) {
+            <a
+              [routerLink]="myCustomBooksNav.path"
+              routerLinkActive="bg-brand-navy text-white border-brand-navy"
+              [routerLinkActiveOptions]="{ exact: myCustomBooksNav.exact ?? false }"
+              class="hidden sm:inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-brand-navy transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              [attr.aria-label]="myCustomBooksNav.label"
+            >
+              <i class="fa-solid {{ myCustomBooksNav.icon }}"></i>
+              <span class="hidden xl:inline">{{ myCustomBooksNav.label }}</span>
+            </a>
+          }
+
           @if (auth.isAuthenticated()) {
             <button
               type="button"
@@ -90,6 +114,30 @@
         [class.hidden]="!mobileOpen()"
       >
         <div class="grid gap-2 pt-2">
+          <a
+            [routerLink]="designStudioNav.path"
+            routerLinkActive="text-brand-orange border-brand-orange/40"
+            [routerLinkActiveOptions]="{ exact: designStudioNav.exact ?? false }"
+            class="text-left px-4 py-3 rounded-xl bg-white/70 border border-gray-200 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+            (click)="closeMobile()"
+          >
+            <i class="fa-solid {{ designStudioNav.icon }} mr-2"></i>
+            {{ designStudioNav.label }}
+          </a>
+
+          @if (auth.isAuthenticated()) {
+            <a
+              [routerLink]="myCustomBooksNav.path"
+              routerLinkActive="text-brand-orange border-brand-orange/40"
+              [routerLinkActiveOptions]="{ exact: myCustomBooksNav.exact ?? false }"
+              class="text-left px-4 py-3 rounded-xl bg-white/70 border border-gray-200 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              (click)="closeMobile()"
+            >
+              <i class="fa-solid {{ myCustomBooksNav.icon }} mr-2"></i>
+              {{ myCustomBooksNav.label }}
+            </a>
+          }
+
           @for (item of primaryNav; track item.path) {
             <a
               [routerLink]="item.path"

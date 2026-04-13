@@ -23,4 +23,5 @@ public class CheckoutOrderRequestDto {
     private String notes;
     private String shippingMethod;
     private String paymentMethod;
+    private Boolean confirmPriceUpdate;
 }

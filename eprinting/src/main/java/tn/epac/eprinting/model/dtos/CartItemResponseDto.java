@@ -15,7 +15,11 @@ public class CartItemResponseDto {
     private String title;
     private String description;
     private String bindingType;
+    private String itemSource;
     private Integer quantity;
     private Float unitPrice;
     private Float lineTotal;
+    private Boolean isEstimated;
+    private String currency;
+    private String calculatedAt;
 }

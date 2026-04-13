@@ -1,19 +1,25 @@
 package tn.epac.eprinting.serviceimpl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import tn.epac.eprinting.exception.ResourceNotFoundException;
 import tn.epac.eprinting.model.dtos.CartItemResponseDto;
 import tn.epac.eprinting.model.dtos.CartResponseDto;
+import tn.epac.eprinting.model.dtos.CustomBookPriceResponseDto;
 import tn.epac.eprinting.model.entities.Book;
 import tn.epac.eprinting.model.entities.Cart;
 import tn.epac.eprinting.model.entities.OrderLine;
+import tn.epac.eprinting.model.enums.CartItemSource;
 import tn.epac.eprinting.repository.BookRepository;
 import tn.epac.eprinting.repository.CartRepository;
 import tn.epac.eprinting.repository.OrderLineRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @Service
@@ -24,6 +30,7 @@ public class CartServiceImpl {
     private final CartRepository cartRepository;
     private final OrderLineRepository orderLineRepository;
     private final BookRepository bookRepository;
+    private final CustomBookPricingService customBookPricingService;
 
     public CartResponseDto getCart(Long cartId) {
         Cart cart = getActiveCart(cartId);
@@ -39,19 +46,104 @@ public class CartServiceImpl {
         Cart cart = resolveCart(cartId);
         OrderLine line = cart.getCartId() == null
                 ? null
-                : orderLineRepository.findByCartCartIdAndBookBookId(cart.getCartId(), bookId).orElse(null);
+                : orderLineRepository
+                .findByCartCartIdAndBookBookIdAndItemSource(cart.getCartId(), bookId, CartItemSource.MARKETPLACE)
+                .orElse(null);
 
+        BigDecimal unitPrice = BigDecimal.valueOf(book.getSalePrice());
         if (line == null) {
             line = OrderLine.builder()
                     .book(book)
                     .quantity(normalizedQuantity)
-                    .unitPrice(BigDecimal.valueOf(book.getSalePrice()))
+                    .unitPrice(unitPrice)
+                    .itemSource(CartItemSource.MARKETPLACE)
+                    .isEstimated(false)
+                    .currency("USD")
+                    .calculatedAt(LocalDateTime.now())
                     .build();
             line.calculateTotalPrice();
             cart.addItem(line);
         } else {
             line.setQuantity(line.getQuantity() + normalizedQuantity);
-            line.setUnitPrice(BigDecimal.valueOf(book.getSalePrice()));
+            line.setUnitPrice(unitPrice);
+            line.setItemSource(CartItemSource.MARKETPLACE);
+            line.setIsEstimated(false);
+            line.setCurrency("USD");
+            line.setCalculatedAt(LocalDateTime.now());
+            line.calculateTotalPrice();
+        }
+
+        cart.calculateTotal();
+        Cart savedCart = cartRepository.save(cart);
+        return mapCart(savedCart, false);
+    }
+
+    public CustomBookPriceResponseDto calculateCustomBookPrice(Long bookId, Integer quantity) {
+        return customBookPricingService.calculateResponse(bookId, quantity);
+    }
+
+    public CartResponseDto addPricedCustomItem(
+            Long cartId,
+            Long bookId,
+            Integer quantity,
+            Float unitPrice,
+            Float totalPrice,
+            Boolean isEstimated,
+            String currency,
+            String calculatedAt
+    ) {
+        int normalizedQuantity = quantity == null || quantity < 1 ? 1 : quantity;
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+
+        if (!book.is_created_by_user()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only custom books can be added with priced custom flow");
+        }
+
+        CustomBookPricingService.PricingQuote pricingQuote = null;
+        if (unitPrice == null || unitPrice <= 0 || totalPrice == null || totalPrice <= 0) {
+            pricingQuote = customBookPricingService.calculateQuote(bookId, normalizedQuantity);
+        }
+
+        BigDecimal normalizedUnitPrice = pricingQuote != null
+                ? pricingQuote.getUnitPrice()
+                : BigDecimal.valueOf(unitPrice).max(BigDecimal.ZERO);
+        boolean estimated = pricingQuote != null
+                ? pricingQuote.isEstimated()
+                : Boolean.TRUE.equals(isEstimated);
+        String normalizedCurrency = pricingQuote != null
+                ? pricingQuote.getCurrency()
+                : (currency == null || currency.isBlank() ? "USD" : currency.trim().toUpperCase());
+        LocalDateTime normalizedCalculatedAt = pricingQuote != null
+                ? pricingQuote.getCalculatedAt()
+                : parseCalculatedAtOrNow(calculatedAt);
+
+        Cart cart = resolveCart(cartId);
+        OrderLine line = cart.getCartId() == null
+                ? null
+                : orderLineRepository
+                .findByCartCartIdAndBookBookIdAndItemSource(cart.getCartId(), bookId, CartItemSource.CUSTOM)
+                .orElse(null);
+
+        if (line == null) {
+            line = OrderLine.builder()
+                    .book(book)
+                    .quantity(normalizedQuantity)
+                    .unitPrice(normalizedUnitPrice)
+                    .itemSource(CartItemSource.CUSTOM)
+                    .isEstimated(estimated)
+                    .currency(normalizedCurrency)
+                    .calculatedAt(normalizedCalculatedAt)
+                    .build();
+            line.calculateTotalPrice();
+            cart.addItem(line);
+        } else {
+            line.setQuantity(line.getQuantity() + normalizedQuantity);
+            line.setUnitPrice(normalizedUnitPrice);
+            line.setItemSource(CartItemSource.CUSTOM);
+            line.setIsEstimated(estimated);
+            line.setCurrency(normalizedCurrency);
+            line.setCalculatedAt(normalizedCalculatedAt);
             line.calculateTotalPrice();
         }
 
@@ -71,7 +163,12 @@ public class CartServiceImpl {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with id: " + orderLineId));
 
         line.setQuantity(normalizedQuantity);
-        line.setUnitPrice(BigDecimal.valueOf(line.getBook().getSalePrice()));
+        if (line.getItemSource() == null || line.getItemSource() == CartItemSource.MARKETPLACE) {
+            line.setUnitPrice(BigDecimal.valueOf(line.getBook().getSalePrice()));
+            line.setIsEstimated(false);
+            line.setCurrency("USD");
+            line.setCalculatedAt(LocalDateTime.now());
+        }
         line.calculateTotalPrice();
         cart.calculateTotal();
         Cart savedCart = cartRepository.save(cart);
@@ -140,10 +237,25 @@ public class CartServiceImpl {
                 .bindingType(line.getBook() != null && line.getBook().getBindingType() != null
                         ? line.getBook().getBindingType().name()
                         : null)
+                .itemSource(line.getItemSource() != null ? line.getItemSource().name() : CartItemSource.MARKETPLACE.name())
                 .quantity(line.getQuantity())
                 .unitPrice(line.getUnitPrice() != null ? line.getUnitPrice().floatValue() : 0f)
                 .lineTotal(line.getTotalPrice() != null ? line.getTotalPrice().floatValue() : 0f)
+                .isEstimated(Boolean.TRUE.equals(line.getIsEstimated()))
+                .currency(line.getCurrency())
+                .calculatedAt(line.getCalculatedAt() != null ? line.getCalculatedAt().toString() : null)
                 .build();
+    }
+
+    private LocalDateTime parseCalculatedAtOrNow(String calculatedAt) {
+        if (calculatedAt == null || calculatedAt.isBlank()) {
+            return LocalDateTime.now();
+        }
+        try {
+            return LocalDateTime.parse(calculatedAt);
+        } catch (DateTimeParseException ignored) {
+            return LocalDateTime.now();
+        }
     }
 
     private CartResponseDto removedCartResponse() {

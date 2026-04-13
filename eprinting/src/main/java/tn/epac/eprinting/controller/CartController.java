@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.epac.eprinting.model.dtos.AddToCartRequestDto;
+import tn.epac.eprinting.model.dtos.AddPricedCustomItemRequestDto;
 import tn.epac.eprinting.model.dtos.CartResponseDto;
+import tn.epac.eprinting.model.dtos.CustomBookPriceRequestDto;
+import tn.epac.eprinting.model.dtos.CustomBookPriceResponseDto;
 import tn.epac.eprinting.model.dtos.UpdateCartItemQuantityRequestDto;
 import tn.epac.eprinting.serviceimpl.CartServiceImpl;
 
@@ -25,6 +28,29 @@ public class CartController {
         return ResponseEntity.ok(
                 cartService.addToCart(request.getCartId(), request.getBookId(), request.getQuantity())
         );
+    }
+
+    @PostMapping("/custom-pricing")
+    public ResponseEntity<CustomBookPriceResponseDto> calculateCustomBookPricing(
+            @RequestBody CustomBookPriceRequestDto request
+    ) {
+        return ResponseEntity.ok(cartService.calculateCustomBookPrice(request.getBookId(), request.getQuantity()));
+    }
+
+    @PostMapping("/custom-items/priced")
+    public ResponseEntity<CartResponseDto> addPricedCustomItemToCart(
+            @RequestBody AddPricedCustomItemRequestDto request
+    ) {
+        return ResponseEntity.ok(cartService.addPricedCustomItem(
+                request.getCartId(),
+                request.getBookId(),
+                request.getQuantity(),
+                request.getUnitPrice(),
+                request.getTotalPrice(),
+                request.getIsEstimated(),
+                request.getCurrency(),
+                request.getCalculatedAt()
+        ));
     }
 
     @PatchMapping("/{cartId}/items/{orderLineId}")

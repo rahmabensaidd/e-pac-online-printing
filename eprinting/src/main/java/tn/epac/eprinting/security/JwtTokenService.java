@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import tn.epac.eprinting.model.entities.User;
 import tn.epac.eprinting.model.enums.Role;
+import tn.epac.eprinting.model.enums.UserType;
 
 import java.time.Instant;
 import java.util.List;
@@ -27,6 +28,7 @@ public class JwtTokenService {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(expirationSeconds);
         String normalizedRole = (user.getRole() == null ? Role.USER.name() : user.getRole().name()).toLowerCase();
+        String normalizedUserType = (user.getUserType() == null ? UserType.SIMPLE.name() : user.getUserType().name()).toLowerCase();
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("eprinting-backend")
@@ -39,6 +41,7 @@ public class JwtTokenService {
                 .claim("given_name", user.getFirstName())
                 .claim("family_name", user.getLastName())
                 .claim("roles", List.of(normalizedRole))
+                .claim("user_type", normalizedUserType)
                 .build();
 
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).type("JWT").build();
