@@ -20,12 +20,29 @@ export interface AdminOrderApiModel {
   dueDate: string;
   total: number;
   status: string;
+  validationStatus?: string;
   priority: string;
   assignee?: string;
   items: number;
   shippingMethod: string;
   paymentStatus: string;
   notes?: string;
+  orderLines?: AdminOrderLineApiModel[];
+}
+
+export interface AdminOrderLineApiModel {
+  orderLineId: number;
+  bookId: number;
+  title: string;
+  itemSource: string;
+  lineStatus?: string;
+  priority?: string;
+  validationStatus?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  isEstimated?: boolean;
+  currency?: string;
 }
 
 export interface AdminOrderStatsApiModel {
@@ -36,6 +53,14 @@ export interface AdminOrderStatsApiModel {
   deliveredOrders: number;
   cancelledOrders: number;
   productionValue: number;
+}
+
+export interface OrderLineValidationUpdatePayload {
+  validationStatus: 'PENDING' | 'VALIDATED' | 'REJECTED';
+}
+
+export interface OrderLineProductionStatusUpdatePayload {
+  lineStatus: 'PRINTING' | 'READY_TO_SHIP' | 'SHIPPED';
 }
 
 export interface AdminOrderUpsertRequest {
@@ -102,5 +127,25 @@ export class BackofficeOrdersApiService {
 
   async deleteOrder(orderId: string): Promise<void> {
     await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/${orderId}`));
+  }
+
+  async updateOrderLineValidation(
+    orderId: string,
+    orderLineId: string,
+    payload: OrderLineValidationUpdatePayload,
+  ): Promise<AdminOrderApiModel> {
+    return await firstValueFrom(
+      this.http.patch<AdminOrderApiModel>(`${this.apiUrl}/${orderId}/lines/${orderLineId}/validation`, payload),
+    );
+  }
+
+  async updateOrderLineProductionStatus(
+    orderId: string,
+    orderLineId: string,
+    payload: OrderLineProductionStatusUpdatePayload,
+  ): Promise<AdminOrderApiModel> {
+    return await firstValueFrom(
+      this.http.patch<AdminOrderApiModel>(`${this.apiUrl}/${orderId}/lines/${orderLineId}/production-status`, payload),
+    );
   }
 }

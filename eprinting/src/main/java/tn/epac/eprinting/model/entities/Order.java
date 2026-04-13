@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import tn.epac.eprinting.model.enums.OrderStatus;
 import tn.epac.eprinting.model.enums.OrderPriority;
+import tn.epac.eprinting.model.enums.OrderValidationStatus;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,10 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     private OrderPriority priority;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "validation_status")
+    private OrderValidationStatus validationStatus;
 
     private float totalAmount;
 

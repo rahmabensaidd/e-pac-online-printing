@@ -189,7 +189,7 @@ export class AuthService {
   }
 
   isUser(): boolean {
-    return this.hasRole('user');
+    return this.hasRole('user') || this.hasRole('organization') || this.userType().toLowerCase() === 'organization';
   }
 
   private persistToken(accessToken: string, remember: boolean): void {

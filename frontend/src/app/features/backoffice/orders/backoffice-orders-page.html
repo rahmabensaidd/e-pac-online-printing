@@ -23,10 +23,10 @@
       tone="positive"
     />
     <app-backoffice-stat-card
-      label="Cancelled orders"
-      [value]="cancelledCount().toString()"
+      label="Rejected orders"
+      [value]="rejectedCount().toString()"
       change="Monitor"
-      hint="failed or cancelled"
+      hint="validation rejected"
       icon="fa-triangle-exclamation"
       tone="danger"
     />
@@ -56,7 +56,7 @@
     [columns]="orderColumns"
     [rows]="tableRows()"
     [rowActions]="orderActions"
-    [searchKeys]="['reference', 'customerName', 'companyName', 'assignee', 'status']"
+    [searchKeys]="['reference', 'customerName', 'companyName', 'assignee', 'status', 'validationStatus']"
     [loading]="isLoading()"
     [emptyState]="emptyState"
     (rowAction)="handleRowAction($event)"
@@ -82,7 +82,7 @@
         <div>
           <p class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-400">Order details</p>
           <h2 class="mt-1.5 text-[1.125rem] font-semibold text-brand-navy">{{ order.reference }}</h2>
-          <p class="mt-1 text-[0.8125rem] text-slate-500">Read-only details + quick status update.</p>
+          <p class="mt-1 text-[0.8125rem] text-slate-500">Production and validation controls for custom lines.</p>
         </div>
         <button
           type="button"
@@ -125,6 +125,10 @@
             <p class="text-sm font-medium text-brand-navy">{{ order.priority }}</p>
           </div>
           <div>
+            <p class="admin-label">Validation</p>
+            <p class="text-sm font-medium text-brand-navy">{{ order.validationStatus }}</p>
+          </div>
+          <div>
             <p class="admin-label">Payment</p>
             <p class="text-sm font-medium text-brand-navy">{{ order.paymentStatus }}</p>
           </div>
@@ -165,8 +169,71 @@
             </button>
           </div>
         </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <p class="admin-label mb-3">Custom line validation</p>
+          @if (printableCustomLines().length === 0) {
+            <p class="text-sm text-slate-500">No custom production lines for this order.</p>
+          } @else {
+            <div class="space-y-3">
+              @for (line of printableCustomLines(); track line.orderLineId) {
+                <article class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p class="text-sm font-semibold text-brand-navy">{{ line.title }}</p>
+                      <p class="text-xs text-slate-500">
+                        Qty {{ line.quantity }} · Status {{ line.lineStatus }} · Validation {{ line.validationStatus }}
+                      </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        class="admin-focus-ring inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"
+                        [disabled]="lineUpdating() === line.orderLineId"
+                        (click)="setLineValidation(order.id, line.orderLineId, 'VALIDATED')"
+                      >
+                        Validate
+                      </button>
+                      <button
+                        type="button"
+                        class="admin-focus-ring inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700"
+                        [disabled]="lineUpdating() === line.orderLineId"
+                        (click)="setLineValidation(order.id, line.orderLineId, 'REJECTED')"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        class="admin-focus-ring inline-flex items-center rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-semibold text-sky-700"
+                        [disabled]="lineUpdating() === line.orderLineId"
+                        (click)="setLineProductionStatus(order.id, line.orderLineId, 'PRINTING')"
+                      >
+                        Printing
+                      </button>
+                      <button
+                        type="button"
+                        class="admin-focus-ring inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700"
+                        [disabled]="lineUpdating() === line.orderLineId"
+                        (click)="setLineProductionStatus(order.id, line.orderLineId, 'READY_TO_SHIP')"
+                      >
+                        Ready to ship
+                      </button>
+                      <button
+                        type="button"
+                        class="admin-focus-ring inline-flex items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+                        [disabled]="lineUpdating() === line.orderLineId"
+                        (click)="setLineProductionStatus(order.id, line.orderLineId, 'SHIPPED')"
+                      >
+                        Shipped
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </section>
       </div>
     </article>
   </section>
 }
-

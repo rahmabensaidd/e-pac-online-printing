@@ -31,6 +31,14 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    path: 'my-custom-books/:bookId',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'my-orders',
+    renderMode: RenderMode.Client,
+  },
+  {
     path: 'marketplace',
     renderMode: RenderMode.Server,
   },

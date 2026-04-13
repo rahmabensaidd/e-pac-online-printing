@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import tn.epac.eprinting.model.enums.OrderStatus;
 import tn.epac.eprinting.model.enums.PaymentStatus;
+import tn.epac.eprinting.model.enums.OrderValidationStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,6 +23,7 @@ public class AdminOrderResponseDto {
     private LocalDate dueDate;
     private BigDecimal total;
     private OrderStatus status;
+    private OrderValidationStatus validationStatus;
     private String priority;
     private String assignee;
     private Integer items;

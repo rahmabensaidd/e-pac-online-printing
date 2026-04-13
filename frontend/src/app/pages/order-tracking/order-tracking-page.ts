@@ -1,0 +1,81 @@
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { OrderResponse, OrderService, OrderTrackingResponse } from '../../core/services/order.service';
+
+@Component({
+  selector: 'app-order-tracking-page',
+  standalone: true,
+  imports: [RouterLink, CurrencyPipe, DatePipe],
+  templateUrl: './order-tracking-page.html',
+  styleUrl: './order-tracking-page.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class OrderTrackingPageComponent {
+  private readonly ordersApi = inject(OrderService);
+
+  readonly loading = signal(true);
+  readonly loadingTracking = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly orders = signal<OrderResponse[]>([]);
+  readonly selectedOrderId = signal<number | null>(null);
+  readonly tracking = signal<OrderTrackingResponse | null>(null);
+
+  readonly selectedOrder = computed(() =>
+    this.orders().find((order) => order.orderId === this.selectedOrderId()) ?? null,
+  );
+
+  readonly productionLines = computed(() => this.tracking()?.productionLines ?? []);
+  readonly shippingLines = computed(() => this.tracking()?.shippingLines ?? []);
+
+  constructor() {
+    void this.loadOrders();
+  }
+
+  async loadOrders(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      const orders = await this.ordersApi.getMyOrders();
+      this.orders.set(orders ?? []);
+      if ((orders ?? []).length > 0) {
+        const firstId = orders[0]?.orderId ?? null;
+        this.selectedOrderId.set(firstId);
+        if (firstId) {
+          await this.loadTracking(firstId);
+        }
+      }
+    } catch (error) {
+      console.error('Unable to load user orders', error);
+      this.error.set('Unable to load your orders right now.');
+      this.orders.set([]);
+      this.tracking.set(null);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async onOrderChange(event: Event): Promise<void> {
+    const target = event.target as HTMLSelectElement | null;
+    const orderId = Number(target?.value ?? NaN);
+    if (!Number.isFinite(orderId) || orderId <= 0) {
+      return;
+    }
+    this.selectedOrderId.set(orderId);
+    await this.loadTracking(orderId);
+  }
+
+  async loadTracking(orderId: number): Promise<void> {
+    this.loadingTracking.set(true);
+    this.error.set(null);
+    try {
+      this.tracking.set(await this.ordersApi.getOrderTracking(orderId));
+    } catch (error) {
+      console.error('Unable to load order tracking', error);
+      this.error.set('Unable to load tracking details for this order.');
+      this.tracking.set(null);
+    } finally {
+      this.loadingTracking.set(false);
+    }
+  }
+}

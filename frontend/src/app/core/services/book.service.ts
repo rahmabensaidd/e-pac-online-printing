@@ -400,6 +400,15 @@ export class BookService {
             throw error;
         }
     }
+
+    async getMyCustomBookById(bookId: number): Promise<Book> {
+        try {
+            return await this.http.get<Book>(`${this.userApiUrl}/my/${bookId}`).toPromise() as Book;
+        } catch (error) {
+            console.error('Error loading current user custom book by id:', error);
+            throw error;
+        }
+    }
     /**
      * Update existing book
      */

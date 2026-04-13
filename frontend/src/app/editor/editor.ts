@@ -338,6 +338,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
   private previewObjectUrls: string[] = [];
   private previewInteractionTarget: HTMLElement | null = null;
   private readonly previewInteractionListeners: Array<{ type: string; listener: EventListener }> = [];
+  private isEditorDestroying = false;
   currentTemplate: AdminTemplate | null = null;
 
   private readonly defaultLibraryTabs: readonly LibraryTab[] = [
@@ -387,6 +388,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   async ngAfterViewInit(): Promise<void> {
+    this.isEditorDestroying = false;
     this.ensureCurrentLibraryEntryIsValid();
     const localBaseURL = `/cesdk/${this.cesdkVersion}/`;
     const initialBlanksPromise = this.loadSystemBlanks();
@@ -2791,7 +2793,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private registerPreviewInteractionListeners(): void {
-    if (typeof window === 'undefined') {
+    if (this.isEditorDestroying || typeof window === 'undefined') {
       return;
     }
 
@@ -2826,7 +2828,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private schedulePreviewTextureRefresh(): void {
-    if (!this.cesdk || typeof window === 'undefined') {
+    if (this.isEditorDestroying || !this.cesdk || typeof window === 'undefined') {
       return;
     }
 
@@ -2866,7 +2868,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private async refreshPreviewTexturesNow(): Promise<void> {
-    if (!this.cesdk || this.previewRefreshInFlight) {
+    if (this.isEditorDestroying || !this.cesdk || this.previewRefreshInFlight) {
       if (this.previewRefreshInFlight) {
         this.previewRefreshQueued = true;
       }
@@ -2924,7 +2926,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
       console.warn('Preview texture export failed:', error);
     } finally {
       this.previewRefreshInFlight = false;
-      if (this.previewRefreshQueued) {
+      if (!this.isEditorDestroying && this.previewRefreshQueued) {
         this.previewRefreshQueued = false;
         void this.refreshPreviewTexturesNow();
       }
@@ -2939,10 +2941,23 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.isEditorDestroying = true;
+    this.previewRefreshQueued = false;
     this.clearPreviewInteractionListeners();
     this.revokePreviewTextureUrls();
     this.closeSaveDecisionDialog();
-    this.cesdk?.dispose?.();
-    this.cesdk?.engine?.dispose?.();
+    const cesdkInstance = this.cesdk;
+    this.cesdk = null;
+    if (!cesdkInstance) {
+      return;
+    }
+
+    try {
+      // CE.SDK dispose already tears down the engine internals.
+      // Calling engine.dispose afterwards can trigger null-reference errors.
+      cesdkInstance.dispose?.();
+    } catch (error) {
+      console.warn('CE.SDK dispose warning:', error);
+    }
   }
 }

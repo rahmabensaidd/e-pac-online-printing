@@ -13,7 +13,9 @@ import tn.epac.eprinting.model.enums.Role;
 import tn.epac.eprinting.model.enums.UserType;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,13 @@ public class JwtTokenService {
         Instant expiresAt = now.plusSeconds(expirationSeconds);
         String normalizedRole = (user.getRole() == null ? Role.USER.name() : user.getRole().name()).toLowerCase();
         String normalizedUserType = (user.getUserType() == null ? UserType.SIMPLE.name() : user.getUserType().name()).toLowerCase();
+        Set<String> roleClaims = new LinkedHashSet<>();
+        roleClaims.add(normalizedRole);
+        if ("organization".equals(normalizedUserType)) {
+            // Organization accounts must keep every USER feature while still being identifiable as organization.
+            roleClaims.add("user");
+            roleClaims.add("organization");
+        }
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("eprinting-backend")
@@ -40,7 +49,7 @@ public class JwtTokenService {
                 .claim("preferred_username", user.getUsername())
                 .claim("given_name", user.getFirstName())
                 .claim("family_name", user.getLastName())
-                .claim("roles", List.of(normalizedRole))
+                .claim("roles", List.copyOf(roleClaims))
                 .claim("user_type", normalizedUserType)
                 .build();
 

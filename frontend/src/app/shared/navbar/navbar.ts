@@ -47,6 +47,12 @@ export class NavbarComponent {
     icon: 'fa-book',
     exact: true,
   };
+  readonly myOrdersNav: IconNavItem = {
+    label: 'My Orders',
+    path: '/my-orders',
+    icon: 'fa-truck-fast',
+    exact: true,
+  };
   readonly loginNav: NavItem = { label: 'Login', path: '/login', exact: true };
 
   readonly mobileOpen = signal(false);

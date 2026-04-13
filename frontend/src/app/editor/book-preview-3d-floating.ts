@@ -27,7 +27,10 @@ import { BookSemanticTextureMap } from './book-preview-semantic-textures';
   standalone: true,
   imports: [CommonModule, CdkDrag, CdkDragHandle],
   templateUrl: './book-preview-3d-floating.html',
-  styleUrl: './book-preview-3d-floating.css'
+  styleUrl: './book-preview-3d-floating.css',
+  host: {
+    '[class.embedded]': 'embedded',
+  },
 })
 export class BookPreview3dFloatingComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() bindingType: string | null = null;
@@ -37,6 +40,7 @@ export class BookPreview3dFloatingComponent implements AfterViewInit, OnChanges,
   @Input() bookThickness: number | string | null = null;
   @Input() textures: BookSemanticTextureMap | null = null;
   @Input() dragBoundarySelector = 'body';
+  @Input() embedded = false;
 
   @ViewChild('canvasHost', { static: true }) private readonly canvasHostRef!: ElementRef<HTMLDivElement>;
 

@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -17,7 +19,6 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
@@ -25,6 +26,9 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
@@ -62,8 +66,9 @@ public class SecurityConfig {
                                 "/api/auth/login"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("admin")
-                        .requestMatchers("/api/orders/checkout").hasAnyRole("user", "admin")
-                        .requestMatchers("/api/user/**").hasAnyRole("user", "admin")
+                        .requestMatchers("/api/orders/checkout").hasAnyRole("user", "admin", "organization")
+                        .requestMatchers("/api/user/**").hasAnyRole("user", "admin", "organization")
+                        .requestMatchers("/api/cover-templates/**").hasAnyRole("user", "admin", "organization")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -95,12 +100,24 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthoritiesClaimName("roles");
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
-
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Object claim = jwt.getClaim("roles");
+            if (!(claim instanceof Collection<?> rawRoles)) {
+                return Set.<GrantedAuthority>of();
+            }
+
+            Set<GrantedAuthority> authorities = new LinkedHashSet<>();
+            for (Object rawRole : rawRoles) {
+                String normalized = String.valueOf(rawRole).trim();
+                if (normalized.isEmpty()) {
+                    continue;
+                }
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + normalized.toLowerCase()));
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + normalized.toUpperCase()));
+            }
+            return authorities;
+        });
         return converter;
     }
 

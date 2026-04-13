@@ -51,17 +51,18 @@ export class BackofficeOrdersPageComponent {
   readonly selectedFilter = signal<OrderFilter>('All');
   readonly detailsModalOpen = signal(false);
   readonly selectedOrderId = signal<string | null>(null);
-  readonly statusDraft = signal<OrderStatusUi>('Pending');
+  readonly statusDraft = signal<OrderStatusUi>('Printing');
   readonly statusUpdating = signal(false);
+  readonly lineUpdating = signal<string | null>(null);
   readonly ordersSignal = signal<OrderViewModel[]>([]);
   readonly statsSignal = signal<AdminOrderStatsApiModel | null>(null);
 
   readonly statusFilters: readonly OrderFilter[] = [
     'All',
-    'Pending',
-    'Processing',
+    'Printing',
+    'Ready to ship',
     'Shipped',
-    'Delivered',
+    'Rejected',
     'Cancelled',
   ];
 
@@ -72,6 +73,7 @@ export class BackofficeOrdersPageComponent {
     { key: 'dueDate', label: 'Due date', type: 'date', sortable: true },
     { key: 'total', label: 'Total', type: 'currency', sortable: true, align: 'right' },
     { key: 'status', label: 'Status', type: 'status', sortable: true },
+    { key: 'validationStatus', label: 'Validation', type: 'status', sortable: true },
     { key: 'priority', label: 'Priority', type: 'priority', sortable: true },
     { key: 'assignee', label: 'Owner', sortable: true },
   ];
@@ -107,6 +109,7 @@ export class BackofficeOrdersPageComponent {
       dueDate: order.dueDate,
       total: order.total,
       status: order.status,
+      validationStatus: order.validationStatus,
       priority: order.priority,
       assignee: order.assignee,
       items: order.items,
@@ -115,10 +118,13 @@ export class BackofficeOrdersPageComponent {
   );
 
   readonly productionValue = computed(() => this.statsSignal()?.productionValue ?? 0);
-  readonly cancelledCount = computed(() => this.statsSignal()?.cancelledOrders ?? 0);
+  readonly rejectedCount = computed(() => this.statsSignal()?.deliveredOrders ?? 0);
   readonly shippedCount = computed(() => this.statsSignal()?.shippedOrders ?? 0);
   readonly selectedOrder = computed(
     () => this.ordersSignal().find((order) => order.id === this.selectedOrderId()) ?? null,
+  );
+  readonly printableCustomLines = computed(() =>
+    (this.selectedOrder()?.orderLines ?? []).filter((line) => line.itemSource === 'Custom'),
   );
 
   constructor() {
@@ -244,6 +250,34 @@ export class BackofficeOrdersPageComponent {
     }
   }
 
+  async setLineValidation(orderId: string, orderLineId: string, action: 'VALIDATED' | 'REJECTED'): Promise<void> {
+    this.lineUpdating.set(orderLineId);
+    try {
+      await this.ordersApi.updateOrderLineValidation(orderId, orderLineId, { validationStatus: action });
+      await this.refreshOrdersAndStats();
+    } catch (error) {
+      console.error('Unable to update line validation', error);
+    } finally {
+      this.lineUpdating.set(null);
+    }
+  }
+
+  async setLineProductionStatus(
+    orderId: string,
+    orderLineId: string,
+    lineStatus: 'PRINTING' | 'READY_TO_SHIP' | 'SHIPPED',
+  ): Promise<void> {
+    this.lineUpdating.set(orderLineId);
+    try {
+      await this.ordersApi.updateOrderLineProductionStatus(orderId, orderLineId, { lineStatus });
+      await this.refreshOrdersAndStats();
+    } catch (error) {
+      console.error('Unable to update line production status', error);
+    } finally {
+      this.lineUpdating.set(null);
+    }
+  }
+
   private updateQuery(mode: 'details' | null, orderId?: string): void {
     this.router.navigate([], {
       relativeTo: this.route,
@@ -256,4 +290,3 @@ export class BackofficeOrdersPageComponent {
     });
   }
 }
-

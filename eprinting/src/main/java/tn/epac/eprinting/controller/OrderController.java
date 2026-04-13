@@ -11,8 +11,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import tn.epac.eprinting.model.dtos.AdminOrderResponseDto;
 import tn.epac.eprinting.model.dtos.CheckoutOrderRequestDto;
+import tn.epac.eprinting.model.dtos.OrderLineProductionStatusRequestDto;
+import tn.epac.eprinting.model.dtos.OrderLineValidationRequestDto;
 import tn.epac.eprinting.model.dtos.OrderResponseDto;
 import tn.epac.eprinting.model.dtos.OrderStatsDto;
+import tn.epac.eprinting.model.dtos.OrderTrackingResponseDto;
 import tn.epac.eprinting.model.dtos.OrderUpdateRequestDto;
 import tn.epac.eprinting.model.entities.Order;
 import tn.epac.eprinting.serviceimpl.OrderServiceImpl;
@@ -80,7 +83,7 @@ public class OrderController {
     }
 
     @PostMapping("/checkout")
-    @PreAuthorize("hasAnyRole('user','admin')")
+    @PreAuthorize("hasAnyRole('user','admin','organization')")
     public ResponseEntity<OrderResponseDto> checkout(
             @RequestBody CheckoutOrderRequestDto request,
             @AuthenticationPrincipal Jwt jwt
@@ -101,5 +104,50 @@ public class OrderController {
         }
 
         return ResponseEntity.ok(orderService.checkout(request.getCartId(), request, email, username, roles));
+    }
+
+    @GetMapping("/my")
+    @PreAuthorize("hasAnyRole('user','admin','organization')")
+    public ResponseEntity<List<OrderResponseDto>> getMyOrders(@AuthenticationPrincipal Jwt jwt) {
+        String email = jwt != null ? jwt.getClaimAsString("email") : null;
+        String username = jwt != null ? jwt.getClaimAsString("preferred_username") : null;
+        if ((username == null || username.isBlank()) && jwt != null) {
+            username = jwt.getSubject();
+        }
+        return ResponseEntity.ok(orderService.getCurrentUserOrders(email, username));
+    }
+
+    @GetMapping("/my/{orderId}/tracking")
+    @PreAuthorize("hasAnyRole('user','admin','organization')")
+    public ResponseEntity<OrderTrackingResponseDto> getMyOrderTracking(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        String email = jwt != null ? jwt.getClaimAsString("email") : null;
+        String username = jwt != null ? jwt.getClaimAsString("preferred_username") : null;
+        if ((username == null || username.isBlank()) && jwt != null) {
+            username = jwt.getSubject();
+        }
+        return ResponseEntity.ok(orderService.getTrackingForCurrentUser(orderId, email, username));
+    }
+
+    @PatchMapping("/admin/{orderId}/lines/{orderLineId}/validation")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminOrderResponseDto> updateOrderLineValidation(
+            @PathVariable Long orderId,
+            @PathVariable Long orderLineId,
+            @RequestBody OrderLineValidationRequestDto request
+    ) {
+        return ResponseEntity.ok(orderService.updateOrderLineValidation(orderId, orderLineId, request.getValidationStatus()));
+    }
+
+    @PatchMapping("/admin/{orderId}/lines/{orderLineId}/production-status")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminOrderResponseDto> updateOrderLineProductionStatus(
+            @PathVariable Long orderId,
+            @PathVariable Long orderLineId,
+            @RequestBody OrderLineProductionStatusRequestDto request
+    ) {
+        return ResponseEntity.ok(orderService.updateOrderLineProductionStatus(orderId, orderLineId, request.getLineStatus()));
     }
 }

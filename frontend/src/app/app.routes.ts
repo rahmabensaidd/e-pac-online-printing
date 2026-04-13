@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { HomePageComponent } from './pages/home/home-page';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 import { SignInComponent } from './pages/auth/sign-in/sign-in';
 
 export const routes: Routes = [
@@ -32,6 +33,18 @@ export const routes: Routes = [
       import('./pages/my-custom-books/my-custom-books-page').then((m) => m.MyCustomBooksPageComponent),
   },
   {
+    path: 'my-custom-books/:bookId',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/custom-book-details/custom-book-details-page').then((m) => m.CustomBookDetailsPageComponent),
+  },
+  {
+    path: 'my-orders',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/order-tracking/order-tracking-page').then((m) => m.OrderTrackingPageComponent),
+  },
+  {
     path: 'products/:id',
     loadComponent: () =>
       import('./pages/product-details/product-details-page').then((m) => m.ProductDetailsPageComponent),
@@ -61,6 +74,7 @@ export const routes: Routes = [
   },
   {
     path: 'backoffice',
+    canActivate: [adminGuard],
     loadChildren: () =>
       import('./features/backoffice/backoffice.routes').then((m) => m.BACKOFFICE_ROUTES),
   },

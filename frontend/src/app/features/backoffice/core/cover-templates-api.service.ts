@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { catchError, firstValueFrom, of, throwError } from 'rxjs';
 
 export interface CoverTemplateApiModel {
   templateId: number;
@@ -51,7 +51,14 @@ export class CoverTemplatesApiService {
 
   async getMyTemplates(userId: number): Promise<CoverTemplateApiModel[]> {
     return await firstValueFrom(
-      this.http.get<CoverTemplateApiModel[]>(`${this.apiUrl}/my/${userId}`),
+      this.http.get<CoverTemplateApiModel[]>(`${this.apiUrl}/my/${userId}`).pipe(
+        catchError((error: HttpErrorResponse) => {
+          if (error.status === 404) {
+            return of([]);
+          }
+          return throwError(() => error);
+        }),
+      ),
     );
   }
 
@@ -69,12 +76,28 @@ export class CoverTemplatesApiService {
 
   async getDraftsByUser(userId: number): Promise<CoverTemplateApiModel[]> {
     return await firstValueFrom(
-      this.http.get<CoverTemplateApiModel[]>(`${this.apiUrl}/drafts/user/${userId}`),
+      this.http.get<CoverTemplateApiModel[]>(`${this.apiUrl}/drafts/user/${userId}`).pipe(
+        catchError((error: HttpErrorResponse) => {
+          if (error.status === 404) {
+            return of([]);
+          }
+          return throwError(() => error);
+        }),
+      ),
     );
   }
 
   async getPublished(): Promise<CoverTemplateApiModel[]> {
-    return await firstValueFrom(this.http.get<CoverTemplateApiModel[]>(`${this.apiUrl}/published`));
+    return await firstValueFrom(
+      this.http.get<CoverTemplateApiModel[]>(`${this.apiUrl}/published`).pipe(
+        catchError((error: HttpErrorResponse) => {
+          if (error.status === 404) {
+            return of([]);
+          }
+          return throwError(() => error);
+        }),
+      ),
+    );
   }
 
   async saveChanges(templateId: number, payload: CoverTemplateSaveDraftRequest): Promise<CoverTemplateApiModel> {

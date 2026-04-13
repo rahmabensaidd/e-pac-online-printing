@@ -17,6 +17,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import tn.epac.eprinting.model.enums.CartItemSource;
+import tn.epac.eprinting.model.enums.OrderLineStatus;
+import tn.epac.eprinting.model.enums.OrderPriority;
+import tn.epac.eprinting.model.enums.OrderValidationStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -65,6 +68,21 @@ public class OrderLine {
     @Column(name = "calculated_at")
     private LocalDateTime calculatedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "line_status", length = 24)
+    @Builder.Default
+    private OrderLineStatus lineStatus = OrderLineStatus.READY;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "line_priority", length = 16)
+    @Builder.Default
+    private OrderPriority priority = OrderPriority.NORMAL;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "validation_status", length = 16)
+    @Builder.Default
+    private OrderValidationStatus validationStatus = OrderValidationStatus.PENDING;
+
     // Method to get the source book unit price
     public float getBookPrice() {
         if (book != null) {
@@ -78,5 +96,13 @@ public class OrderLine {
         if (quantity != null && unitPrice != null) {
             this.totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
         }
+    }
+
+    public boolean isCustomItem() {
+        return itemSource == CartItemSource.CUSTOM;
+    }
+
+    public boolean isMarketplaceItem() {
+        return itemSource == null || itemSource == CartItemSource.MARKETPLACE;
     }
 }

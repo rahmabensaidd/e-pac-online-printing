@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import tn.epac.eprinting.model.enums.OrderStatus;
+import tn.epac.eprinting.model.enums.OrderValidationStatus;
 import tn.epac.eprinting.model.enums.PaymentStatus;
 
 import java.math.BigDecimal;
@@ -29,5 +30,6 @@ public class OrderUpdateRequestDto {
     private Integer items;
     private String shippingMethod;
     private PaymentStatus paymentStatus;
+    private OrderValidationStatus validationStatus;
     private String notes;
 }

@@ -31,6 +31,7 @@ public class CartServiceImpl {
     private final OrderLineRepository orderLineRepository;
     private final BookRepository bookRepository;
     private final CustomBookPricingService customBookPricingService;
+    private final OrderComputationService orderComputationService;
 
     public CartResponseDto getCart(Long cartId) {
         Cart cart = getActiveCart(cartId);
@@ -62,6 +63,7 @@ public class CartServiceImpl {
                     .calculatedAt(LocalDateTime.now())
                     .build();
             line.calculateTotalPrice();
+            orderComputationService.initializeLineDefaults(line);
             cart.addItem(line);
         } else {
             line.setQuantity(line.getQuantity() + normalizedQuantity);
@@ -71,6 +73,7 @@ public class CartServiceImpl {
             line.setCurrency("USD");
             line.setCalculatedAt(LocalDateTime.now());
             line.calculateTotalPrice();
+            orderComputationService.initializeLineDefaults(line);
         }
 
         cart.calculateTotal();
@@ -136,6 +139,7 @@ public class CartServiceImpl {
                     .calculatedAt(normalizedCalculatedAt)
                     .build();
             line.calculateTotalPrice();
+            orderComputationService.initializeLineDefaults(line);
             cart.addItem(line);
         } else {
             line.setQuantity(line.getQuantity() + normalizedQuantity);
@@ -145,6 +149,7 @@ public class CartServiceImpl {
             line.setCurrency(normalizedCurrency);
             line.setCalculatedAt(normalizedCalculatedAt);
             line.calculateTotalPrice();
+            orderComputationService.initializeLineDefaults(line);
         }
 
         cart.calculateTotal();
@@ -170,6 +175,7 @@ public class CartServiceImpl {
             line.setCalculatedAt(LocalDateTime.now());
         }
         line.calculateTotalPrice();
+        orderComputationService.initializeLineDefaults(line);
         cart.calculateTotal();
         Cart savedCart = cartRepository.save(cart);
         return mapCart(savedCart, false);
