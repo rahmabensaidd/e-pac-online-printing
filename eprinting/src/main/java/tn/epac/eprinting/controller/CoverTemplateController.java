@@ -6,7 +6,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import tn.epac.eprinting.model.dtos.CoverTemplateDraftRequestDto;
 import tn.epac.eprinting.model.dtos.CoverTemplateResponseDto;
 import tn.epac.eprinting.model.dtos.CoverTemplateUsageDto;
@@ -17,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/cover-templates")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('admin','user')")
+@PreAuthorize("hasAnyRole('admin','user','organization')")
 public class CoverTemplateController {
 
     private final CoverTemplateServiceImpl coverTemplateService;
