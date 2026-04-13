@@ -1,0 +1,199 @@
+<section class="relative min-h-[calc(100vh-10rem)] overflow-hidden bg-brand-cream py-10 sm:py-14">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <header class="rounded-3xl border border-gray-200/80 bg-white/90 p-6 shadow-lg sm:p-8">
+      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">User Space</p>
+      <h1 class="mt-1 font-display text-4xl font-extrabold text-brand-navy">My Custom Books</h1>
+      <p class="mt-3 text-gray-600">
+        Edit your custom books or add them to cart with instant pricing.
+      </p>
+    </header>
+
+    @if (error()) {
+      <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ error() }}
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">
+        Loading your books...
+      </div>
+    } @else if (books().length === 0) {
+      <div class="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-8 text-center">
+        <p class="text-base font-semibold text-brand-navy">No custom books yet.</p>
+        <p class="mt-2 text-sm text-slate-600">Create your first one from Design Studio.</p>
+        <a
+          routerLink="/design-your-book"
+          class="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-orange px-5 py-3 font-extrabold text-white transition hover:bg-brand-navy"
+        >
+          Create My First Book
+        </a>
+      </div>
+    } @else {
+      <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        @for (book of books(); track book.bookId) {
+          <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+            <div class="mb-4">
+              <div
+                class="h-36 w-full rounded-xl"
+                [style.background]="coverVisual(book)"
+                aria-hidden="true"
+              ></div>
+            </div>
+
+            <div class="mb-3 flex items-start justify-between gap-3">
+              <h2 class="line-clamp-2 text-lg font-bold text-brand-navy">{{ book.title }}</h2>
+              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase text-slate-600">
+                Custom
+              </span>
+            </div>
+
+            <p class="line-clamp-2 text-sm text-slate-600">{{ book.description || 'No description provided.' }}</p>
+
+            <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {{ specsSummary(book) }}
+            </p>
+
+            <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <dt class="text-slate-500">Quantity</dt>
+                <dd class="font-semibold text-brand-navy">{{ book.quantity || 0 }}</dd>
+              </div>
+              <div>
+                <dt class="text-slate-500">Base price</dt>
+                <dd class="font-semibold text-brand-navy">{{ book.salePrice | currency:'USD':'symbol':'1.2-2' }}</dd>
+              </div>
+            </dl>
+
+            <div class="mt-5 flex gap-2">
+              <a
+                [routerLink]="['/design-your-book']"
+                [queryParams]="{ bookId: book.bookId }"
+                class="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-brand-navy transition hover:bg-slate-100"
+              >
+                Edit
+              </a>
+              <button
+                type="button"
+                class="inline-flex flex-1 items-center justify-center rounded-xl bg-brand-navy px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-orange"
+                (click)="openAddToCartModal(book)"
+              >
+                Add to cart
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+
+  @if (addToCartModalOpen()) {
+    <div
+      class="fixed inset-0 z-70 bg-black/45"
+      aria-hidden="true"
+      (click)="closeAddToCartModal()"
+    ></div>
+    <section
+      class="fixed left-1/2 top-1/2 z-80 w-[95vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="custom-price-modal-title"
+    >
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="custom-price-modal-title" class="font-display text-xl font-extrabold text-brand-navy">
+          Add Custom Book
+        </h3>
+        <button
+          type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-100"
+          (click)="closeAddToCartModal()"
+          [disabled]="calculatingPrice() || addingToCart()"
+          aria-label="Close"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+          <p class="text-sm font-bold text-brand-navy">{{ selectedBook()?.title }}</p>
+          <p class="text-xs text-slate-600">{{ selectedBookSpecs() }}</p>
+        </div>
+
+        <label class="block">
+          <span class="mb-1 block text-sm font-semibold text-slate-700">Quantity</span>
+          <input
+            type="number"
+            min="1"
+            [value]="modalQuantity()"
+            (input)="onQuantityInput($event)"
+            class="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+          />
+        </label>
+
+        <button
+          type="button"
+          class="inline-flex w-full items-center justify-center rounded-xl border border-brand-navy px-4 py-2.5 text-sm font-bold text-brand-navy transition hover:bg-brand-navy hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          (click)="calculatePrice()"
+          [disabled]="calculatingPrice() || addingToCart()"
+        >
+          {{ calculatingPrice() ? 'Calculating...' : 'Calculate price' }}
+        </button>
+
+        @if (modalError()) {
+          <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {{ modalError() }}
+          </div>
+        }
+
+        @if (modalInfo()) {
+          <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {{ modalInfo() }}
+          </div>
+        }
+
+        @if (modalQuote(); as quote) {
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+            <div class="flex items-center justify-between py-1">
+              <span class="text-slate-600">Unit price</span>
+              <span class="font-bold text-brand-navy">
+                {{ quote.unitPrice | currency:(quote.currency || 'USD'):'symbol':'1.2-2' }}
+              </span>
+            </div>
+            <div class="flex items-center justify-between py-1">
+              <span class="text-slate-600">Total</span>
+              <span class="font-extrabold text-brand-navy">
+                {{ quote.totalPrice | currency:(quote.currency || 'USD'):'symbol':'1.2-2' }}
+              </span>
+            </div>
+            @if (quote.isEstimated) {
+              <div class="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                Estimated price
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="mt-5 flex gap-2">
+        <button
+          type="button"
+          class="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+          (click)="closeAddToCartModal()"
+          [disabled]="calculatingPrice() || addingToCart()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="inline-flex flex-1 items-center justify-center rounded-xl bg-brand-navy px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-orange disabled:cursor-not-allowed disabled:opacity-50"
+          (click)="addCustomBookToCart()"
+          [disabled]="!canAddPricedItem()"
+        >
+          {{ addingToCart() ? 'Adding...' : 'Add to cart' }}
+        </button>
+      </div>
+    </section>
+  }
+</section>

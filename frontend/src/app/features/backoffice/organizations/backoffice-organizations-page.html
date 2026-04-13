@@ -1,0 +1,242 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+    [breadcrumb]="['Backoffice', 'Organizations']"
+    title="Organizations"
+    description="Create internal organizations and issue one-time verification tokens for claim-based signup."
+  >
+    <button
+      header-actions
+      type="button"
+      class="admin-focus-ring rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange"
+      (click)="openCreateModal()"
+    >
+      Create organization
+    </button>
+  </app-backoffice-section-header>
+
+  @if (errorMessage()) {
+    <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <app-backoffice-stat-card
+      label="Organizations"
+      [value]="totalOrganizations().toString()"
+      change="Registry"
+      hint="internal accounts"
+      icon="fa-building"
+      tone="neutral"
+    />
+    <app-backoffice-stat-card
+      label="Active"
+      [value]="activeOrganizations().toString()"
+      change="Ready"
+      hint="can be claimed"
+      icon="fa-circle-check"
+      tone="positive"
+    />
+    <app-backoffice-stat-card
+      label="Pending"
+      [value]="pendingOrganizations().toString()"
+      change="Review"
+      hint="awaiting activation"
+      icon="fa-hourglass-half"
+      tone="warning"
+    />
+    <app-backoffice-stat-card
+      label="Inactive"
+      [value]="inactiveOrganizations().toString()"
+      change="Restricted"
+      hint="blocked organizations"
+      icon="fa-ban"
+      tone="danger"
+    />
+  </div>
+
+  <app-backoffice-card
+    title="Organization registry"
+    description="Generate verification tokens and share them through your secure business channel."
+  >
+    <div class="admin-scrollbar overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200/70 text-left">
+        <thead class="bg-slate-50/70">
+          <tr>
+            <th class="px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Name</th>
+            <th class="px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-500">SIREN</th>
+            <th class="px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Status</th>
+            <th class="px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Created at</th>
+            <th class="px-3 py-2 text-right text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+          @if (loading()) {
+            <tr>
+              <td colspan="5" class="px-3 py-8 text-center text-sm text-slate-500">Loading organizations...</td>
+            </tr>
+          } @else if (organizations().length === 0) {
+            <tr>
+              <td colspan="5" class="px-3 py-8 text-center text-sm text-slate-500">
+                No organizations yet. Create your first organization.
+              </td>
+            </tr>
+          } @else {
+            @for (organization of organizations(); track organization.id) {
+              <tr class="hover:bg-slate-50/60">
+                <td class="px-3 py-3 text-[0.82rem] font-semibold text-brand-navy">{{ organization.name }}</td>
+                <td class="px-3 py-3 text-[0.8rem] text-slate-600">{{ organization.siren }}</td>
+                <td class="px-3 py-3">
+                  <span [class]="statusBadgeClass(organization.status)">
+                    {{ organization.status }}
+                  </span>
+                </td>
+                <td class="px-3 py-3 text-[0.8rem] text-slate-500">
+                  {{ organization.createdAt | date: 'yyyy-MM-dd HH:mm' }}
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <button
+                    type="button"
+                    class="admin-focus-ring rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[0.74rem] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+                    (click)="generateToken(organization)"
+                    [disabled]="isGeneratingToken(organization.id)"
+                  >
+                    {{ isGeneratingToken(organization.id) ? 'Generating...' : 'Generate token' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </app-backoffice-card>
+</div>
+
+@if (createModalOpen()) {
+  <button
+    type="button"
+    class="fixed inset-0 z-40 bg-brand-navy/40"
+    aria-label="Close create organization modal"
+    (click)="closeCreateModal()"
+  ></button>
+
+  <section class="fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true">
+    <article class="admin-panel w-full max-w-2xl rounded-[1.25rem] p-5">
+      <header class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-brand-navy">Create organization</h2>
+        <button type="button" class="admin-focus-ring admin-icon-button" (click)="closeCreateModal()">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </header>
+
+      <form class="grid gap-4 sm:grid-cols-2" [formGroup]="createForm" (ngSubmit)="createOrganization()">
+        <label class="space-y-1 text-sm text-slate-600 sm:col-span-2">
+          <span class="admin-label">Organization name</span>
+          <input class="admin-input w-full" formControlName="name" />
+        </label>
+
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">SIREN (9 digits)</span>
+          <input
+            class="admin-input w-full"
+            formControlName="siren"
+            inputmode="numeric"
+            maxlength="9"
+            (input)="normalizeSirenInput($event)"
+          />
+        </label>
+
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">Status</span>
+          <select class="admin-select w-full" formControlName="status">
+            @for (status of statuses; track status) {
+              <option [value]="status">{{ status }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            class="admin-focus-ring rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            (click)="closeCreateModal()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="admin-focus-ring rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange disabled:opacity-60"
+            [disabled]="createLoading()"
+          >
+            {{ createLoading() ? 'Saving...' : 'Create organization' }}
+          </button>
+        </div>
+      </form>
+    </article>
+  </section>
+}
+
+@if (tokenModalOpen() && tokenPayload(); as payload) {
+  <button
+    type="button"
+    class="fixed inset-0 z-40 bg-brand-navy/40"
+    aria-label="Close token modal"
+    (click)="closeTokenModal()"
+  ></button>
+
+  <section class="fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true">
+    <article class="admin-panel w-full max-w-2xl rounded-[1.25rem] p-5">
+      <header class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-brand-navy">Verification token generated</h2>
+        <button type="button" class="admin-focus-ring admin-icon-button" (click)="closeTokenModal()">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </header>
+
+      <div class="space-y-4">
+        <p class="text-sm text-slate-600">
+          Share this token once through your secure offline/business channel.
+          This token can be used only one time.
+        </p>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-[0.72rem] uppercase tracking-[0.12em] text-slate-500">Organization</p>
+          <p class="mt-1 text-sm font-semibold text-brand-navy">{{ payload.organizationName }}</p>
+          <p class="mt-1 text-xs text-slate-600">SIREN: {{ payload.siren }}</p>
+          <p class="mt-1 text-xs text-slate-600">Expires at: {{ payload.expiresAt | date: 'yyyy-MM-dd HH:mm' }}</p>
+        </div>
+
+        <label class="space-y-1 text-sm text-slate-600">
+          <span class="admin-label">Raw verification token</span>
+          <textarea
+            class="admin-input w-full resize-none font-mono text-[0.78rem]"
+            rows="4"
+            readonly
+          >{{ payload.rawToken }}</textarea>
+        </label>
+
+        @if (copyMessage()) {
+          <p class="text-xs text-brand-teal">{{ copyMessage() }}</p>
+        }
+
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="admin-focus-ring rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            (click)="closeTokenModal()"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            class="admin-focus-ring rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange"
+            (click)="copyToken()"
+          >
+            Copy token
+          </button>
+        </div>
+      </div>
+    </article>
+  </section>
+}

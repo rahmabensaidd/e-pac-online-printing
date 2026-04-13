@@ -1,0 +1,79 @@
+<section class="relative min-h-[calc(100vh-10rem)] overflow-hidden bg-brand-cream py-12 sm:py-16">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="absolute -top-20 -left-20 h-72 w-72 blob bg-brand-orange/15"></div>
+  <div class="absolute -bottom-24 -right-24 h-80 w-80 blob bg-brand-teal/15"></div>
+
+  <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+      <div class="rounded-3xl border border-gray-200/80 bg-white/90 p-6 shadow-xl backdrop-blur-sm sm:p-8">
+        <span class="inline-flex items-center gap-2 rounded-full bg-brand-lime/30 px-4 py-2 text-sm font-bold text-brand-navy">
+          <i class="fa-solid fa-compass-drafting text-brand-orange"></i>
+          Design Studio
+        </span>
+
+        <h1 class="mt-4 font-display text-4xl font-extrabold leading-tight text-brand-navy sm:text-5xl">
+          Build Your Custom Book Design
+        </h1>
+
+        <p class="mt-4 text-lg text-gray-600">
+          Preview your editor workflow, then jump directly into your own book creation flow with guided steps.
+        </p>
+
+        <ul class="mt-6 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+          <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <i class="fa-solid fa-images mr-2 text-brand-orange"></i>
+            Cover and content setup
+          </li>
+          <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <i class="fa-solid fa-pen-ruler mr-2 text-brand-orange"></i>
+            Visual template design
+          </li>
+          <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <i class="fa-solid fa-book-open mr-2 text-brand-orange"></i>
+            Binding-aware configuration
+          </li>
+          <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <i class="fa-solid fa-circle-check mr-2 text-brand-orange"></i>
+            Direct creation in your account
+          </li>
+        </ul>
+
+        <div class="mt-7 flex flex-wrap items-center gap-3">
+          <a
+            [routerLink]="ctaRoute()"
+            [queryParams]="ctaQueryParams()"
+            class="inline-flex items-center justify-center rounded-xl bg-brand-orange px-6 py-3 font-extrabold text-white transition hover:bg-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+          >
+            {{ ctaLabel() }}
+          </a>
+          <a
+            routerLink="/price-simulator"
+            class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-5 py-3 font-bold text-brand-navy transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+          >
+            Open Price Simulator
+          </a>
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="absolute -inset-2 rounded-[2rem] bg-gradient-to-r from-brand-orange/30 via-brand-pink/20 to-brand-teal/30 blur-xl"></div>
+        <div class="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-3 shadow-2xl">
+          <div class="mb-3 flex items-center gap-2 border-b border-slate-200 pb-3">
+            <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+            <span class="ml-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Editor preview</span>
+          </div>
+
+          <img
+            src="/cesdk/1.67.0/ly.img.template/thumbnails/cesdk_blank_1.png"
+            alt="Editor preview"
+            class="h-[420px] w-full rounded-2xl object-cover"
+            loading="lazy"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+

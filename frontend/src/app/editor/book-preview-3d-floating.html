@@ -1,0 +1,38 @@
+<div
+  class="preview-card"
+  cdkDrag
+  [cdkDragBoundary]="dragBoundarySelector"
+  [cdkDragStartDelay]="40"
+>
+  <div class="preview-header" cdkDragHandle>
+    <div class="preview-title-group">
+      <p class="preview-eyebrow">Live Preview</p>
+      <h3 class="preview-title">3D Product</h3>
+    </div>
+    <button
+      type="button"
+      class="preview-toggle"
+      [attr.aria-label]="isCollapsed ? 'Expand 3D preview' : 'Collapse 3D preview'"
+      (click)="toggleCollapsed()"
+    >
+      @if (isCollapsed) {
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 10l5 5 5-5"></path>
+        </svg>
+      } @else {
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 14l5-5 5 5"></path>
+        </svg>
+      }
+    </button>
+  </div>
+
+  <div class="preview-body" [class.preview-body-collapsed]="isCollapsed">
+    <div #canvasHost class="preview-canvas"></div>
+    @if (!isCollapsed && (isLoadingModel || loadErrorMessage)) {
+      <div class="preview-overlay" [class.preview-overlay-error]="!!loadErrorMessage">
+        {{ loadErrorMessage || loadingMessage }}
+      </div>
+    }
+  </div>
+</div>
