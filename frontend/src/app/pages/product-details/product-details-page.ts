@@ -80,4 +80,5 @@ export class ProductDetailsPageComponent {
       queryParams: { category: detail.marketplaceCategory },
     });
   }
+
 }

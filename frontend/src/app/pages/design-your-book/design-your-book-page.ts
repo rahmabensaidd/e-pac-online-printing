@@ -266,7 +266,6 @@ export class DesignYourBookPageComponent implements OnInit {
       coverPaperType: qp.get('coverPaperType') ?? 'NONE',
       coverFinishType: this.normalizeCoverFinishType(qp.get('coverFinishType')),
       coverColor: qp.get('coverColor') ?? 'FOUR_ZERO',
-      priorityLevel: qp.get('priorityLevel') ?? 'NORMAL',
       headAndTail: qp.get('headAndTail') ?? 'NONE',
     });
   }

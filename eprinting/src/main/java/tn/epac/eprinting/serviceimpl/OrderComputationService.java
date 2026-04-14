@@ -7,7 +7,6 @@ import tn.epac.eprinting.model.enums.OrderLineStatus;
 import tn.epac.eprinting.model.enums.OrderPriority;
 import tn.epac.eprinting.model.enums.OrderStatus;
 import tn.epac.eprinting.model.enums.OrderValidationStatus;
-import tn.epac.eprinting.model.enums.PriorityLevel;
 
 import java.util.List;
 
@@ -15,9 +14,7 @@ import java.util.List;
 public class OrderComputationService {
 
     public void initializeLineDefaults(OrderLine line) {
-        if (line == null) {
-            return;
-        }
+        if (line == null) return;
 
         if (line.getItemSource() == null) {
             line.setItemSource(CartItemSource.MARKETPLACE);
@@ -34,7 +31,7 @@ public class OrderComputationService {
             line.setLineStatus(OrderLineStatus.PRINTING);
         }
         if (line.getPriority() == null) {
-            line.setPriority(resolvePriorityFromBook(line));
+            line.setPriority(OrderPriority.NORMAL);
         }
         if (line.getValidationStatus() == null) {
             line.setValidationStatus(OrderValidationStatus.PENDING);
@@ -50,29 +47,37 @@ public class OrderComputationService {
             return OrderStatus.READY_TO_SHIP;
         }
 
-        boolean anyPrinting = customLines.stream().anyMatch(line -> line.getLineStatus() == OrderLineStatus.PRINTING);
-        if (anyPrinting) {
-            return OrderStatus.PRINTING;
+        boolean anyRejected = customLines.stream()
+                .anyMatch(line -> line.getLineStatus() == OrderLineStatus.REJECTED);
+        if (anyRejected) {
+            return OrderStatus.REJECTED;
         }
 
-        boolean allShipped = customLines.stream().allMatch(line -> line.getLineStatus() == OrderLineStatus.SHIPPED);
+        boolean anyPrinting = customLines.stream()
+                .anyMatch(line -> line.getLineStatus() == OrderLineStatus.PRINTING);
+        if (anyPrinting) {
+            return OrderStatus.IN_PRODUCTION;
+        }
+
+        boolean allShipped = customLines.stream()
+                .allMatch(line -> line.getLineStatus() == OrderLineStatus.SHIPPED);
         if (allShipped) {
             return OrderStatus.SHIPPED;
         }
 
-        boolean allReadyToShip = customLines.stream().allMatch(line -> line.getLineStatus() == OrderLineStatus.READY_TO_SHIP);
+        boolean allReadyToShip = customLines.stream()
+                .allMatch(line -> line.getLineStatus() == OrderLineStatus.READY_TO_SHIP);
         if (allReadyToShip) {
             return OrderStatus.READY_TO_SHIP;
         }
 
-        // If there is no PRINTING line, the order can be prepared for shipment
-        // even when some custom lines are already SHIPPED and others READY_TO_SHIP.
-        boolean anyReadyToShip = customLines.stream().anyMatch(line -> line.getLineStatus() == OrderLineStatus.READY_TO_SHIP);
+        boolean anyReadyToShip = customLines.stream()
+                .anyMatch(line -> line.getLineStatus() == OrderLineStatus.READY_TO_SHIP);
         if (anyReadyToShip) {
             return OrderStatus.READY_TO_SHIP;
         }
 
-        return OrderStatus.PRINTING;
+        return OrderStatus.IN_PRODUCTION;
     }
 
     public OrderPriority computeOrderPriority(List<OrderLine> lines) {
@@ -82,13 +87,26 @@ public class OrderComputationService {
 
         OrderPriority best = OrderPriority.NORMAL;
         for (OrderLine line : lines) {
-            OrderPriority linePriority = normalizePriority(line != null ? line.getPriority() : null);
-            if (linePriority.rank() > best.rank()) {
+            OrderPriority linePriority = line != null ? line.getPriority() : OrderPriority.NORMAL;
+            if (comparePriority(linePriority, best) > 0) {
                 best = linePriority;
             }
         }
-
         return best;
+    }
+
+    private int comparePriority(OrderPriority a, OrderPriority b) {
+        return getRank(a) - getRank(b);
+    }
+
+    private int getRank(OrderPriority p) {
+        if (p == null) return 0;
+        return switch (p) {
+            case NORMAL -> 0;
+            case HIGH1 -> 1;
+            case HIGH2 -> 2;
+            case HIGH3 -> 3;
+        };
     }
 
     public OrderValidationStatus computeOrderValidationStatus(List<OrderLine> lines) {
@@ -100,12 +118,14 @@ public class OrderComputationService {
             return OrderValidationStatus.VALIDATED;
         }
 
-        boolean anyRejected = customLines.stream().anyMatch(line -> line.getValidationStatus() == OrderValidationStatus.REJECTED);
+        boolean anyRejected = customLines.stream()
+                .anyMatch(line -> line.getValidationStatus() == OrderValidationStatus.REJECTED);
         if (anyRejected) {
             return OrderValidationStatus.REJECTED;
         }
 
-        boolean anyPending = customLines.stream().anyMatch(line -> line.getValidationStatus() == null || line.getValidationStatus() == OrderValidationStatus.PENDING);
+        boolean anyPending = customLines.stream()
+                .anyMatch(line -> line.getValidationStatus() == null || line.getValidationStatus() == OrderValidationStatus.PENDING);
         if (anyPending) {
             return OrderValidationStatus.PENDING;
         }
@@ -113,33 +133,51 @@ public class OrderComputationService {
         return OrderValidationStatus.VALIDATED;
     }
 
-    public OrderPriority resolvePriorityFromBook(OrderLine line) {
-        if (line == null || line.getBook() == null || line.isMarketplaceItem()) {
+    /**
+     * Normalise une priorité à partir d'une String (pour les valeurs legacy)
+     */
+    public OrderPriority normalizePriorityFromString(String legacyValue) {
+        if (legacyValue == null) {
             return OrderPriority.NORMAL;
         }
-
-        PriorityLevel level = line.getBook().getPriorityLevel();
-        if (level == null) {
-            return OrderPriority.HIGH1;
-        }
-
-        return switch (level) {
-            case HIGH3 -> OrderPriority.HIGH3;
-            case HIGH2 -> OrderPriority.HIGH2;
-            case HIGH1 -> OrderPriority.HIGH1;
-            case NORMAL -> OrderPriority.HIGH1;
+        return switch (legacyValue.toUpperCase()) {
+            case "LOW" -> OrderPriority.NORMAL;
+            case "MEDIUM" -> OrderPriority.HIGH1;
+            case "HIGH" -> OrderPriority.HIGH3;
+            default -> OrderPriority.NORMAL;
         };
     }
 
-    public OrderPriority normalizePriority(OrderPriority value) {
-        if (value == null) {
+    /**
+     * Normalise une priorité (si c'est une valeur legacy, on convertit)
+     */
+    public OrderPriority normalizePriority(OrderPriority priority) {
+        if (priority == null) {
             return OrderPriority.NORMAL;
         }
-        return switch (value) {
-            case LOW -> OrderPriority.NORMAL;
-            case MEDIUM -> OrderPriority.HIGH1;
-            case HIGH -> OrderPriority.HIGH3;
-            default -> value;
+        // Si priority est déjà NORMAL/HIGH1/HIGH2/HIGH3, on le retourne tel quel
+        // Les valeurs legacy LOW/MEDIUM/HIGH n'existent pas dans l'enum actuel
+        return priority;
+    }
+
+    // Pour l'affichage : mappe NORMAL/HIGH1/HIGH2/HIGH3 -> LOW/MEDIUM/HIGH
+    public String getDisplayPriority(OrderPriority priority) {
+        if (priority == null) return "LOW";
+        return switch (priority) {
+            case NORMAL -> "LOW";
+            case HIGH1 -> "MEDIUM";
+            case HIGH2, HIGH3 -> "HIGH";
+        };
+    }
+
+    // Pour l'enregistrement : mappe LOW/MEDIUM/HIGH -> NORMAL/HIGH1/HIGH3
+    public OrderPriority fromDisplayPriority(String displayPriority) {
+        if (displayPriority == null) return OrderPriority.NORMAL;
+        return switch (displayPriority.toUpperCase()) {
+            case "LOW" -> OrderPriority.NORMAL;
+            case "MEDIUM" -> OrderPriority.HIGH1;
+            case "HIGH" -> OrderPriority.HIGH3;
+            default -> OrderPriority.NORMAL;
         };
     }
 }

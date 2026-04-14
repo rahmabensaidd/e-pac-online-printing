@@ -17,6 +17,7 @@ export interface CartItem {
   isEstimated: boolean;
   currency: string;
   calculatedAt: string | null;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
 export interface CustomBookPriceQuote {
@@ -28,6 +29,7 @@ export interface CustomBookPriceQuote {
   currency: string;
   calculatedAt: string;
   message?: string | null;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
 interface CartApiItem {
@@ -43,6 +45,7 @@ interface CartApiItem {
   isEstimated: boolean | null;
   currency: string | null;
   calculatedAt: string | null;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
 interface CartApiResponse {
@@ -68,6 +71,7 @@ interface AddPricedCustomItemRequest {
   isEstimated: boolean;
   currency: string;
   calculatedAt: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
 interface UpdateCartItemQuantityRequest {
@@ -90,11 +94,11 @@ export class CartService {
   readonly syncing = this.syncingSignal.asReadonly();
 
   readonly count = computed(() =>
-    this.items().reduce((sum, item) => sum + item.quantity, 0)
+      this.items().reduce((sum, item) => sum + item.quantity, 0)
   );
 
   readonly subtotal = computed(() =>
-    this.items().reduce((sum, item) => sum + item.lineTotal, 0)
+      this.items().reduce((sum, item) => sum + item.lineTotal, 0)
   );
 
   constructor() {
@@ -145,14 +149,15 @@ export class CartService {
     }
   }
 
-  async calculateCustomBookPrice(bookId: number, quantity: number): Promise<CustomBookPriceQuote> {
+  async calculateCustomBookPrice(bookId: number, quantity: number, priority: 'LOW' | 'MEDIUM' | 'HIGH'): Promise<CustomBookPriceQuote> {
     const payload = {
       bookId,
       quantity: Math.max(1, Math.floor(quantity || 1)),
+      priority,
     };
 
     return await firstValueFrom(
-      this.http.post<CustomBookPriceQuote>(`${this.cartApiUrl}/custom-pricing`, payload)
+        this.http.post<CustomBookPriceQuote>(`${this.cartApiUrl}/custom-pricing`, payload)
     );
   }
 
@@ -164,6 +169,7 @@ export class CartService {
     isEstimated: boolean;
     currency: string;
     calculatedAt: string;
+    priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }): Promise<void> {
     const payload: AddPricedCustomItemRequest = {
       cartId: this.cartIdSignal(),
@@ -174,12 +180,13 @@ export class CartService {
       isEstimated: input.isEstimated,
       currency: input.currency || 'USD',
       calculatedAt: input.calculatedAt,
+      priority: input.priority,
     };
 
     this.syncingSignal.set(true);
     try {
       const response = await firstValueFrom(
-        this.http.post<CartApiResponse>(`${this.cartApiUrl}/custom-items/priced`, payload)
+          this.http.post<CartApiResponse>(`${this.cartApiUrl}/custom-items/priced`, payload)
       );
       this.applyCartResponse(response);
     } catch (error) {
@@ -200,7 +207,7 @@ export class CartService {
     this.syncingSignal.set(true);
     try {
       const response = await firstValueFrom(
-        this.http.delete<CartApiResponse>(`${this.cartApiUrl}/${cartId}/items/${orderLineId}`)
+          this.http.delete<CartApiResponse>(`${this.cartApiUrl}/${cartId}/items/${orderLineId}`)
       );
       this.applyCartResponse(response);
     } catch (error) {
@@ -224,7 +231,7 @@ export class CartService {
     this.syncingSignal.set(true);
     try {
       const response = await firstValueFrom(
-        this.http.patch<CartApiResponse>(`${this.cartApiUrl}/${cartId}/items/${orderLineId}`, payload)
+          this.http.patch<CartApiResponse>(`${this.cartApiUrl}/${cartId}/items/${orderLineId}`, payload)
       );
       this.applyCartResponse(response);
     } catch (error) {
@@ -277,6 +284,7 @@ export class CartService {
       isEstimated: !!item.isEstimated,
       currency: item.currency || 'USD',
       calculatedAt: item.calculatedAt,
+      priority: item.priority || 'LOW',
       product: {
         id: item.bookId,
         name: item.title,

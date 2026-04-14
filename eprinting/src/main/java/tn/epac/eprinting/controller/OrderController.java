@@ -9,14 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import tn.epac.eprinting.model.dtos.AdminOrderResponseDto;
-import tn.epac.eprinting.model.dtos.CheckoutOrderRequestDto;
-import tn.epac.eprinting.model.dtos.OrderLineProductionStatusRequestDto;
-import tn.epac.eprinting.model.dtos.OrderLineValidationRequestDto;
-import tn.epac.eprinting.model.dtos.OrderResponseDto;
-import tn.epac.eprinting.model.dtos.OrderStatsDto;
-import tn.epac.eprinting.model.dtos.OrderTrackingResponseDto;
-import tn.epac.eprinting.model.dtos.OrderUpdateRequestDto;
+import tn.epac.eprinting.model.dtos.*;
 import tn.epac.eprinting.model.entities.Order;
 import tn.epac.eprinting.serviceimpl.OrderServiceImpl;
 
@@ -29,23 +22,23 @@ public class OrderController {
 
     private final OrderServiceImpl orderService;
 
+    // ==================== ENDPOINTS ADMIN EXISTANTS ====================
 
-    // ✅ Accessible uniquement aux admins
     @GetMapping("/all")
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<List<Order>> getAllOrders() {
-        List<Order> orders = orderService.getAllOrders();
-        return ResponseEntity.ok(orders);
+        return ResponseEntity.ok(orderService.getAllOrders());
     }
 
     @GetMapping("/admin")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<Page<AdminOrderResponseDto>> getAllOrdersAdmin(
+    public ResponseEntity<PagedResponseDto<AdminOrderResponseDto>> getAllOrdersAdmin(
             @PageableDefault(size = 20, sort = "orderDate") Pageable pageable,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String search
     ) {
-        return ResponseEntity.ok(orderService.getAllOrdersAdmin(pageable, status, search));
+        Page<AdminOrderResponseDto> page = orderService.getAllOrdersAdmin(pageable, status, search);
+        return ResponseEntity.ok(PagedResponseDto.from(page));
     }
 
     @GetMapping("/admin/stats")
@@ -81,6 +74,59 @@ public class OrderController {
         orderService.deleteOrder(orderId);
         return ResponseEntity.noContent().build();
     }
+
+    // ==================== NOUVEAUX ENDPOINTS POUR LE MODAL ÉLÉGANT ====================
+
+    /**
+     * Met à jour le statut global d'une commande (uniquement REJECTED, CANCELLED, SHIPPED)
+     */
+    @PatchMapping("/admin/{orderId}/status")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminOrderResponseDto> updateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestBody OrderStatusUpdateDto request
+    ) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.getStatus()));
+    }
+
+    /**
+     * Met à jour plusieurs OrderLines en une seule requête
+     * Permet de modifier le statut et/ou la priorité
+     */
+    @PatchMapping("/admin/{orderId}/orderlines")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminOrderResponseDto> updateOrderLines(
+            @PathVariable Long orderId,
+            @RequestBody BatchOrderLineUpdateDto request
+    ) {
+        return ResponseEntity.ok(orderService.updateOrderLines(orderId, request.getUpdates()));
+    }
+
+    // ==================== ENDPOINTS DÉPRÉCIÉS (gardés pour compatibilité) ====================
+
+    @PatchMapping("/admin/{orderId}/lines/{orderLineId}/validation")
+    @PreAuthorize("hasRole('admin')")
+    @Deprecated
+    public ResponseEntity<AdminOrderResponseDto> updateOrderLineValidation(
+            @PathVariable Long orderId,
+            @PathVariable Long orderLineId,
+            @RequestBody OrderLineValidationRequestDto request
+    ) {
+        return ResponseEntity.ok(orderService.updateOrderLineValidation(orderId, orderLineId, request.getValidationStatus()));
+    }
+
+    @PatchMapping("/admin/{orderId}/lines/{orderLineId}/production-status")
+    @PreAuthorize("hasRole('admin')")
+    @Deprecated
+    public ResponseEntity<AdminOrderResponseDto> updateOrderLineProductionStatus(
+            @PathVariable Long orderId,
+            @PathVariable Long orderLineId,
+            @RequestBody OrderLineProductionStatusRequestDto request
+    ) {
+        return ResponseEntity.ok(orderService.updateOrderLineProductionStatus(orderId, orderLineId, request.getLineStatus()));
+    }
+
+    // ==================== ENDPOINTS PUBLIC/USER ====================
 
     @PostMapping("/checkout")
     @PreAuthorize("hasAnyRole('user','admin','organization')")
@@ -129,25 +175,5 @@ public class OrderController {
             username = jwt.getSubject();
         }
         return ResponseEntity.ok(orderService.getTrackingForCurrentUser(orderId, email, username));
-    }
-
-    @PatchMapping("/admin/{orderId}/lines/{orderLineId}/validation")
-    @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<AdminOrderResponseDto> updateOrderLineValidation(
-            @PathVariable Long orderId,
-            @PathVariable Long orderLineId,
-            @RequestBody OrderLineValidationRequestDto request
-    ) {
-        return ResponseEntity.ok(orderService.updateOrderLineValidation(orderId, orderLineId, request.getValidationStatus()));
-    }
-
-    @PatchMapping("/admin/{orderId}/lines/{orderLineId}/production-status")
-    @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<AdminOrderResponseDto> updateOrderLineProductionStatus(
-            @PathVariable Long orderId,
-            @PathVariable Long orderLineId,
-            @RequestBody OrderLineProductionStatusRequestDto request
-    ) {
-        return ResponseEntity.ok(orderService.updateOrderLineProductionStatus(orderId, orderLineId, request.getLineStatus()));
     }
 }

@@ -1,21 +1,7 @@
 package tn.epac.eprinting.model.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 import tn.epac.eprinting.model.enums.CartItemSource;
 import tn.epac.eprinting.model.enums.OrderLineStatus;
 import tn.epac.eprinting.model.enums.OrderPriority;
@@ -24,10 +10,6 @@ import tn.epac.eprinting.model.enums.OrderValidationStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * OrderLine entity - represents a line item in a cart or order.
- * Links a book with quantity and pricing information.
- */
 @Entity
 @Table(name = "order_lines")
 @Data
@@ -47,9 +29,7 @@ public class OrderLine {
     private Book book;
 
     private Integer quantity;
-
     private BigDecimal unitPrice;
-
     private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
@@ -68,11 +48,13 @@ public class OrderLine {
     @Column(name = "calculated_at")
     private LocalDateTime calculatedAt;
 
+    // Changement : EnumType.STRING au lieu de converter
     @Enumerated(EnumType.STRING)
     @Column(name = "line_status", length = 24)
     @Builder.Default
     private OrderLineStatus lineStatus = OrderLineStatus.READY;
 
+    // Priorité stockée directement en String
     @Enumerated(EnumType.STRING)
     @Column(name = "line_priority", length = 16)
     @Builder.Default
@@ -83,15 +65,10 @@ public class OrderLine {
     @Builder.Default
     private OrderValidationStatus validationStatus = OrderValidationStatus.PENDING;
 
-    // Method to get the source book unit price
     public float getBookPrice() {
-        if (book != null) {
-            return book.getSalePrice();
-        }
-        return 0;
+        return book != null ? book.getSalePrice() : 0;
     }
 
-    // Method to recalculate line total
     public void calculateTotalPrice() {
         if (quantity != null && unitPrice != null) {
             this.totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));

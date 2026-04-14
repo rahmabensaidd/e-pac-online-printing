@@ -26,4 +26,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.status NOT IN :excludedStatuses")
     BigDecimal sumTotalAmountByExcludedStatuses(@Param("excludedStatuses") OrderStatus... excludedStatuses);
+
+    @Query("""
+            SELECT DISTINCT o
+            FROM Order o
+            LEFT JOIN FETCH o.orderLines ol
+            LEFT JOIN FETCH ol.book
+            LEFT JOIN FETCH o.user
+            LEFT JOIN FETCH o.billing
+            LEFT JOIN FETCH o.shipping
+            WHERE o.orderId = :orderId
+            """)
+    java.util.Optional<Order> findByIdWithLines(@Param("orderId") Long orderId);
 }

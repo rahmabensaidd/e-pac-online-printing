@@ -34,9 +34,15 @@ public class CartServiceImpl {
     private final OrderComputationService orderComputationService;
 
     public CartResponseDto getCart(Long cartId) {
-        Cart cart = getActiveCart(cartId);
-        cart.calculateTotal();
-        return mapCart(cart, false);
+        if (cartId == null) {
+            return removedCartResponse();
+        }
+        return cartRepository.findActiveCartById(cartId)
+                .map(cart -> {
+                    cart.calculateTotal();
+                    return mapCart(cart, false);
+                })
+                .orElseGet(this::removedCartResponse);
     }
 
     public CartResponseDto addToCart(Long cartId, Long bookId, Integer quantity) {
@@ -163,7 +169,10 @@ public class CartServiceImpl {
             return removeItem(cartId, orderLineId);
         }
 
-        Cart cart = getActiveCart(cartId);
+        Cart cart = findActiveCart(cartId).orElse(null);
+        if (cart == null) {
+            return removedCartResponse();
+        }
         OrderLine line = orderLineRepository.findByOrderLineIdAndCartCartId(orderLineId, cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with id: " + orderLineId));
 
@@ -182,7 +191,10 @@ public class CartServiceImpl {
     }
 
     public CartResponseDto removeItem(Long cartId, Long orderLineId) {
-        Cart cart = getActiveCart(cartId);
+        Cart cart = findActiveCart(cartId).orElse(null);
+        if (cart == null) {
+            return removedCartResponse();
+        }
         OrderLine line = orderLineRepository.findByOrderLineIdAndCartCartId(orderLineId, cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with id: " + orderLineId));
 
@@ -198,24 +210,33 @@ public class CartServiceImpl {
     }
 
     public CartResponseDto clearCart(Long cartId) {
-        Cart cart = getActiveCart(cartId);
+        Cart cart = findActiveCart(cartId).orElse(null);
+        if (cart == null) {
+            return removedCartResponse();
+        }
         cartRepository.delete(cart);
         return removedCartResponse();
     }
 
     private Cart resolveCart(Long cartId) {
         if (cartId == null) {
-            return Cart.builder()
-                    .totalPrice(BigDecimal.ZERO)
-                    .build();
+            return createTransientCart();
         }
 
-        return getActiveCart(cartId);
+        return findActiveCart(cartId).orElseGet(this::createTransientCart);
     }
 
-    private Cart getActiveCart(Long cartId) {
-        return cartRepository.findActiveCartById(cartId)
-                .orElseThrow(() -> new ResourceNotFoundException("Active cart not found with id: " + cartId));
+    private java.util.Optional<Cart> findActiveCart(Long cartId) {
+        if (cartId == null) {
+            return java.util.Optional.empty();
+        }
+        return cartRepository.findActiveCartById(cartId);
+    }
+
+    private Cart createTransientCart() {
+        return Cart.builder()
+                .totalPrice(BigDecimal.ZERO)
+                .build();
     }
 
     private CartResponseDto mapCart(Cart cart, boolean removed) {

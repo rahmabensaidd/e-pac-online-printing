@@ -321,9 +321,7 @@ public class AdminBookServiceImpl implements AdminBookService {
         if (!partial || dto.getHeadAndTail() != null) {
             book.setHeadAndTail(parseEnum(HeadAndTail.class, dto.getHeadAndTail(), HeadAndTail.NONE));
         }
-        if (!partial || dto.getPriorityLevel() != null) {
-            book.setPriorityLevel(parseEnum(PriorityLevel.class, dto.getPriorityLevel(), PriorityLevel.NORMAL));
-        }
+
         if (!partial || dto.getBindingType() != null) {
             book.setBindingType(parseEnum(BindingType.class, dto.getBindingType(), BindingType.NONE));
         }
@@ -491,7 +489,6 @@ public class AdminBookServiceImpl implements AdminBookService {
                 .coverSize(book.getCoverSize() != null ? book.getCoverSize().name() : null)
                 .coverPaperType(book.getCoverPaperType() != null ? book.getCoverPaperType().name() : null)
                 .headAndTail(book.getHeadAndTail() != null ? book.getHeadAndTail().name() : null)
-                .priorityLevel(book.getPriorityLevel() != null ? book.getPriorityLevel().name() : null)
                 .bindingType(book.getBindingType() != null ? book.getBindingType().name() : null)
                 .coilType(book.getCoilType() != null ? book.getCoilType().name() : null)
                 .tabColor(book.getTabColor() != null ? book.getTabColor().name() : null)

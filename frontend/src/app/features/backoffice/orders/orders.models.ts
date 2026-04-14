@@ -2,7 +2,7 @@ import { BackofficeDataTableRow } from '../shared/backoffice-data-table.models';
 
 export type OrderStatusUi = 'Printing' | 'Ready to ship' | 'Shipped' | 'Rejected' | 'Cancelled';
 export type OrderFilter = 'All' | OrderStatusUi;
-export type OrderPriorityUi = 'Normal' | 'High1' | 'High2' | 'High3';
+export type OrderPriorityUi = 'Low' | 'Medium' | 'High';
 export type PaymentStatusUi = 'Paid' | 'Pending' | 'Failed';
 export type OrderValidationStatusUi = 'Pending' | 'Validated' | 'Rejected';
 

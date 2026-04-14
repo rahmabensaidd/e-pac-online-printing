@@ -8,41 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import tn.epac.eprinting.exception.ResourceNotFoundException;
-import tn.epac.eprinting.model.dtos.AdminOrderResponseDto;
-import tn.epac.eprinting.model.dtos.CheckoutOrderRequestDto;
-import tn.epac.eprinting.model.dtos.OrderLineResponseDto;
-import tn.epac.eprinting.model.dtos.OrderResponseDto;
-import tn.epac.eprinting.model.dtos.OrderStatsDto;
-import tn.epac.eprinting.model.dtos.OrderTrackingResponseDto;
-import tn.epac.eprinting.model.dtos.OrderUpdateRequestDto;
-import tn.epac.eprinting.model.entities.Adress;
-import tn.epac.eprinting.model.entities.Billing;
-import tn.epac.eprinting.model.entities.Cart;
-import tn.epac.eprinting.model.entities.Order;
-import tn.epac.eprinting.model.entities.OrderLine;
-import tn.epac.eprinting.model.entities.Shipping;
-import tn.epac.eprinting.model.entities.User;
-import tn.epac.eprinting.model.enums.CartItemSource;
-import tn.epac.eprinting.model.enums.OrderLineStatus;
-import tn.epac.eprinting.model.enums.OrderPriority;
-import tn.epac.eprinting.model.enums.OrderStatus;
-import tn.epac.eprinting.model.enums.OrderValidationStatus;
-import tn.epac.eprinting.model.enums.PaymentStatus;
-import tn.epac.eprinting.model.enums.Role;
-import tn.epac.eprinting.model.enums.ShippingStatus;
-import tn.epac.eprinting.repository.AdressRepository;
-import tn.epac.eprinting.repository.BillingRepository;
-import tn.epac.eprinting.repository.CartRepository;
-import tn.epac.eprinting.repository.OrderRepository;
-import tn.epac.eprinting.repository.ShippingRepository;
-import tn.epac.eprinting.repository.UserRepository;
+import tn.epac.eprinting.model.dtos.*;
+import tn.epac.eprinting.model.entities.*;
+import tn.epac.eprinting.model.enums.*;
+import tn.epac.eprinting.repository.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -58,17 +32,17 @@ public class OrderServiceImpl {
     private final CustomBookPricingService customBookPricingService;
     private final OrderComputationService orderComputationService;
 
+    // ==================== Méthodes existantes (non modifiées) ====================
+    private String generateInvoiceNumber() {
+        String year = String.valueOf(LocalDate.now().getYear());
+        long count = orderRepository.count() + 1;
+        return String.format("INV-%s-%05d", year, count);
+    }
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
     }
 
-    public OrderResponseDto checkout(
-            Long cartId,
-            CheckoutOrderRequestDto request,
-            String email,
-            String username,
-            List<String> roles
-    ) {
+    public OrderResponseDto checkout(Long cartId, CheckoutOrderRequestDto request, String email, String username, List<String> roles) {
         Cart cart = cartRepository.findActiveCartById(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active cart not found with id: " + cartId));
 
@@ -94,6 +68,22 @@ public class OrderServiceImpl {
         shipping.setEstimatedDelivery(LocalDate.now().plusDays("express".equalsIgnoreCase(request.getShippingMethod()) ? 2 : 5));
         shipping.setShippingCost("express".equalsIgnoreCase(request.getShippingMethod()) ? 18f : 8.5f);
         shipping = shippingRepository.save(shipping);
+        Invoice invoice = new Invoice();
+        invoice.setInvoiceNumber(generateInvoiceNumber());
+        invoice.setInvoiceDate(LocalDate.now());
+        invoice.setDueDate(LocalDate.now().plusDays(30));
+
+        float totalTTC = cart.getCalculatedTotal().floatValue();
+        float tvaRate = 0.19f; // ou 0.0f si tu ne veux pas encore gérer la TVA
+        float totalHT = totalTTC / (1 + tvaRate);
+        float tvaAmount = totalTTC - totalHT;
+
+        invoice.setTotalTTC(totalTTC);
+        invoice.setTotalHT(totalHT);
+        invoice.setTvaRate(tvaRate);
+        invoice.setTvaAmount(tvaAmount);
+        invoice.setPaid(false);
+        invoice.setPaymentDate(null);
 
         List<OrderLine> orderLines = cart.getItems().stream()
                 .map(this::copyOrderLine)
@@ -108,6 +98,8 @@ public class OrderServiceImpl {
         order.setShipping(shipping);
         order.setOrderLines(orderLines);
         order.setTotalAmount(cart.getCalculatedTotal().floatValue());
+        order.setInvoice(invoice);
+        invoice.setOrder(order);
         recomputeAggregates(order);
 
         Order savedOrder = orderRepository.save(order);
@@ -139,49 +131,7 @@ public class OrderServiceImpl {
         return mapToTrackingResponse(order);
     }
 
-    public AdminOrderResponseDto updateOrderLineValidation(Long orderId, Long orderLineId, OrderValidationStatus validationStatus) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
-
-        OrderLine targetLine = order.getOrderLines().stream()
-                .filter(line -> Objects.equals(line.getOrderLineId(), orderLineId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Order line not found with id: " + orderLineId));
-
-        if (!targetLine.isCustomItem()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only custom lines can be validated/rejected");
-        }
-
-        targetLine.setValidationStatus(validationStatus == null ? OrderValidationStatus.PENDING : validationStatus);
-        recomputeAggregates(order);
-        Order saved = orderRepository.save(order);
-        return mapToAdminResponseDto(saved);
-    }
-
-    public AdminOrderResponseDto updateOrderLineProductionStatus(Long orderId, Long orderLineId, OrderLineStatus lineStatus) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
-
-        OrderLine targetLine = order.getOrderLines().stream()
-                .filter(line -> Objects.equals(line.getOrderLineId(), orderLineId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Order line not found with id: " + orderLineId));
-
-        if (!targetLine.isCustomItem()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Marketplace lines are always READY");
-        }
-
-        targetLine.setLineStatus(lineStatus == null ? OrderLineStatus.PRINTING : lineStatus);
-        recomputeAggregates(order);
-        Order saved = orderRepository.save(order);
-        return mapToAdminResponseDto(saved);
-    }
-
-    public Page<AdminOrderResponseDto> getAllOrdersAdmin(
-            Pageable pageable,
-            String status,
-            String search
-    ) {
+    public Page<AdminOrderResponseDto> getAllOrdersAdmin(Pageable pageable, String status, String search) {
         Page<Order> orders;
 
         if (status != null && !status.isBlank()) {
@@ -201,7 +151,7 @@ public class OrderServiceImpl {
     }
 
     public AdminOrderResponseDto getOrderByIdForAdmin(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithLines(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
         return mapToAdminResponseDto(order);
     }
@@ -210,9 +160,9 @@ public class OrderServiceImpl {
         Order order = new Order();
         order.setOrderDate(LocalDate.now());
         order.setReference(generateOrderReference());
-        order.setStatus(request.getStatus() != null ? request.getStatus() : OrderStatus.READY_TO_SHIP);
+        order.setStatus(request.getStatus() != null ? request.getStatus() : OrderStatus.PENDING);
         order.setPriority(parseOrderPriority(request.getPriority()));
-        order.setValidationStatus(OrderValidationStatus.VALIDATED);
+        order.setValidationStatus(OrderValidationStatus.PENDING);
         order.setTotalAmount(request.getTotal() != null ? request.getTotal().floatValue() : 0f);
 
         User assigneeUser = resolveAssigneeUser(request.getAssignee(), request.getCompanyName());
@@ -237,11 +187,168 @@ public class OrderServiceImpl {
         return mapToAdminResponseDto(savedOrder);
     }
 
+    // ==================== NOUVELLE MÉTHODE : Update statut global de la commande ====================
+
+    @Transactional
+    public AdminOrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        // Vérifier que le statut est autorisé (REJECTED, CANCELLED, SHIPPED)
+        if (!isAllowedManualOrderStatus(newStatus)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Le statut de la commande ne peut être modifié qu'en REJECTED, CANCELLED ou SHIPPED"
+            );
+        }
+
+        order.setStatus(newStatus);
+        Order savedOrder = orderRepository.save(order);
+        return mapToAdminResponseDto(savedOrder);
+    }
+
+    // ==================== NOUVELLE MÉTHODE : Update batch des OrderLines ====================
+
+    @Transactional
+    public AdminOrderResponseDto updateOrderLines(Long orderId, List<OrderLineUpdateDto> updates) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        for (OrderLineUpdateDto update : updates) {
+            OrderLine targetLine = order.getOrderLines().stream()
+                    .filter(line -> Objects.equals(line.getOrderLineId(), update.getOrderLineId()))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("OrderLine not found with id: " + update.getOrderLineId()));
+
+            // Seules les lignes CUSTOM peuvent être modifiées
+            if (!targetLine.isCustomItem()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Seules les lignes de livres customisés peuvent être modifiées. LineId: " + update.getOrderLineId()
+                );
+            }
+
+            // Mise à jour du statut
+            if (update.getStatus() != null) {
+                if (!isAllowedLineStatus(update.getStatus())) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Statut non autorisé pour une ligne custom. Autorised: READY, REJECTED, PRINTING, READY_TO_SHIP"
+                    );
+                }
+                targetLine.setLineStatus(update.getStatus());
+
+                // Synchronisation du validationStatus avec le lineStatus
+                if (update.getStatus() == OrderLineStatus.REJECTED) {
+                    targetLine.setValidationStatus(OrderValidationStatus.REJECTED);
+                } else if (update.getStatus() == OrderLineStatus.READY) {
+                    targetLine.setValidationStatus(OrderValidationStatus.VALIDATED);
+                }
+            }
+
+            // Mise à jour de la priorité (mapping LOW/MEDIUM/HIGH -> NORMAL/HIGH1/HIGH3)
+            if (update.getPriority() != null && !update.getPriority().isBlank()) {
+                OrderPriority mappedPriority = orderComputationService.fromDisplayPriority(update.getPriority());
+                targetLine.setPriority(mappedPriority);
+            }
+        }
+
+        // Recalculer tous les agrégats de la commande
+        recomputeAggregates(order);
+
+        Order savedOrder = orderRepository.save(order);
+        return mapToAdminResponseDto(savedOrder);
+    }
+
+    // ==================== MÉTHODES EXISTANTES MODIFIÉES ====================
+
+    /**
+     * Met à jour le validationStatus d'une OrderLine (PENDING, VALIDATED, REJECTED)
+     * @deprecated Utiliser updateOrderLines à la place pour une gestion unifiée
+     */
+    @Deprecated
+    public AdminOrderResponseDto updateOrderLineValidation(Long orderId, Long orderLineId, OrderValidationStatus validationStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        OrderLine targetLine = order.getOrderLines().stream()
+                .filter(line -> Objects.equals(line.getOrderLineId(), orderLineId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Order line not found with id: " + orderLineId));
+
+        if (!targetLine.isCustomItem()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only custom lines can be validated/rejected");
+        }
+
+        targetLine.setValidationStatus(validationStatus == null ? OrderValidationStatus.PENDING : validationStatus);
+
+        // Si validationStatus passe à VALIDATED, on met lineStatus à READY par défaut
+        if (validationStatus == OrderValidationStatus.VALIDATED && targetLine.getLineStatus() == null) {
+            targetLine.setLineStatus(OrderLineStatus.READY);
+        }
+        // Si validationStatus passe à REJECTED, on met lineStatus à REJECTED
+        if (validationStatus == OrderValidationStatus.REJECTED) {
+            targetLine.setLineStatus(OrderLineStatus.REJECTED);
+        }
+
+        recomputeAggregates(order);
+        Order saved = orderRepository.save(order);
+        return mapToAdminResponseDto(saved);
+    }
+
+    /**
+     * Met à jour le lineStatus d'une OrderLine (PRINTING, READY_TO_SHIP)
+     * @deprecated Utiliser updateOrderLines à la place pour une gestion unifiée
+     */
+    @Deprecated
+    public AdminOrderResponseDto updateOrderLineProductionStatus(Long orderId, Long orderLineId, OrderLineStatus lineStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        OrderLine targetLine = order.getOrderLines().stream()
+                .filter(line -> Objects.equals(line.getOrderLineId(), orderLineId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Order line not found with id: " + orderLineId));
+
+        if (!targetLine.isCustomItem()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Marketplace lines are always READY");
+        }
+
+        OrderLineStatus nextStatus = lineStatus == null ? OrderLineStatus.PRINTING : lineStatus;
+        if (!isAllowedLineStatus(nextStatus)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Custom line status can only be READY, REJECTED, PRINTING or READY_TO_SHIP"
+            );
+        }
+
+        targetLine.setLineStatus(nextStatus);
+
+        // Synchronisation du validationStatus
+        if (nextStatus == OrderLineStatus.REJECTED) {
+            targetLine.setValidationStatus(OrderValidationStatus.REJECTED);
+        } else if (nextStatus == OrderLineStatus.READY) {
+            targetLine.setValidationStatus(OrderValidationStatus.VALIDATED);
+        }
+
+        recomputeAggregates(order);
+        Order saved = orderRepository.save(order);
+        return mapToAdminResponseDto(saved);
+    }
+
+    // ==================== MÉTHODES ADMIN STANDARD ====================
+
     public AdminOrderResponseDto updateOrder(Long orderId, OrderUpdateRequestDto request) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
         if (request.getStatus() != null) {
+            if (!isAllowedManualOrderStatus(request.getStatus())) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Order status can only be updated to SHIPPED, REJECTED, or CANCELLED"
+                );
+            }
             order.setStatus(request.getStatus());
         }
         if (request.getPriority() != null && !request.getPriority().isBlank()) {
@@ -281,7 +388,7 @@ public class OrderServiceImpl {
 
     public OrderStatsDto getOrderStats() {
         long totalOrders = orderRepository.count();
-        long printingOrders = orderRepository.countByStatus(OrderStatus.PRINTING);
+        long printingOrders = orderRepository.countByStatus(OrderStatus.IN_PRODUCTION);
         long readyToShipOrders = orderRepository.countByStatus(OrderStatus.READY_TO_SHIP);
         long shippedOrders = orderRepository.countByStatus(OrderStatus.SHIPPED);
         long rejectedOrders = orderRepository.countByStatus(OrderStatus.REJECTED);
@@ -304,6 +411,8 @@ public class OrderServiceImpl {
                 .productionValue(productionValue)
                 .build();
     }
+
+    // ==================== MÉTHODES PRIVÉES ====================
 
     private String generateOrderReference() {
         String year = String.valueOf(LocalDate.now().getYear()).substring(2);
@@ -488,21 +597,43 @@ public class OrderServiceImpl {
     }
 
     private OrderPriority parseOrderPriority(String value) {
-        return OrderPriority.fromString(value);
+        if (value == null || value.isBlank()) {
+            return OrderPriority.NORMAL;
+        }
+
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "LOW", "NORMAL" -> OrderPriority.NORMAL;
+            case "MEDIUM", "HIGH1" -> OrderPriority.HIGH1;
+            case "HIGH2" -> OrderPriority.HIGH2;
+            case "HIGH", "HIGH3" -> OrderPriority.HIGH3;
+            default -> OrderPriority.NORMAL;
+        };
     }
 
     private String toPriorityLabel(OrderPriority priority) {
-        return switch (orderComputationService.normalizePriority(priority)) {
-            case HIGH3 -> "High3";
-            case HIGH2 -> "High2";
-            case HIGH1 -> "High1";
-            default -> "Normal";
-        };
+        OrderPriority normalized = orderComputationService.normalizePriority(priority);
+        if (normalized == OrderPriority.HIGH3) return "High";
+        if (normalized == OrderPriority.HIGH2 || normalized == OrderPriority.HIGH1) return "Medium";
+        return "Low";
+    }
+
+    private boolean isAllowedManualOrderStatus(OrderStatus status) {
+        return status == OrderStatus.SHIPPED
+                || status == OrderStatus.REJECTED
+                || status == OrderStatus.CANCELLED;
+    }
+
+    private boolean isAllowedLineStatus(OrderLineStatus status) {
+        return status == OrderLineStatus.READY
+                || status == OrderLineStatus.REJECTED
+                || status == OrderLineStatus.PRINTING
+                || status == OrderLineStatus.READY_TO_SHIP;
     }
 
     private void recomputeAggregates(Order order) {
         if (order.getOrderLines() == null) {
-            order.setOrderLines(List.of());
+            order.setOrderLines(new ArrayList<>());
         }
 
         order.getOrderLines().forEach(orderComputationService::initializeLineDefaults);
@@ -534,7 +665,7 @@ public class OrderServiceImpl {
                 .title(line.getBook() != null ? line.getBook().getTitle() : null)
                 .itemSource(line.getItemSource() != null ? line.getItemSource().name() : CartItemSource.MARKETPLACE.name())
                 .lineStatus(line.getLineStatus() != null ? line.getLineStatus().name() : null)
-                .priority(line.getPriority() != null ? orderComputationService.normalizePriority(line.getPriority()).name() : OrderPriority.NORMAL.name())
+                .priority(line.getPriority() != null ? getDisplayPriorityForDto(line.getPriority()) : OrderPriority.NORMAL.name())
                 .validationStatus(line.getValidationStatus() != null ? line.getValidationStatus().name() : OrderValidationStatus.PENDING.name())
                 .quantity(line.getQuantity())
                 .unitPrice(line.getUnitPrice() != null ? line.getUnitPrice().floatValue() : 0f)
@@ -542,6 +673,12 @@ public class OrderServiceImpl {
                 .isEstimated(Boolean.TRUE.equals(line.getIsEstimated()))
                 .currency(line.getCurrency())
                 .build();
+    }
+
+    private String getDisplayPriorityForDto(OrderPriority priority) {
+        if (priority == null) return OrderPriority.NORMAL.name();
+        // Pour l'affichage dans le DTO, on garde la valeur réelle
+        return priority.name();
     }
 
     private void revalidateCustomPricing(Cart cart, CheckoutOrderRequestDto request) {
@@ -689,5 +826,39 @@ public class OrderServiceImpl {
             return line1;
         }
         return line1 + ", " + line2;
+    }
+
+    @Transactional
+    public void markPaidFromStripe(String paymentIntentId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        if (order.getBilling() != null) {
+            order.getBilling().setPaymentStatus(PaymentStatus.PAID);
+            order.getBilling().setBillingDate(LocalDate.now());
+        }
+
+        if (order.getInvoice() != null) {
+            order.getInvoice().setPaid(true);
+            order.getInvoice().setPaymentDate(LocalDate.now());
+        }
+
+        orderRepository.save(order);
+    }
+    @Transactional
+    public void markPaymentFailed(String paymentIntentId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        if (order.getBilling() != null) {
+            order.getBilling().setPaymentStatus(PaymentStatus.FAILED);
+        }
+
+        if (order.getInvoice() != null) {
+            order.getInvoice().setPaid(false);
+            order.getInvoice().setPaymentDate(null);
+        }
+
+        orderRepository.save(order);
     }
 }

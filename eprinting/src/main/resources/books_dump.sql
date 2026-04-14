@@ -26,7 +26,6 @@ INSERT INTO admin_books (
     cover_size,
     cover_paper_type,
     head_and_tail,
-    priority_level,
     binding_type,
     sale_price
 )
@@ -58,7 +57,6 @@ SELECT
     'XL',
     'NONE',
     'NONE',
-    'NORMAL',
     'CASEBIND',
     19.90
 FROM DUAL
@@ -68,7 +66,7 @@ INSERT INTO admin_books (
     title, description, is_created_by_user, userbook_status, is_added_from_admin, stock_status,
     quantity, production_page, height, thickness, width,
     security_label, has_coil, has_insert, has_tab, has_backcover, perf, double_sided_cover, shrinkwrap, three_hole_drill,
-    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, priority_level, binding_type, sale_price
+    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, binding_type, sale_price
 )
 SELECT
     'Project Planner',
@@ -76,7 +74,7 @@ SELECT
     0, 'PUBLISHED', 1, 'IN_STOCK',
     80, 140, 300, 18, 215,
     0, 0, 0, 0, 1, 0, 1, 0, 0,
-    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'NORMAL', 'CASEBIND_ES', 24.50
+    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'CASEBIND_ES', 24.50
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM admin_books WHERE title = 'Project Planner');
 
@@ -84,7 +82,7 @@ INSERT INTO admin_books (
     title, description, is_created_by_user, userbook_status, is_added_from_admin, stock_status,
     quantity, production_page, height, thickness, width,
     security_label, has_coil, has_insert, has_tab, has_backcover, perf, double_sided_cover, shrinkwrap, three_hole_drill,
-    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, priority_level, binding_type, sale_price
+    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, binding_type, sale_price
 )
 SELECT
     'Training Manual',
@@ -92,7 +90,7 @@ SELECT
     0, 'PUBLISHED', 1, 'IN_STOCK',
     60, 72, 280, 10, 200,
     0, 0, 0, 0, 1, 0, 1, 0, 0,
-    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'NORMAL', 'PERFECT', 14.90
+    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'PERFECT', 14.90
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM admin_books WHERE title = 'Training Manual');
 
@@ -100,7 +98,7 @@ INSERT INTO admin_books (
     title, description, is_created_by_user, userbook_status, is_added_from_admin, stock_status,
     quantity, production_page, height, thickness, width,
     security_label, has_coil, has_insert, has_tab, has_backcover, perf, double_sided_cover, shrinkwrap, three_hole_drill,
-    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, priority_level, binding_type, sale_price
+    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, binding_type, sale_price
 )
 SELECT
     'Customer Workbook',
@@ -108,7 +106,7 @@ SELECT
     0, 'PUBLISHED', 1, 'IN_STOCK',
     45, 128, 297, 16, 210,
     0, 0, 0, 0, 1, 0, 1, 0, 0,
-    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'NORMAL', 'CASEBIND_INS', 21.00
+    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'CASEBIND_INS', 21.00
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM admin_books WHERE title = 'Customer Workbook');
 
@@ -116,7 +114,7 @@ INSERT INTO admin_books (
     title, description, is_created_by_user, userbook_status, is_added_from_admin, stock_status,
     quantity, production_page, height, thickness, width,
     security_label, has_coil, has_insert, has_tab, has_backcover, perf, double_sided_cover, shrinkwrap, three_hole_drill,
-    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, priority_level, binding_type, sale_price
+    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, binding_type, sale_price
 )
 SELECT
     'Premium Lookbook',
@@ -124,7 +122,7 @@ SELECT
     0, 'PUBLISHED', 1, 'IN_STOCK',
     30, 84, 300, 14, 210,
     0, 0, 0, 0, 1, 0, 1, 0, 0,
-    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'NORMAL', 'PERFECT', 27.50
+    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'PERFECT', 27.50
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM admin_books WHERE title = 'Premium Lookbook');
 
@@ -132,7 +130,7 @@ INSERT INTO admin_books (
     title, description, is_created_by_user, userbook_status, is_added_from_admin, stock_status,
     quantity, production_page, height, thickness, width,
     security_label, has_coil, has_insert, has_tab, has_backcover, perf, double_sided_cover, shrinkwrap, three_hole_drill,
-    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, priority_level, binding_type, sale_price
+    text_paper_type, text_color, cover_finish_type, cover_color, cover_size, cover_paper_type, head_and_tail, binding_type, sale_price
 )
 SELECT
     'Campus Event Guide',
@@ -140,7 +138,7 @@ SELECT
     0, 'PUBLISHED', 1, 'IN_STOCK',
     75, 64, 280, 8, 200,
     0, 0, 0, 0, 1, 0, 1, 0, 0,
-    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'NORMAL', 'SS', 11.90
+    'NONE', 'FOUR_FOUR', 'MATT', 'FOUR_FOUR', 'XL', 'NONE', 'NONE', 'SS', 11.90
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM admin_books WHERE title = 'Campus Event Guide');
 

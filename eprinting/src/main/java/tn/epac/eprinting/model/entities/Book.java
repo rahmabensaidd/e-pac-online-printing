@@ -121,9 +121,7 @@ public class Book {
     @Column(name = "head_and_tail", nullable = false)
     private HeadAndTail headAndTail;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "priority_level", nullable = false)
-    private PriorityLevel priorityLevel;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "binding_type", nullable = false)

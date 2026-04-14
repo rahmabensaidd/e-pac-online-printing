@@ -191,6 +191,9 @@ export class AuthService {
   isUser(): boolean {
     return this.hasRole('user') || this.hasRole('organization') || this.userType().toLowerCase() === 'organization';
   }
+  isOrganization(): boolean {
+    return this.hasRole('organization') ;
+  }
 
   private persistToken(accessToken: string, remember: boolean): void {
     const storage = remember ? window.localStorage : window.sessionStorage;

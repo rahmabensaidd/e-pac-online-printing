@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import tn.epac.eprinting.model.dtos.AdminOrderResponseDto;
 import tn.epac.eprinting.model.dtos.OrderStatsDto;
 import tn.epac.eprinting.model.dtos.OrderUpdateRequestDto;
+import tn.epac.eprinting.model.dtos.PagedResponseDto;
 import tn.epac.eprinting.serviceimpl.OrderServiceImpl;
 
 @RestController
@@ -27,13 +28,13 @@ public class AdminOrderController {
      * GET /api/admin/orders?status=PENDING&search=ORD&page=0&size=10
      */
     @GetMapping
-    public ResponseEntity<Page<AdminOrderResponseDto>> getAllOrders(
+    public ResponseEntity<PagedResponseDto<AdminOrderResponseDto>> getAllOrders(
             @PageableDefault(size = 10, sort = "orderId") Pageable pageable,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String search
     ) {
         Page<AdminOrderResponseDto> orders = orderService.getAllOrdersAdmin(pageable, status, search);
-        return ResponseEntity.ok(orders);
+        return ResponseEntity.ok(PagedResponseDto.from(orders));
     }
 
     /**

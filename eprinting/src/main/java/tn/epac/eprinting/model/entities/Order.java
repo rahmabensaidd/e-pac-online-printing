@@ -1,19 +1,16 @@
 package tn.epac.eprinting.model.entities;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
-
-import tn.epac.eprinting.model.enums.OrderStatus;
 import tn.epac.eprinting.model.enums.OrderPriority;
+import tn.epac.eprinting.model.enums.OrderStatus;
 import tn.epac.eprinting.model.enums.OrderValidationStatus;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-/**
- * Order entity - represents a customer purchase order.
- * Contains order status, total amount, and linked billing, shipping, and order lines.
- */
+
 @Entity
 @Table(name = "orders")
 @Getter
@@ -30,9 +27,11 @@ public class Order {
     private String reference;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     private OrderStatus status;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "priority")
     private OrderPriority priority;
 
     @Enumerated(EnumType.STRING)
@@ -45,13 +44,18 @@ public class Order {
     private User user;
 
     @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "billing_id")
     private Billing billing;
 
     @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "shipping_id")
     private Shipping shipping;
 
-    // Relation unidirectionnelle Order -> OrderLine
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id")
     private List<OrderLine> orderLines = new ArrayList<>();
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "invoice_id")
+    private Invoice invoice;
 }

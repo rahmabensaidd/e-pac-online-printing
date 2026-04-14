@@ -1,170 +1,110 @@
-import { AdminOrderApiModel, AdminOrderUpsertRequest } from '../core/backoffice-orders-api.service';
-import { OrderPriorityUi, OrderStatusUi, OrderValidationStatusUi, OrderViewModel, PaymentStatusUi } from './orders.models';
+// orders.mappers.ts
+import { AdminOrderApiModel, AdminOrderLineApiModel } from '../core/backoffice-orders-api.service';
+import { OrderFilter, OrderLinePriorityDisplay, OrderLineStatusUi, OrderLineViewModel, OrderViewModel } from '../core/orders.models';
 
-export interface OrderFormRawValue {
-  reference: string;
-  customerName: string;
-  companyName: string;
-  channel: string;
-  submittedAt: string;
-  dueDate: string;
-  total: number;
-  status: OrderStatusUi;
-  priority: OrderPriorityUi;
-  assignee: string;
-  items: number;
-  shippingMethod: string;
-  paymentStatus: PaymentStatusUi;
-  notes: string;
-}
+export function mapApiOrderToViewModel(apiOrder: AdminOrderApiModel): OrderViewModel {
+  const rawOrder = apiOrder as unknown as Record<string, unknown>;
+  const rawLines = resolveRawOrderLines(rawOrder);
 
-export function mapApiOrderToViewModel(order: AdminOrderApiModel): OrderViewModel {
   return {
-    id: String(order.orderId),
-    reference: order.reference,
-    customerName: order.customerName,
-    companyName: order.companyName ?? '',
-    channel: order.channel,
-    submittedAt: order.submittedAt,
-    dueDate: order.dueDate,
-    total: order.total,
-    status: mapApiStatusToUi(order.status),
-    validationStatus: mapApiValidationStatusToUi(order.validationStatus),
-    priority: mapApiPriorityToUi(order.priority),
-    assignee: order.assignee ?? '',
-    items: order.items || 0,
-    shippingMethod: order.shippingMethod || 'Standard',
-    paymentStatus: mapApiPaymentStatusToUi(order.paymentStatus),
-    notes: order.notes ?? '',
-    orderLines: (order.orderLines ?? []).map((line) => ({
-      orderLineId: String(line.orderLineId),
-      title: line.title || 'Untitled',
-      itemSource: (line.itemSource || '').toUpperCase() === 'CUSTOM' ? 'Custom' : 'Marketplace',
-      lineStatus: line.lineStatus || ((line.itemSource || '').toUpperCase() === 'CUSTOM' ? 'PRINTING' : 'READY'),
-      validationStatus: mapApiValidationStatusToUi(line.validationStatus),
-      priority: line.priority || 'NORMAL',
-      quantity: line.quantity || 0,
-      totalPrice: line.totalPrice || 0,
-    })),
+    id: String(rawOrder['orderId'] ?? apiOrder.orderId ?? ''),
+    reference: String(rawOrder['reference'] ?? apiOrder.reference ?? ''),
+    customerName: String(rawOrder['customerName'] ?? rawOrder['customer_name'] ?? apiOrder.customerName ?? ''),
+    companyName: String(rawOrder['companyName'] ?? rawOrder['company_name'] ?? apiOrder.companyName ?? ''),
+    channel: String(rawOrder['channel'] ?? apiOrder.channel ?? ''),
+    submittedAt: String(rawOrder['submittedAt'] ?? rawOrder['submitted_at'] ?? apiOrder.submittedAt ?? ''),
+    dueDate: String(rawOrder['dueDate'] ?? rawOrder['due_date'] ?? apiOrder.dueDate ?? ''),
+    total: Number(rawOrder['total'] ?? apiOrder.total ?? 0),
+    status: mapApiStatusToFilter(String(rawOrder['status'] ?? apiOrder.status ?? '')),
+    validationStatus: String(rawOrder['validationStatus'] ?? rawOrder['validation_status'] ?? apiOrder.validationStatus ?? 'PENDING'),
+    priority: mapApiPriorityToDisplay(String(rawOrder['priority'] ?? apiOrder.priority ?? 'NORMAL')),
+    assignee: String(rawOrder['assignee'] ?? apiOrder.assignee ?? ''),
+    items: Number(rawOrder['items'] ?? apiOrder.items ?? rawLines.length),
+    paymentStatus: String(rawOrder['paymentStatus'] ?? rawOrder['payment_status'] ?? apiOrder.paymentStatus ?? ''),
+    shippingMethod: String(rawOrder['shippingMethod'] ?? rawOrder['shipping_method'] ?? apiOrder.shippingMethod ?? ''),
+    orderLines: rawLines.map(mapApiOrderLineToViewModel),
   };
 }
 
-export function buildUpsertPayload(
-  draft: OrderFormRawValue,
-  includeReference: boolean,
-): AdminOrderUpsertRequest {
+function mapApiOrderLineToViewModel(line: AdminOrderLineApiModel): OrderLineViewModel {
+  const rawLine = line as unknown as Record<string, unknown>;
   return {
-    reference: includeReference ? draft.reference : undefined,
-    customerName: draft.customerName,
-    companyName: draft.companyName?.trim() ? draft.companyName : undefined,
-    channel: draft.channel,
-    submittedAt: draft.submittedAt,
-    dueDate: draft.dueDate,
-    total: draft.total,
-    status: mapUiStatusToApi(draft.status),
-    priority: mapUiPriorityToApi(draft.priority),
-    assignee: draft.assignee,
-    items: draft.items,
-    shippingMethod: draft.shippingMethod,
-    paymentStatus: mapUiPaymentStatusToApi(draft.paymentStatus),
-    notes: draft.notes?.trim() ? draft.notes : undefined,
+    orderLineId: String(rawLine['orderLineId'] ?? rawLine['order_line_id'] ?? line.orderLineId ?? ''),
+    bookId: Number(rawLine['bookId'] ?? rawLine['book_id'] ?? line.bookId ?? 0),
+    title: String(rawLine['title'] ?? line.title ?? ''),
+    itemSource: String(rawLine['itemSource'] ?? rawLine['item_source'] ?? line.itemSource ?? 'MARKETPLACE') === 'CUSTOM' ? 'CUSTOM' : 'MARKETPLACE',
+    lineStatus: mapApiLineStatusToUi(String(rawLine['lineStatus'] ?? rawLine['line_status'] ?? line.lineStatus ?? 'READY')),
+    priority: mapApiPriorityToDisplay(String(rawLine['priority'] ?? line.priority ?? 'NORMAL')),
+    validationStatus: String(rawLine['validationStatus'] ?? rawLine['validation_status'] ?? line.validationStatus ?? 'PENDING'),
+    quantity: Number(rawLine['quantity'] ?? line.quantity ?? 0),
+    unitPrice: Number(rawLine['unitPrice'] ?? rawLine['unit_price'] ?? line.unitPrice ?? 0),
+    totalPrice: Number(rawLine['totalPrice'] ?? rawLine['total_price'] ?? line.totalPrice ?? 0),
+    isEstimated: Boolean(rawLine['isEstimated'] ?? rawLine['is_estimated'] ?? line.isEstimated ?? false),
+    currency: String(rawLine['currency'] ?? line.currency ?? 'USD'),
   };
 }
 
-export function mapApiStatusToUi(status: string): OrderStatusUi {
-  switch ((status || '').toUpperCase()) {
-    case 'PRINTING':
-      return 'Printing';
-    case 'READY_TO_SHIP':
-      return 'Ready to ship';
-    case 'SHIPPED':
-      return 'Shipped';
-    case 'REJECTED':
-      return 'Rejected';
-    case 'CANCELLED':
-    default:
-      return 'Cancelled';
+function resolveRawOrderLines(rawOrder: Record<string, unknown>): AdminOrderLineApiModel[] {
+  const candidates = [
+    rawOrder['orderLines'],
+    rawOrder['orderlines'],
+    rawOrder['order_lines'],
+    rawOrder['lines'],
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate as AdminOrderLineApiModel[];
+    }
+  }
+  return [];
+}
+
+function mapApiStatusToFilter(apiStatus: string): OrderFilter {
+  switch (apiStatus) {
+    case 'IN_PRODUCTION': return 'Printing';
+    case 'READY_TO_SHIP': return 'Ready to ship';
+    case 'SHIPPED': return 'Shipped';
+    case 'REJECTED': return 'Rejected';
+    case 'CANCELLED': return 'Cancelled';
+    default: return 'All';
   }
 }
 
-export function mapUiStatusToApi(status: OrderStatusUi): string {
-  switch (status) {
-    case 'Printing':
-      return 'PRINTING';
-    case 'Ready to ship':
-      return 'READY_TO_SHIP';
-    case 'Shipped':
-      return 'SHIPPED';
-    case 'Rejected':
-      return 'REJECTED';
-    case 'Cancelled':
-    default:
-      return 'CANCELLED';
+function mapApiLineStatusToUi(apiStatus?: string): OrderLineStatusUi {
+  switch (apiStatus) {
+    case 'READY': return 'READY';
+    case 'REJECTED': return 'REJECTED';
+    case 'PRINTING': return 'PRINTING';
+    case 'READY_TO_SHIP': return 'READY_TO_SHIP';
+    default: return 'PRINTING';
   }
 }
 
-export function mapApiPriorityToUi(priority: string): OrderPriorityUi {
-  switch ((priority || '').toUpperCase()) {
-    case 'HIGH3':
-    case 'HIGH':
-      return 'High3';
+function mapApiPriorityToDisplay(apiPriority?: string): OrderLinePriorityDisplay {
+  switch (apiPriority) {
+    case 'NORMAL': return 'LOW';
+    case 'HIGH1': return 'MEDIUM';
     case 'HIGH2':
-      return 'High2';
-    case 'HIGH1':
-    case 'MEDIUM':
-      return 'High1';
-    case 'LOW':
-    default:
-      return 'Normal';
+    case 'HIGH3': return 'HIGH';
+    default: return 'LOW';
   }
 }
 
-export function mapUiPriorityToApi(priority: OrderPriorityUi): string {
-  switch (priority) {
-    case 'High3':
-      return 'HIGH3';
-    case 'High2':
-      return 'HIGH2';
-    case 'High1':
-      return 'HIGH1';
-    case 'Normal':
-    default:
-      return 'NORMAL';
+export function mapDisplayPriorityToApi(displayPriority: OrderLinePriorityDisplay): string {
+  switch (displayPriority) {
+    case 'LOW': return 'NORMAL';
+    case 'MEDIUM': return 'HIGH1';
+    case 'HIGH': return 'HIGH3';
+    default: return 'NORMAL';
   }
 }
 
-export function mapApiValidationStatusToUi(status?: string | null): OrderValidationStatusUi {
-  switch ((status || '').toUpperCase()) {
-    case 'VALIDATED':
-      return 'Validated';
-    case 'REJECTED':
-      return 'Rejected';
-    case 'PENDING':
-    default:
-      return 'Pending';
-  }
-}
-
-export function mapApiPaymentStatusToUi(status: string): PaymentStatusUi {
-  switch ((status || '').toUpperCase()) {
-    case 'PAID':
-      return 'Paid';
-    case 'FAILED':
-      return 'Failed';
-    case 'PENDING':
-    default:
-      return 'Pending';
-  }
-}
-
-export function mapUiPaymentStatusToApi(status: PaymentStatusUi): string {
-  switch (status) {
-    case 'Paid':
-      return 'PAID';
-    case 'Failed':
-      return 'FAILED';
-    case 'Pending':
-    default:
-      return 'PENDING';
+export function mapUiStatusToApi(uiStatus: string): string {
+  switch (uiStatus) {
+    case 'Shipped': return 'SHIPPED';
+    case 'Rejected': return 'REJECTED';
+    case 'Cancelled': return 'CANCELLED';
+    default: return 'SHIPPED';
   }
 }

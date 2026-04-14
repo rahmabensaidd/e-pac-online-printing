@@ -1,3 +1,5 @@
+// my-custom-books-page.component.ts
+
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -25,23 +27,32 @@ export class MyCustomBooksPageComponent {
   readonly addToCartModalOpen = signal(false);
   readonly selectedBook = signal<Book | null>(null);
   readonly modalQuantity = signal(1);
+  readonly modalPriority = signal<'LOW' | 'MEDIUM' | 'HIGH'>('LOW'); // Ajout
   readonly modalQuote = signal<CustomBookPriceQuote | null>(null);
   readonly modalError = signal<string | null>(null);
   readonly modalInfo = signal<string | null>(null);
   readonly calculatingPrice = signal(false);
   readonly addingToCart = signal(false);
 
+  readonly priorityOptions = [
+    { value: 'LOW' as const, label: 'Low', color: 'bg-slate-500', description: 'Standard processing' },
+    { value: 'MEDIUM' as const, label: 'Medium', color: 'bg-amber-500', description: 'Faster processing (+15%)' },
+    { value: 'HIGH' as const, label: 'High', color: 'bg-red-500', description: 'Express processing (+30%)' }
+  ];
+
   readonly canAddPricedItem = computed(() =>
-    !!this.selectedBook() &&
-    !!this.modalQuote() &&
-    this.modalQuantity() > 0 &&
-    !this.addingToCart()
+      !!this.selectedBook() &&
+      !!this.modalQuote() &&
+      this.modalQuantity() > 0 &&
+      !this.addingToCart()
   );
 
   readonly selectedBookSpecs = computed(() => {
     const book = this.selectedBook();
     return book ? this.specsSummary(book) : '';
   });
+
+  readonly customBooksCount = computed(() => this.books().length);
 
   constructor() {
     void this.load();
@@ -65,6 +76,7 @@ export class MyCustomBooksPageComponent {
   openAddToCartModal(book: Book): void {
     this.selectedBook.set(book);
     this.modalQuantity.set(1);
+    this.modalPriority.set('LOW'); // Reset priority
     this.modalQuote.set(null);
     this.modalError.set(null);
     this.modalInfo.set(null);
@@ -91,6 +103,29 @@ export class MyCustomBooksPageComponent {
     this.modalError.set(null);
   }
 
+  setPriority(priority: 'LOW' | 'MEDIUM' | 'HIGH'): void {
+    this.modalPriority.set(priority);
+    this.modalQuote.set(null);
+    this.modalInfo.set(null);
+    this.modalError.set(null);
+  }
+
+  getPriorityColor(priority: 'LOW' | 'MEDIUM' | 'HIGH'): string {
+    switch (priority) {
+      case 'LOW': return 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100';
+      case 'MEDIUM': return 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100';
+      case 'HIGH': return 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100';
+    }
+  }
+
+  getPrioritySelectedColor(priority: 'LOW' | 'MEDIUM' | 'HIGH'): string {
+    switch (priority) {
+      case 'LOW': return 'bg-slate-600 text-white shadow-sm';
+      case 'MEDIUM': return 'bg-amber-600 text-white shadow-sm';
+      case 'HIGH': return 'bg-red-600 text-white shadow-sm';
+    }
+  }
+
   async calculatePrice(): Promise<void> {
     const book = this.selectedBook();
     if (!book) return;
@@ -99,7 +134,11 @@ export class MyCustomBooksPageComponent {
     this.modalError.set(null);
     this.modalInfo.set(null);
     try {
-      const quote = await this.cart.calculateCustomBookPrice(book.bookId, this.modalQuantity());
+      const quote = await this.cart.calculateCustomBookPrice(
+          book.bookId,
+          this.modalQuantity(),
+          this.modalPriority() // Pass priority to API
+      );
       this.modalQuote.set(quote);
       if (quote.isEstimated) {
         this.modalInfo.set('Estimated price applied');
@@ -129,12 +168,13 @@ export class MyCustomBooksPageComponent {
         isEstimated: quote.isEstimated,
         currency: quote.currency || 'USD',
         calculatedAt: quote.calculatedAt,
+        priority: this.modalPriority(), // Ajout de la priorité
       });
 
       this.ui.showToast?.({
         message: quote.isEstimated
-          ? 'Custom book added with estimated price.'
-          : 'Custom book added to cart.',
+            ? `Custom book added with ${this.modalPriority()} priority and estimated price.`
+            : `Custom book added to cart with ${this.modalPriority()} priority.`,
         type: quote.isEstimated ? 'warning' : 'success',
       });
       this.closeAddToCartModal();
@@ -164,5 +204,31 @@ export class MyCustomBooksPageComponent {
       return 'linear-gradient(135deg, #0F766E 0%, #14B8A6 100%)';
     }
     return 'linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)';
+  }
+
+  coverImageUrl(book: Book): string | null {
+    const raw = book.cover?.images?.[0]?.trim();
+    if (!raw) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:') || raw.startsWith('/')) {
+      return raw;
+    }
+    return `/${raw.replace(/^\.?\//, '')}`;
+  }
+
+  editQueryParams(book: Book): Record<string, string | number> {
+    return {
+      bindingType: book.bindingType || '',
+      quantity: book.quantity || 1,
+      productionPage: book.productionPage || 1,
+      height: book.height || 21,
+      width: book.width || 14,
+      thickness: book.thickness || 1,
+      textPaperType: book.textPaperType || 'NONE',
+      textColor: book.textColor || 'FOUR_FOUR',
+      coverPaperType: book.coverPaperType || 'NONE',
+      coverFinishType: book.coverFinishType || 'MATT',
+      coverColor: book.coverColor || 'FOUR_ZERO',
+      headAndTail: book.headAndTail || 'NONE',
+    };
   }
 }

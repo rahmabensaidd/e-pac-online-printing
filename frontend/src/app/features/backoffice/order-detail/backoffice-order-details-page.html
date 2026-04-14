@@ -1,0 +1,327 @@
+<div class="space-y-6">
+    <app-backoffice-section-header
+            [breadcrumb]="['Backoffice', 'Orders', 'Order Details']"
+            title="Order Details"
+            description="View and manage order details, lines, and production status."
+    >
+        <button
+                header-actions
+                type="button"
+                class="admin-focus-ring admin-btn-secondary inline-flex items-center gap-2"
+                (click)="goBack()"
+        >
+            <i class="fas fa-arrow-left"></i>
+            Back to Orders
+        </button>
+    </app-backoffice-section-header>
+
+    @if (errorMessage()) {
+        <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            {{ errorMessage() }}
+        </div>
+    }
+
+    @if (loading()) {
+        <div class="rounded-xl border border-slate-200 bg-white p-8 text-center">
+            <i class="fas fa-spinner fa-spin text-3xl text-brand-navy"></i>
+            <p class="mt-3 text-slate-500">Loading order details...</p>
+        </div>
+    }
+
+    @if (!loading() && order(); as order) {
+        <!-- ORDER INFORMATION -->
+        <section class="rounded-[1.25rem] border border-slate-200/70 bg-white/70 p-5 shadow-sm">
+            <div class="mb-4 flex items-center gap-2">
+                <i class="fas fa-circle-info text-brand-navy"></i>
+                <h3 class="text-sm font-semibold text-brand-navy">Order Information</h3>
+            </div>
+
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Reference</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.reference }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Customer</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.customerName }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Company</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.companyName || '—' }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Channel</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.channel }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Owner</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.assignee || '—' }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Submitted</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.submittedAt }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Due date</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.dueDate }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Priority</p>
+                    <span
+                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                            [class.bg-slate-100]="order.priority === 'LOW'"
+                            [class.text-slate-700]="order.priority === 'LOW'"
+                            [class.bg-amber-100]="order.priority === 'MEDIUM'"
+                            [class.text-amber-700]="order.priority === 'MEDIUM'"
+                            [class.bg-red-100]="order.priority === 'HIGH'"
+                            [class.text-red-700]="order.priority === 'HIGH'"
+                    >
+            {{ order.priority }}
+          </span>
+                </div>
+
+                <!-- GLOBAL ORDER STATUS -->
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Order Status</p>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+            <span
+                    class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                    [class.bg-emerald-100]="order.status === 'Shipped'"
+                    [class.text-emerald-700]="order.status === 'Shipped'"
+                    [class.bg-rose-100]="order.status === 'Rejected'"
+                    [class.text-rose-700]="order.status === 'Rejected'"
+                    [class.bg-slate-200]="order.status === 'Cancelled'"
+                    [class.text-slate-700]="order.status === 'Cancelled'"
+                    [class.bg-blue-100]="order.status !== 'Shipped' && order.status !== 'Rejected' && order.status !== 'Cancelled'"
+                    [class.text-blue-700]="order.status !== 'Shipped' && order.status !== 'Rejected' && order.status !== 'Cancelled'"
+            >
+              {{ order.status }}
+            </span>
+
+                        @if (statusUpdating()) {
+                            <span class="inline-flex items-center gap-1 text-xs text-slate-400">
+                <i class="fas fa-spinner fa-spin"></i>
+                Updating...
+              </span>
+                        }
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Validation</p>
+                    <span
+                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                            [class.bg-emerald-100]="order.validationStatus === 'VALIDATED'"
+                            [class.text-emerald-700]="order.validationStatus === 'VALIDATED'"
+                            [class.bg-yellow-100]="order.validationStatus === 'PENDING'"
+                            [class.text-yellow-700]="order.validationStatus === 'PENDING'"
+                            [class.bg-rose-100]="order.validationStatus === 'REJECTED'"
+                            [class.text-rose-700]="order.validationStatus === 'REJECTED'"
+                    >
+            {{ order.validationStatus }}
+          </span>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Payment</p>
+                    <span
+                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                            [class.bg-emerald-100]="order.paymentStatus === 'PAID'"
+                            [class.text-emerald-700]="order.paymentStatus === 'PAID'"
+                            [class.bg-yellow-100]="order.paymentStatus === 'PENDING'"
+                            [class.text-yellow-700]="order.paymentStatus === 'PENDING'"
+                            [class.bg-rose-100]="order.paymentStatus === 'FAILED'"
+                            [class.text-rose-700]="order.paymentStatus === 'FAILED'"
+                    >
+            {{ order.paymentStatus }}
+          </span>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Items</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">{{ order.items }}</p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Shipping method</p>
+                    <span
+                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
+                            [class.bg-violet-100]="order.shippingMethod === 'full_truckload'"
+                            [class.text-violet-700]="order.shippingMethod === 'full_truckload'"
+
+                            [class.bg-sky-100]="order.shippingMethod === 'freight_shipping'"
+                            [class.text-sky-700]="order.shippingMethod === 'freight_shipping'"
+
+                            [class.bg-slate-100]="order.shippingMethod === 'standard'"
+                            [class.text-slate-700]="order.shippingMethod === 'standard'"
+
+                            [class.bg-amber-100]="order.shippingMethod === 'express'"
+                            [class.text-amber-700]="order.shippingMethod === 'express'"
+
+                            [class.bg-slate-200]="
+          order.shippingMethod !== 'full_truckload' &&
+          order.shippingMethod !== 'freight_shipping' &&
+          order.shippingMethod !== 'standard' &&
+          order.shippingMethod !== 'express'
+        "
+                            [class.text-slate-700]="
+          order.shippingMethod !== 'full_truckload' &&
+          order.shippingMethod !== 'freight_shipping' &&
+          order.shippingMethod !== 'standard' &&
+          order.shippingMethod !== 'express'
+        "
+                    >
+        <i class="fas fa-truck"></i>
+                        {{
+                            order.shippingMethod === 'full_truckload'
+                                ? 'Full truckload'
+                                : order.shippingMethod === 'freight_shipping'
+                                    ? 'Freight shipping'
+                                    : order.shippingMethod === 'standard'
+                                        ? 'Standard'
+                                        : order.shippingMethod === 'express'
+                                            ? 'Express'
+                                            : order.shippingMethod
+                        }}
+    </span>
+                </div>
+
+                <div class="sm:col-span-2 xl:col-span-3 border-t border-slate-200/70 pt-3">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Total</p>
+                    <p class="text-xl font-bold text-brand-navy">${{ order.total.toLocaleString() }}</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ORDER LINES -->
+        <section class="rounded-[1.25rem] border border-slate-200/70 bg-white/70 p-5 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-list-ul text-brand-navy"></i>
+                    <h3 class="text-sm font-semibold text-brand-navy">Order Lines</h3>
+                </div>
+                <span class="text-xs text-slate-500">{{ orderLines().length }} item(s)</span>
+            </div>
+
+            @if (orderLines().length === 0) {
+                <div class="py-8 text-center text-slate-500">
+                    <i class="fas fa-box-open mb-2 text-3xl text-slate-300"></i>
+                    <p>No order lines for this order.</p>
+                </div>
+            } @else {
+                <div class="space-y-4">
+                    @for (line of orderLines(); track line.orderLineId) {
+                        <article class="rounded-[1rem] border border-slate-200/70 bg-slate-50/70 p-4 transition-all hover:shadow-sm">
+                            <div class="mb-3 flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-sm font-semibold text-brand-navy">{{ line.title }}</p>
+                                        <span
+                                                class="inline-flex items-center rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-wide"
+                                                [class]="isCustomLine(line) ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-700'"
+                                        >
+                      {{ line.itemSource }}
+                    </span>
+                                    </div>
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        Qty: {{ line.quantity }} | Unit: {{ line.unitPrice }} | Total: {{ line.totalPrice }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            @if (isCustomLine(line)) {
+                                <div class="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+                                    <!-- STATUS -->
+                                    <div>
+                                        <label class="mb-2 block text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                            Production status
+                                        </label>
+
+                                        <div class="inline-flex rounded-full bg-slate-100 p-1">
+                                            @for (option of lineStatusOptions; track option.value) {
+                                                <button
+                                                        type="button"
+                                                        class="admin-focus-ring inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200"
+                                                        [class.bg-white]="line.lineStatus === option.value"
+                                                        [class.text-brand-navy]="line.lineStatus === option.value"
+                                                        [class.shadow-sm]="line.lineStatus === option.value"
+                                                        [class.text-slate-500]="line.lineStatus !== option.value"
+                                                        [disabled]="lineUpdating() === line.orderLineId"
+                                                        (click)="updateLine(line, { status: option.value })"
+                                                >
+                                                    {{ option.label }}
+                                                </button>
+                                            }
+                                        </div>
+
+                                        @if (lineUpdating() === line.orderLineId) {
+                                            <div class="mt-2 flex items-center gap-1 text-xs text-slate-400">
+                                                <i class="fas fa-spinner fa-spin"></i>
+                                                Updating...
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <!-- PRIORITY DISPLAY ONLY -->
+                                    <div>
+                                        <label class="mb-2 block text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                            Priority
+                                        </label>
+
+                                        <div class="rounded-[0.9rem] bg-white/80 px-3 py-3">
+        <span
+                class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                [class.bg-slate-100]="line.priority === 'LOW'"
+                [class.text-slate-700]="line.priority === 'LOW'"
+                [class.bg-amber-100]="line.priority === 'MEDIUM'"
+                [class.text-amber-700]="line.priority === 'MEDIUM'"
+                [class.bg-red-100]="line.priority === 'HIGH'"
+                [class.text-red-700]="line.priority === 'HIGH'"
+        >
+          {{ line.priority }}
+        </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            } @else {
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div class="rounded-[0.9rem] bg-white/70 px-3 py-2.5">
+                                        <label class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                            Status
+                                        </label>
+                                        <p class="text-sm font-semibold text-brand-navy">{{ line.lineStatus }}</p>
+                                    </div>
+
+                                    <div class="rounded-[0.9rem] bg-white/70 px-3 py-2.5">
+                                        <label class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                            Priority
+                                        </label>
+                                        <p class="text-sm font-semibold text-brand-navy">{{ line.priority }}</p>
+                                    </div>
+                                </div>
+
+                                <p class="mt-2 text-xs text-slate-500">Marketplace lines are read-only.</p>
+                            }
+
+                            @if (lineUpdating() === line.orderLineId || priorityUpdating() === line.orderLineId) {
+                                <div class="mt-3 flex items-center gap-1 text-xs text-slate-400">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    Updating...
+                                </div>
+                            }
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>

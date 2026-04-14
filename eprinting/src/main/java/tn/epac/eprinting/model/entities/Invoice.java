@@ -1,12 +1,11 @@
 package tn.epac.eprinting.model.entities;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.OneToOne;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.time.LocalDate;
+
 /**
  * Invoice entity - represents a commercial invoice for an order.
  * Contains tax calculation (HT, TVA, TTC) and payment tracking.
@@ -34,10 +33,10 @@ public class Invoice {
 
     private float totalTTC;
 
-    private boolean isPaid;
+    private boolean paid;
 
     private LocalDate paymentDate;
 
-    @OneToOne
+    @OneToOne(mappedBy = "invoice")
     private Order order;
 }
