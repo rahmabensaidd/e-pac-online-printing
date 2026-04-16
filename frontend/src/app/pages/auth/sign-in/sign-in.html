@@ -1,0 +1,136 @@
+<section class="relative py-10 sm:py-14 lg:py-16 overflow-hidden">
+  <div class="absolute inset-0 hero-pattern opacity-20"></div>
+  <div class="absolute -top-20 -left-20 w-72 h-72 bg-brand-orange/15 blob"></div>
+  <div class="absolute -bottom-24 -right-20 w-80 h-80 bg-brand-teal/15 blob"></div>
+
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="rounded-3xl border border-gray-200/80 bg-white/90 shadow-xl backdrop-blur-sm overflow-hidden">
+      <div class="grid lg:grid-cols-5">
+        <aside class="hidden lg:flex lg:col-span-2 p-10 bg-brand-cream/80 border-r border-gray-200/70">
+          <div class="self-center space-y-8">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-lime/30 text-brand-navy text-sm font-bold">
+              <span class="w-2 h-2 rounded-full bg-brand-teal"></span>
+              Welcome back
+            </div>
+
+            <div>
+              <h1 class="font-display font-extrabold text-3xl text-brand-navy leading-tight">
+                Sign in to your workspace
+              </h1>
+              <p class="mt-3 text-gray-600">
+                Manage print jobs, review estimates, and track delivery updates from one place.
+              </p>
+            </div>
+
+            <ul class="space-y-4 text-sm text-gray-700">
+              <li class="flex items-start gap-3">
+                <i class="fas fa-circle-check text-brand-teal mt-0.5"></i>
+                <span>Fast reorder flow for recurring print products.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fas fa-circle-check text-brand-teal mt-0.5"></i>
+                <span>Secure checkout and transparent order history.</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fas fa-circle-check text-brand-teal mt-0.5"></i>
+                <span>Real-time pricing updates before confirmation.</span>
+              </li>
+            </ul>
+          </div>
+        </aside>
+
+        <div class="lg:col-span-3 p-6 sm:p-8 lg:p-10">
+          <div class="max-w-xl">
+            <h2 class="font-display font-extrabold text-3xl text-brand-navy">Sign in</h2>
+            <p class="mt-2 text-gray-600">Use your account credentials to continue.</p>
+          </div>
+
+          <form class="mt-8 space-y-5" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+            @if (authError()) {
+              <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+                {{ authError() }}
+              </div>
+            }
+
+            <div>
+              <label for="sign-in-identifier" class="block text-sm font-bold text-brand-navy mb-2">Email or username</label>
+              <input
+                id="sign-in-identifier"
+                type="text"
+                formControlName="identifier"
+                autocomplete="username"
+                class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                placeholder="you@company.com or your username"
+                [attr.aria-invalid]="showError('identifier') ? 'true' : 'false'"
+                [attr.aria-describedby]="showError('identifier') ? 'sign-in-identifier-error' : null"
+              />
+              @if (showError('identifier')) {
+                <p id="sign-in-identifier-error" class="mt-2 text-sm text-brand-pink">
+                  Email or username is required.
+                </p>
+              }
+            </div>
+
+            <div>
+              <label for="sign-in-password" class="block text-sm font-bold text-brand-navy mb-2">Password</label>
+              <input
+                id="sign-in-password"
+                type="password"
+                formControlName="password"
+                autocomplete="current-password"
+                class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                placeholder="Enter your password"
+                [attr.aria-invalid]="showError('password') ? 'true' : 'false'"
+                [attr.aria-describedby]="showError('password') ? 'sign-in-password-error' : null"
+              />
+              @if (showError('password')) {
+                <p id="sign-in-password-error" class="mt-2 text-sm text-brand-pink">
+                  Password is required.
+                </p>
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <label for="sign-in-remember" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  id="sign-in-remember"
+                  type="checkbox"
+                  formControlName="rememberMe"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40"
+                />
+                Remember me
+              </label>
+
+              <a
+                routerLink="/forgot-password"
+                class="text-sm font-bold text-brand-navy hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 rounded-lg"
+              >
+                Forgot password?
+              </a>
+            </div>
+
+            <div class="pt-2">
+              <button
+                type="submit"
+                [disabled]="submitting()"
+                class="w-full inline-flex justify-center items-center gap-2 px-6 py-3.5 rounded-full bg-brand-navy text-white font-bold hover:bg-brand-orange transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              >
+                {{ submitting() ? 'Signing in...' : 'Sign in' }}
+              </button>
+            </div>
+          </form>
+
+          <p class="mt-6 text-sm text-gray-600">
+            New here?
+            <a
+              routerLink="/signup"
+              class="font-bold text-brand-navy hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 rounded-lg"
+            >
+              Create an account
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

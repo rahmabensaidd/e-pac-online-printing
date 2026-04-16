@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mysql-app:
+    image: mysql:8.0
+    container_name: mysql-app
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword123
+      MYSQL_DATABASE: eprinting_db
+      MYSQL_USER: eprinting_user
+      MYSQL_PASSWORD: eprinting_pass123
+      MYSQL_ROOT_HOST: '%'
+    volumes:
+      - mysql-app-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    networks:
+      - eprinting-network
+
+  backend:
+    build:
+      context: ./eprinting
+      dockerfile: Dockerfile
+    container_name: eprinting-backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-app:3306/eprinting_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: eprinting_user
+      SPRING_DATASOURCE_PASSWORD: eprinting_pass123
+
+      SECURITY_AUTHENTICATION_MODE: jwt
+      SECURITY_JWT_SECRET: change-me-please-change-me-please-123456789
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      - mysql-app
+
+    networks:
+      - eprinting-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: eprinting-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    environment:
+      API_URL: http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - eprinting-network
+
+networks:
+  eprinting-network:
+    driver: bridge
+
+volumes:
+  mysql-app-data:

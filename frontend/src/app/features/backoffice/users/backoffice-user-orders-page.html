@@ -1,0 +1,153 @@
+<div class="space-y-6">
+
+    <!-- HEADER -->
+    <app-backoffice-section-header
+            [breadcrumb]="['Backoffice', 'Users', 'Orders']"
+            title="User orders"
+            description="Profile summary and all orders for this user."
+    >
+        <div class="flex items-center gap-2">
+
+            <!-- USER BADGE -->
+            @if (details(); as user) {
+                <div class="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                    <i class="fas fa-user text-slate-400"></i>
+                    <span class="text-sm font-semibold text-brand-navy">
+            {{ user.firstName }} {{ user.lastName }}
+          </span>
+                </div>
+            }
+
+            <!-- BACK BUTTON -->
+            <button
+                    type="button"
+                    class="admin-focus-ring admin-btn-secondary inline-flex items-center gap-2"
+                    (click)="goBack()"
+            >
+                <i class="fas fa-arrow-left"></i>
+                Back
+            </button>
+
+        </div>
+    </app-backoffice-section-header>
+
+    <!-- ERROR -->
+    @if (errorMessage()) {
+        <div class="rounded-2xl border border-brand-pink/20 bg-red-50 px-4 py-3 text-sm text-brand-pink">
+            {{ errorMessage() }}
+        </div>
+    }
+
+    <!-- CONTENT -->
+    @if (details(); as user) {
+
+        <!-- STATS -->
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+            <app-backoffice-stat-card
+                    label="Total orders"
+                    [value]="totalOrders().toString()"
+                    change="For this user"
+                    hint="history"
+                    icon="fa-receipt"
+                    tone="neutral"
+            />
+
+            <app-backoffice-stat-card
+                    label="Total amount"
+                    [value]="'$' + totalAmount().toLocaleString()"
+                    change="Lifetime"
+                    hint="orders value"
+                    icon="fa-sack-dollar"
+                    tone="positive"
+            />
+
+            <app-backoffice-stat-card
+                    label="Role"
+                    [value]="user.role"
+                    change="Access level"
+                    hint="current role"
+                    icon="fa-user-shield"
+                    tone="warning"
+            />
+
+            <app-backoffice-stat-card
+                    label="Username"
+                    [value]="user.username"
+                    change="Identity"
+                    hint="linked account"
+                    icon="fa-user"
+                    tone="neutral"
+            />
+
+        </div>
+
+        <!-- PROFILE CARD (UPGRADED STYLE) -->
+        <section class="rounded-[1.25rem] border border-slate-200/70 bg-white/70 p-5 shadow-sm">
+
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <p class="text-sm font-semibold text-brand-navy">User profile</p>
+                    <p class="text-xs text-slate-500">Account information</p>
+                </div>
+
+                <!-- ROLE BADGE -->
+                <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+          {{ user.role }}
+        </span>
+            </div>
+
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Full name</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">
+                        {{ user.firstName }} {{ user.lastName }}
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Email</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">
+                        {{ user.email }}
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Username</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">
+                        {{ user.username }}
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">Role</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">
+                        {{ user.role }}
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+    }
+
+    <!-- TABLE (WRAPPED FOR STYLE CONSISTENCY) -->
+    <section class="rounded-[1.25rem] border border-slate-200/70 bg-white/70 p-4 shadow-sm">
+        <app-backoffice-data-table
+                title="Orders list"
+                description="All orders linked to this user."
+                [columns]="orderColumns"
+                [rows]="orderRows()"
+                [loading]="loading()"
+                [searchKeys]="['reference', 'status', 'priority']"
+                [emptyState]="{
+        icon: 'fa-receipt',
+        title: 'No orders',
+        description: 'This user has no orders yet.',
+        actionLabel: ''
+      }"
+        />
+    </section>
+
+</div>

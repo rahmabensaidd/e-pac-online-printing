@@ -1,0 +1,25 @@
+<section class="relative overflow-hidden py-24">
+  <div class="absolute inset-0 bg-linear-to-r from-brand-orange via-brand-pink to-brand-teal"></div>
+  <div class="absolute inset-0 opacity-30 hero-pattern"></div>
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10" appReveal [revealDelay]="40">
+    <h2 class="font-display font-bold text-4xl lg:text-6xl text-white mb-6">Ready to Print?</h2>
+    <p class="text-white/90 text-xl mb-8">Personalize your product, simulate cost instantly, and order with confidence.</p>
+
+    <div class="flex flex-wrap justify-center gap-4">
+      <a
+        routerLink="/price-simulator"
+        class="inline-flex items-center bg-white text-brand-navy px-8 py-4 rounded-full font-bold text-lg hover:bg-brand-lime transition-all transform hover:scale-105 shadow-xl"
+      >
+        Start Your Print
+      </a>
+
+      <a
+        routerLink="/marketplace"
+        class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-brand-navy transition-all"
+      >
+        Browse Catalog
+      </a>
+    </div>
+  </div>
+</section>

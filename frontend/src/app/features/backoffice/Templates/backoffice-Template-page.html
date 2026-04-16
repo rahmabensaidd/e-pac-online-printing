@@ -1,0 +1,20 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+          [breadcrumb]="['Backoffice', 'Editor']"
+          title="Template Editor"
+          description="Create and edit your templates"
+  >
+    <div header-actions>
+      <a routerLink="/backoffice/templates" class="admin-focus-ring admin-btn-secondary">
+        Back to Templates
+      </a>
+      <button class="admin-focus-ring admin-btn-primary" (click)="saveTemplate()">
+        Save Template
+      </button>
+    </div>
+  </app-backoffice-section-header>
+
+  <div class="editor-wrapper" style="height: calc(100vh - 200px);">
+    <app-editor></app-editor>
+  </div>
+</div>

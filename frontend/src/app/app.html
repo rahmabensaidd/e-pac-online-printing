@@ -1,0 +1,14 @@
+@if (showPublicChrome()) {
+  <app-navbar />
+}
+
+<main [class]="showPublicChrome() ? 'pt-20' : 'pt-0'">
+  <router-outlet />
+</main>
+
+@if (showPublicChrome()) {
+  <app-footer />
+
+  <!-- overlays -->
+  <app-cart-drawer />
+}

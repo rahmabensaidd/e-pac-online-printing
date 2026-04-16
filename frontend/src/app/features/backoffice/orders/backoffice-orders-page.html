@@ -1,0 +1,64 @@
+<div class="space-y-6">
+    <app-backoffice-section-header
+            [breadcrumb]="['Backoffice', 'Orders']"
+            title="Production orders"
+            description="Track intake, status, and fulfillment."
+    />
+
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <app-backoffice-stat-card
+                label="Visible orders"
+                [value]="filteredOrders().length.toString()"
+                change="Filtered"
+                hint="current view"
+                icon="fa-receipt"
+                tone="neutral"
+        />
+        <app-backoffice-stat-card
+                label="Production value"
+                [value]="'$' + productionValue().toLocaleString()"
+                change="Active"
+                hint="visible orders"
+                icon="fa-sack-dollar"
+                tone="positive"
+        />
+        <app-backoffice-stat-card
+                label="Rejected orders"
+                [value]="rejectedCount().toString()"
+                change="Monitor"
+                hint="validation rejected"
+                icon="fa-triangle-exclamation"
+                tone="danger"
+        />
+        <app-backoffice-stat-card
+                label="Shipped"
+                [value]="shippedCount().toString()"
+                change="In transit"
+                hint="current period"
+                icon="fa-truck-fast"
+                tone="warning"
+        />
+    </div>
+
+    <app-backoffice-card title="Filters">
+        <div class="flex flex-wrap gap-2">
+            @for (filter of statusFilters; track filter) {
+                <button type="button" [class]="filterButtonClass(filter)" (click)="setFilter(filter)">
+                    {{ filter }}
+                </button>
+            }
+        </div>
+    </app-backoffice-card>
+
+    <app-backoffice-data-table
+            title="Production queue"
+            description="Search, sort, and view order details."
+            [columns]="orderColumns"
+            [rows]="tableRows()"
+            [rowActions]="orderActions"
+            [searchKeys]="['reference', 'customerName', 'companyName', 'assignee', 'status', 'validationStatus']"
+            [loading]="isLoading()"
+            [emptyState]="emptyState"
+            (rowAction)="handleRowAction($event)"
+    />
+</div>

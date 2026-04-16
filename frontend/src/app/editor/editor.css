@@ -1,0 +1,540 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+/* Supprimer totalement l'espace réservé par le dock natif CE.SDK */
+#editor [class*='Dock-module__dock'],
+#editor [class*='AssetLibraryDock'],
+#editor [class*='LibraryDock'],
+#editor [class*='DockBuilder'] {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  flex: 0 0 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Forcer la zone canvas à prendre toute la place */
+#editor [class*='UBQ_Editor-module__canvasAndTimelineWrapper'],
+#editor [class*='UBQ_Editor-module__canvasContainer'],
+#editor [class*='UBQ_Editor-module__canvasViewport'],
+#editor [class*='UBQ_Editor-module__body'],
+#editor [class*='UBQ_Editor-module__layout'] {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+/* ===== CACHER UNIQUEMENT LE DOCK NATIF CE.SDK ===== */
+/* On cache le dock de librairie mais on garde le canvas visible */
+.ubq-public [class*="Dock-module__dock"],
+.ubq-public [class*="AssetLibraryDock"],
+.ubq-public [class*="LibraryDock"] {
+  display: none !important;
+}
+
+/* On garde la barre d'outils supérieure (utile pour les outils) */
+/* On ne cache pas Toolbar-module__toolbar */
+
+/* On cache uniquement le panneau de librairie natif */
+.ubq-public [class*="LibraryPanel"],
+.ubq-public [class*="AssetLibraryContent"],
+.ubq-public [class*="AssetLibraryGrid"],
+.ubq-public [class*="AssetLibraryOverview"] {
+  display: none !important;
+}
+
+/* Le canvas doit prendre toute la largeur disponible */
+.ubq-public [class*="Editor-module__canvasViewport"] {
+  width: 100% !important;
+  margin-left: 0 !important;
+}
+
+/* ===== LAYOUT PRINCIPAL ===== */
+.editor-shell {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background:
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.96) 0, rgba(255, 255, 255, 0) 34%),
+          linear-gradient(135deg, #f4f6fb 0%, #e8edf7 48%, #dde7f4 100%);
+}
+
+/* ===== RAIL LATERAL ===== */
+.library-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0.75rem;
+  border-right: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(180deg, rgba(13, 18, 29, 0.96) 0%, rgba(23, 31, 48, 0.98) 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.library-rail-brand {
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.library-rail-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
+}
+
+.library-rail-tab {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 1rem;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.78);
+  padding: 0.65rem 0.35rem 0.55rem;
+  cursor: pointer;
+  transition:
+          transform 160ms ease,
+          color 160ms ease,
+          background-color 160ms ease,
+          border-color 160ms ease,
+          box-shadow 160ms ease;
+}
+
+.library-rail-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.library-rail-tab.is-active {
+  color: #0f172a;
+  background: linear-gradient(180deg, #f8fafc 0%, #dbeafe 100%);
+  border-color: rgba(148, 163, 184, 0.4);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.28);
+}
+
+.library-rail-icon {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.85rem;
+  background: currentColor;
+  color: inherit;
+}
+
+.library-rail-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: #0f172a;
+}
+
+.library-rail-tab:not(.is-active) .library-rail-icon {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.library-rail-tab:not(.is-active) .library-rail-icon svg {
+  color: #e2e8f0;
+}
+
+.library-rail-label {
+  display: block;
+  max-width: 100%;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* ===== DRAWER (PANEL LATERAL) ===== */
+.library-drawer {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(249, 250, 252, 0.96);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.library-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.8rem;
+  flex-shrink: 0;
+}
+
+.library-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.library-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.library-close {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.8);
+  color: #334155;
+  cursor: pointer;
+  transition:
+          transform 160ms ease,
+          background-color 160ms ease,
+          border-color 160ms ease;
+}
+
+.library-close:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  border-color: rgba(100, 116, 139, 0.34);
+}
+
+.library-close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.library-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 1rem 1rem;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.library-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.55rem;
+  cursor: pointer;
+  transition:
+          transform 160ms ease,
+          border-color 160ms ease,
+          box-shadow 160ms ease;
+}
+
+.library-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.library-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 0.8rem;
+  background: #eef2f7;
+}
+
+.library-thumb-placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #64748b;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
+}
+
+.library-label {
+  display: block;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.library-badge {
+  align-self: flex-start;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.18rem 0.45rem;
+}
+
+.library-state {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  padding: 1rem;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.library-state-error {
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.28);
+  background: rgba(254, 242, 242, 0.95);
+}
+
+.library-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
+}
+
+.btn-save-draft,
+.btn-publish,
+.btn-export-pdf {
+  border: 1px solid transparent;
+  border-radius: 0.95rem;
+  font: inherit;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 0.8rem 0.95rem;
+  cursor: pointer;
+  transition:
+          transform 160ms ease,
+          box-shadow 160ms ease,
+          opacity 160ms ease,
+          background-color 160ms ease,
+          color 160ms ease,
+          border-color 160ms ease;
+}
+
+.btn-save-draft {
+  background: #e8eefc;
+  color: #183153;
+  border-color: #c9d7f8;
+}
+
+.btn-publish {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.btn-export-pdf {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fdba74;
+}
+
+.btn-save-draft:hover,
+.btn-publish:hover,
+.btn-export-pdf:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+}
+
+.btn-save-draft:disabled,
+.btn-publish:disabled,
+.btn-export-pdf:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ===== CANVAS EDITOR ===== */
+.editor-canvas {
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-floating-preview {
+  pointer-events: none;
+}
+
+#editor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ===== GARANTIR QUE CE.SDK PREND TOUTE LA PLACE ===== */
+#editor .ubq-public,
+#editor [class*='UBQ_Editor-module__block'],
+#editor [class*='UBQ_Editor-module__layout'],
+#editor [class*='UBQ_Editor-module__body'],
+#editor [class*='UBQ_Editor-module__canvasViewport'],
+#editor [class*='UBQ_Editor-module__canvasAndTimelineWrapper'],
+#editor [class*='UBQ_Editor-module__canvasContainer'] {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ===== NE CACHER QUE CE QU'IL FAUT ===== */
+/* Cacher uniquement le dock de librairie natif */
+#editor [class*='LibraryDock'],
+#editor [class*='AssetLibraryDock'],
+#editor [class*='LibraryPanel'],
+#editor [class*='AssetLibraryContent'],
+#editor [class*='AssetLibraryGrid'],
+#editor [class*='AssetLibraryOverview'],
+#editor [class*='AssetLibraryTabs'],
+#editor [class*='AssetLibrarySections'],
+#editor [class*='DockBuilder'] {
+  display: none !important;
+}
+
+.ubq-public [class*='LibraryDock'],
+.ubq-public [class*='AssetLibraryDock'],
+.ubq-public [class*='LibraryPanel'],
+.ubq-public [class*='AssetLibraryContent'],
+.ubq-public [class*='AssetLibraryGrid'],
+.ubq-public [class*='AssetLibraryOverview'],
+.ubq-public [class*='AssetLibraryTabs'],
+.ubq-public [class*='AssetLibrarySections'],
+.ubq-public [class*='DockBuilder'] {
+  display: none !important;
+}
+/* === FORCER CE.SDK A SUPPRIMER LA COLONNE DE LIBRARY === */
+#editor .ubq-public {
+  --ubq-dock-width: 0px !important;
+  --ubq-library-dock-width: 0px !important;
+  --ubq-panel-width: 0px !important;
+  --ubq-left-sidebar-width: 0px !important;
+}
+
+/* Si le layout interne est en grid */
+#editor [class*='Editor-module__layout'],
+#editor [class*='UBQ_Editor-module__layout'] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* Si le layout interne est en flex */
+#editor [class*='Editor-module__body'],
+#editor [class*='UBQ_Editor-module__body'] {
+  display: flex !important;
+}
+
+#editor [class*='Editor-module__body'] > :first-child,
+#editor [class*='UBQ_Editor-module__body'] > :first-child {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  flex: 0 0 0 !important;
+  overflow: hidden !important;
+}
+
+/* Le canvas prend tout l'espace */
+#editor [class*='Editor-module__canvasViewport'],
+#editor [class*='UBQ_Editor-module__canvasViewport'],
+#editor [class*='Editor-module__canvasContainer'],
+#editor [class*='UBQ_Editor-module__canvasContainer'],
+#editor [class*='Editor-module__canvasAndTimelineWrapper'],
+#editor [class*='UBQ_Editor-module__canvasAndTimelineWrapper'] {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 auto !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1100px) {
+  .editor-shell {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .library-rail {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0.75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.8rem;
+    border-right: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  }
+
+  .library-rail-brand {
+    flex: 0 0 auto;
+  }
+
+  .library-rail-tabs {
+    flex-direction: row;
+  }
+
+  .library-rail-tab {
+    width: 4.2rem;
+    flex: 0 0 auto;
+  }
+
+  .library-drawer {
+    border-right: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    max-height: 340px;
+  }
+
+  .editor-canvas {
+    min-height: 300px;
+  }
+}

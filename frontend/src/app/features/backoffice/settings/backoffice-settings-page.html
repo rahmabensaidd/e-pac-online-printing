@@ -1,0 +1,144 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+    [breadcrumb]="['Backoffice', 'Settings']"
+    title="Workspace settings"
+    description="Workspace defaults and thresholds."
+  />
+
+  <div class="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+    <app-backoffice-card id="workspace-profile" title="Workspace defaults">
+      <form class="space-y-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label class="admin-label" for="settings-workspace-name">Workspace name</label>
+            <input
+              id="settings-workspace-name"
+              class="admin-input"
+              formControlName="workspaceName"
+            />
+            @if (showError('workspaceName')) {
+              <p class="admin-error">Workspace name is required.</p>
+            }
+          </div>
+
+          <div>
+            <label class="admin-label" for="settings-support-email">Support email</label>
+            <input
+              id="settings-support-email"
+              type="email"
+              class="admin-input"
+              formControlName="supportEmail"
+            />
+            @if (showError('supportEmail')) {
+              <p class="admin-error">Enter a valid support email address.</p>
+            }
+          </div>
+
+          <div>
+            <label class="admin-label" for="settings-timezone">Timezone</label>
+            <input id="settings-timezone" class="admin-input" formControlName="timezone" />
+            @if (showError('timezone')) {
+              <p class="admin-error">Timezone is required.</p>
+            }
+          </div>
+
+          <div>
+            <label class="admin-label" for="settings-default-due-window"
+              >Default due window (days)</label
+            >
+            <input
+              id="settings-default-due-window"
+              type="number"
+              min="1"
+              max="21"
+              class="admin-input"
+              formControlName="defaultDueWindowDays"
+            />
+            @if (showError('defaultDueWindowDays')) {
+              <p class="admin-error">Choose a value between 1 and 21 days.</p>
+            }
+          </div>
+
+          <div>
+            <label class="admin-label" for="settings-low-stock-threshold"
+              >Low stock threshold</label
+            >
+            <input
+              id="settings-low-stock-threshold"
+              type="number"
+              min="1"
+              max="500"
+              class="admin-input"
+              formControlName="lowStockThreshold"
+            />
+            @if (showError('lowStockThreshold')) {
+              <p class="admin-error">Choose a value between 1 and 500 units.</p>
+            }
+          </div>
+
+          <div>
+            <label class="admin-label" for="settings-digest-frequency">Digest frequency</label>
+            <select
+              id="settings-digest-frequency"
+              class="admin-select"
+              formControlName="digestFrequency"
+            >
+              @for (option of digestOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="admin-label" for="settings-accent-mode">Accent balance</label>
+            <select id="settings-accent-mode" class="admin-select" formControlName="accentMode">
+              @for (mode of accentModes; track mode) {
+                <option [value]="mode">{{ mode }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <label
+          class="flex items-center gap-3 rounded-[1rem] border border-slate-200/70 bg-white/70 px-4 py-3.5 text-[0.875rem] text-slate-600"
+        >
+          <input type="checkbox" class="admin-checkbox" formControlName="autoAssignOrders" />
+          Auto-assign new orders when a matching owner is available.
+        </label>
+
+        <div
+          class="flex flex-col gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          @if (saveMessage()) {
+            <p
+              class="rounded-full bg-brand-teal/12 px-3 py-1.5 text-[0.8125rem] font-semibold text-brand-navy"
+            >
+              {{ saveMessage() }}
+            </p>
+          } @else {
+            <span class="text-[0.8125rem] text-slate-500">Changes update the workspace state.</span>
+          }
+
+          <button type="submit" class="admin-focus-ring admin-btn-primary">Save settings</button>
+        </div>
+      </form>
+    </app-backoffice-card>
+
+    <app-backoffice-card id="workspace-preferences" title="System notes">
+      <div class="space-y-3">
+        <div class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3.5">
+          <p class="font-bold text-brand-navy">Typography</p>
+          <p class="mt-2 text-[0.8125rem] leading-6 text-slate-500">Shared Sora hierarchy with tighter operational spacing.</p>
+        </div>
+        <div class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3.5">
+          <p class="font-bold text-brand-navy">Spacing system</p>
+          <p class="mt-2 text-[0.8125rem] leading-6 text-slate-500">The admin compresses the public spacing into a 16-24px rhythm.</p>
+        </div>
+        <div class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3.5">
+          <p class="font-bold text-brand-navy">Surface hierarchy</p>
+          <p class="mt-2 text-[0.8125rem] leading-6 text-slate-500">Softer surfaces and lower contrast keep the workspace calm.</p>
+        </div>
+      </div>
+    </app-backoffice-card>
+  </div>
+</div>

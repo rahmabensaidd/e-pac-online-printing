@@ -1,0 +1,582 @@
+<section id="price-simulator-page" class="relative py-10 sm:py-14 bg-brand-cream min-h-[calc(100vh-10rem)] overflow-hidden">
+    <div class="absolute inset-0 hero-pattern opacity-20"></div>
+    <div class="absolute -top-16 -left-16 w-64 h-64 bg-brand-orange/15 blob"></div>
+    <div class="absolute -bottom-20 -right-20 w-80 h-80 bg-brand-teal/15 blob"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <header class="text-center max-w-3xl mx-auto" appReveal [revealDelay]="20">
+            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-lime/30 text-brand-navy text-sm font-bold">
+                <span class="w-2 h-2 rounded-full bg-brand-orange"></span>
+                Price Simulation
+            </span>
+
+            <h1 class="mt-4 font-display font-extrabold text-4xl lg:text-5xl text-brand-navy">
+                Configure your print and simulate cost in real time
+            </h1>
+
+            <p class="mt-3 text-gray-600 text-lg">
+                Select specifications and estimate total production cost before ordering.
+            </p>
+        </header>
+
+        <div class="mt-4 rounded-3xl border border-gray-200/80 bg-white/90 shadow-xl backdrop-blur-sm overflow-hidden sim-shell" appReveal [revealDelay]="80">
+            <div class="grid lg:grid-cols-[1.38fr_0.62fr]">
+                <!-- LEFT -->
+                <div class="p-5 sm:p-6 lg:p-7 border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto max-h-[85vh] sim-panel-left">
+
+                    <div class="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3">
+                        <p class="text-sm text-amber-700 flex items-center gap-2">
+                            <span class="text-lg">🔘</span>
+                            Manual mode: Click "Calculate Price" to update the estimate. Quantity change recalculates the unit price automatically.
+                        </p>
+                    </div>
+
+                    <!-- 1. PHYSICAL SPECIFICATIONS -->
+                    <div class="sim-block">
+                        <p class="text-xs tracking-[0.15em] uppercase font-bold text-gray-500">1. Physical Specifications</p>
+
+                        <div class="mt-5 grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="simulator-quantity" class="block text-sm font-bold text-brand-navy mb-2">Quantity *</label>
+                                <input
+                                        id="simulator-quantity"
+                                        type="number"
+                                        min="1"
+                                        max="5000"
+                                        [value]="quantity()"
+                                        (input)="onQuantityChange($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-bold outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="simulator-production-page" class="block text-sm font-bold text-brand-navy mb-2">Production Page *</label>
+                                <input
+                                        id="simulator-production-page"
+                                        type="number"
+                                        min="1"
+                                        [value]="productionPage()"
+                                        (input)="onProductionPageChange($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="simulator-page-count" class="block text-sm font-bold text-brand-navy mb-2">Page Count: {{ pageCount() }}</label>
+                                <input
+                                        id="simulator-page-count"
+                                        type="range"
+                                        min="24"
+                                        max="480"
+                                        step="2"
+                                        [value]="pageCount()"
+                                        (input)="onPageCountChange($event)"
+                                        class="mt-3 w-full accent-brand-orange"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="simulator-height" class="block text-sm font-bold text-brand-navy mb-2">Height (cm) *</label>
+                                <input
+                                        id="simulator-height"
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        [value]="height()"
+                                        (input)="onHeightChange($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="simulator-width" class="block text-sm font-bold text-brand-navy mb-2">Width (cm) *</label>
+                                <input
+                                        id="simulator-width"
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        [value]="width()"
+                                        (input)="onWidthChange($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="simulator-thickness" class="block text-sm font-bold text-brand-navy mb-2">Thickness (cm) *</label>
+                                <input
+                                        id="simulator-thickness"
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        [value]="thickness()"
+                                        (input)="onThicknessChange($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="simulator-trim" class="block text-sm font-bold text-brand-navy mb-2">Trim Size</label>
+                                <select
+                                        id="simulator-trim"
+                                        [value]="trimSize()"
+                                        (change)="setTrimSize($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of trimSizeOptions; track option) {
+                                        <option [value]="option">{{ option }}</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. PRINT SPECIFICATIONS -->
+                    <div class="sim-block">
+                        <p class="text-xs tracking-[0.15em] uppercase font-bold text-gray-500">2. Print Specifications</p>
+
+                        <div class="mt-5">
+                            <div class="flex items-end justify-between gap-3">
+                                <label class="block text-sm font-bold text-brand-navy">Binding Type *</label>
+                                <span class="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Visual selection</span>
+                            </div>
+                            <div class="mt-3 sim-binding-grid">
+                                @for (family of bindingFamilies; track family) {
+                                    <button
+                                            type="button"
+                                            class="sim-binding-card"
+                                            [class.sim-binding-card--active]="getSelectedBindingFamily() === family"
+                                            (click)="setBindingFamily(family)"
+                                    >
+                                        <span class="sim-choice-preview">
+                                            <img
+                                                    [src]="getBindingFamilyImage(family)"
+                                                    [alt]="bindingFamilyLabels[family]"
+                                                    class="sim-choice-preview__image"
+                                                    loading="lazy"
+                                                    (error)="$event.target.src='/books/default-binding.png'"
+                                            />
+                                        </span>
+                                        <span class="sim-choice-title">{{ bindingFamilyLabels[family] }}</span>
+                                    </button>
+                                }
+                            </div>
+
+                            @if (getSelectedBindingFamily()) {
+                                <div class="mt-4">
+                                    <label for="simulator-binding-specification" class="block text-sm font-bold text-brand-navy mb-2">Binding specification *</label>
+                                    <select
+                                            id="simulator-binding-specification"
+                                            [value]="bindingType()"
+                                            (change)="setBindingSpecification($event)"
+                                            class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                    >
+                                        @for (option of getBindingSpecificationsForSelectedFamily(); track option) {
+                                            <option [value]="option">{{ getBindingTypeLabel(option) }}</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="mt-4 grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-brand-navy mb-2">Text Paper Type *</label>
+                                <select
+                                        id="simulator-text-paper-type"
+                                        [value]="textPaperType()"
+                                        (change)="setTextPaperType($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of textPaperTypeOptions; track option) {
+                                        <option [value]="option">{{ getTextPaperTypeLabel(option) }}</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="simulator-text-color" class="block text-sm font-bold text-brand-navy mb-2">Text Color *</label>
+                                <select
+                                        id="simulator-text-color"
+                                        [value]="textColor()"
+                                        (change)="setTextColor($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of textColorOptions; track option) {
+                                        <option [value]="option">{{ getTextColorLabel(option) }}</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-brand-navy mb-2">Cover Paper Type *</label>
+                                <select
+                                        id="simulator-cover-paper-type"
+                                        [value]="coverPaperType()"
+                                        (change)="setCoverPaperType($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of coverPaperTypeOptions; track option) {
+                                        <option [value]="option">{{ getCoverPaperTypeLabel(option) }}</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label for="simulator-cover-color" class="block text-sm font-bold text-brand-navy mb-2">Cover Color *</label>
+                                <select
+                                        id="simulator-cover-color"
+                                        [value]="coverColor()"
+                                        (change)="setCoverColor($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of coverColorOptions; track option) {
+                                        <option [value]="option">{{ getCoverColorLabel(option) }}</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-bold text-brand-navy mb-2">Cover Finish *</label>
+                                <div class="sim-finish-grid">
+                                    <div class="sim-finish-options">
+                                        @for (option of coverFinishOptions; track option) {
+                                            <button
+                                                    type="button"
+                                                    class="sim-choice-card sim-choice-card--finish"
+                                                    [class.sim-choice-card--active]="coverFinish() === option"
+                                                    (click)="setCoverFinishValue(option)"
+                                            >
+                                                <span class="sim-choice-preview">
+                                                    <img
+                                                            [src]="getCoverFinishImage(option)"
+                                                            [alt]="getCoverFinishLabel(option)"
+                                                            class="sim-choice-preview__image"
+                                                            loading="lazy"
+                                                            (error)="$event.target.src='/cover_finish/default.png'"
+                                                    />
+                                                </span>
+                                                <span class="sim-choice-title">{{ getCoverFinishLabel(option) }}</span>
+                                                <span class="sim-choice-subtitle">{{ getCoverFinishDescription(option) }}</span>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="simulator-priority-level" class="block text-sm font-bold text-brand-navy mb-2">Priority Level *</label>
+                                <select
+                                        id="simulator-priority-level"
+                                        [value]="priorityLevel()"
+                                        (change)="setPriorityLevel($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of priorityLevelOptions; track option) {
+                                        <option [value]="option">{{ option }}</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="simulator-head-and-tail" class="block text-sm font-bold text-brand-navy mb-2">Head and Tail *</label>
+                                <select
+                                        id="simulator-head-and-tail"
+                                        [value]="headAndTail()"
+                                        (change)="setHeadAndTail($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of headAndTailOptions; track option) {
+                                        <option [value]="option">{{ option }}</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. OPTIONS -->
+                    <div class="sim-block">
+                        <p class="text-xs tracking-[0.15em] uppercase font-bold text-gray-500">3. Options & Finishing</p>
+
+                        <div class="mt-5 grid sm:grid-cols-2 gap-3 sim-check-grid">
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="securityLabel()" (change)="securityLabel.set(readCheckedValue($event))" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                Security Label
+                            </label>
+
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="perf()" (change)="perf.set(readCheckedValue($event))" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                Perf
+                            </label>
+
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="doubleSidedCover()" (change)="doubleSidedCover.set(readCheckedValue($event))" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                Double Sided Cover
+                            </label>
+
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="shrinkwrap()" (change)="shrinkwrap.set(readCheckedValue($event))" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                Shrinkwrap
+                            </label>
+
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="threeHoleDrill()" (change)="threeHoleDrill.set(readCheckedValue($event))" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                Three Hole Drill
+                            </label>
+
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="proofCopy()" (change)="onProofCopyChange($event)" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                Printed proof copy (+$3.20)
+                            </label>
+
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="isbnSupport()" (change)="onIsbnSupportChange($event)" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                ISBN/barcode setup (+$6.80)
+                            </label>
+
+                            <label class="flex items-center gap-3 text-sm text-gray-700">
+                                <input type="checkbox" [checked]="rushProduction()" (change)="onRushProductionChange($event)" class="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/40" />
+                                Rush production (+10% production cost)
+                            </label>
+                        </div>
+
+                        <div class="mt-5 grid sm:grid-cols-2 gap-4">
+                            @if (securityLabel()) {
+                                <div>
+                                    <label for="simulator-label-type" class="block text-sm font-bold text-brand-navy mb-2">Label Type</label>
+                                    <select
+                                            id="simulator-label-type"
+                                            [value]="labelType()"
+                                            (change)="setLabelType($event)"
+                                            class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                    >
+                                        @for (option of labelTypeOptions; track option) {
+                                            <option [value]="option">{{ option }}</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            @if (shouldShowCoilType()) {
+                                <div>
+                                    <label for="simulator-coil-type" class="block text-sm font-bold text-brand-navy mb-2">Coil Type</label>
+                                    <select
+                                            id="simulator-coil-type"
+                                            [value]="coilType()"
+                                            (change)="setCoilType($event)"
+                                            class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                    >
+                                        @for (option of coilTypeOptions; track option) {
+                                            <option [value]="option">{{ option }}</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            @if (shouldShowTabColor()) {
+                                <div>
+                                    <label for="simulator-tab-color" class="block text-sm font-bold text-brand-navy mb-2">Tab Color</label>
+                                    <select
+                                            id="simulator-tab-color"
+                                            [value]="tabColor()"
+                                            (change)="setTabColor($event)"
+                                            class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                    >
+                                        @for (option of tabColorOptions; track option) {
+                                            <option [value]="option">{{ option }}</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            @if (shouldShowInsertPaperType()) {
+                                <div>
+                                    <label for="simulator-insert-paper-type" class="block text-sm font-bold text-brand-navy mb-2">Insert Paper Type</label>
+                                    <select
+                                            id="simulator-insert-paper-type"
+                                            [value]="insertPaperType()"
+                                            (change)="setInsertPaperType($event)"
+                                            class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                    >
+                                        @for (option of insertPaperTypeOptions; track option) {
+                                            <option [value]="option">{{ option }}</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            @if (shouldShowCaseFinishType()) {
+                                <div>
+                                    <label for="simulator-case-finish-type" class="block text-sm font-bold text-brand-navy mb-2">Case Finish Type</label>
+                                    <select
+                                            id="simulator-case-finish-type"
+                                            [value]="caseFinishType()"
+                                            (change)="setCaseFinishType($event)"
+                                            class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                    >
+                                        @for (option of caseFinishTypeOptions; track option) {
+                                            <option [value]="option">{{ option }}</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            <div>
+                                <label for="simulator-spine-type" class="block text-sm font-bold text-brand-navy mb-2">Spine Type</label>
+                                <select
+                                        id="simulator-spine-type"
+                                        [value]="spineType()"
+                                        (change)="setSpineType($event)"
+                                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-brand-navy font-medium outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                                >
+                                    @for (option of spineTypeOptions; track option) {
+                                        <option [value]="option">{{ option }}</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT -->
+                <div class="p-5 sm:p-6 lg:p-7 bg-brand-cream/35 sim-panel-right">
+                    <div class="h-full rounded-2xl border border-gray-200 bg-white/70 p-5 sm:p-6 flex flex-col justify-between sim-sticky-summary">
+                        <div>
+                            <div class="mb-5">
+                                <button
+                                        type="button"
+                                        (click)="calculatePrice()"
+                                        [disabled]="isLoading()"
+                                        class="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand-orange text-white font-extrabold hover:bg-brand-navy transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    @if (isLoading()) {
+                                        <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                                        Calculating...
+                                    } @else {
+                                        <span>💰</span>
+                                        Calculate Price
+                                    }
+                                </button>
+
+                                @if (manualCalculationDone() && !isLoading()) {
+                                    <p class="text-xs text-green-600 text-center mt-2">
+                                        ✓ Price calculated successfully
+                                    </p>
+                                }
+                            </div>
+
+                            @if (quoteResponse()?.message && !isLoading()) {
+                                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-5">
+                                    <p class="text-sm text-amber-700">
+                                        {{ quoteResponse()?.message }}
+                                    </p>
+                                </div>
+                            }
+
+                            @if (quoteResponse() && !quoteResponse()?.available && !isLoading()) {
+                                <div class="rounded-2xl border border-red-200 bg-red-50 p-4 mb-5">
+                                    <p class="text-sm text-red-600 font-medium">
+                                        ⚠️ Configuration not available
+                                    </p>
+                                    <p class="text-xs text-red-500 mt-1">
+                                        {{ quoteResponse()?.message || 'Please adjust your specifications' }}
+                                    </p>
+                                </div>
+                            }
+
+                            <div class="rounded-2xl border border-gray-200 bg-white p-5 sim-right-costs">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-500">Estimated unit price</span>
+                                    <span class="font-bold text-brand-navy">{{ estimatedUnitPrice() | currency:'USD':'symbol':'1.2-2' }}</span>
+                                </div>
+
+                                <div class="mt-2 flex items-center justify-between text-sm">
+                                    <span class="text-gray-500">Production subtotal</span>
+                                    <span class="font-bold text-brand-navy">{{ productionSubtotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+                                </div>
+
+                                <div class="mt-2 flex items-center justify-between text-sm">
+                                    <span class="text-gray-500">Setup fee</span>
+                                    <span class="font-bold text-brand-navy">{{ setupFee() | currency:'USD':'symbol':'1.2-2' }}</span>
+                                </div>
+
+                                <div class="mt-2 flex items-center justify-between text-sm">
+                                    <span class="text-gray-500">Add-ons</span>
+                                    <span class="font-bold text-brand-navy">{{ addOnTotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+                                </div>
+
+                                @if (rushProduction()) {
+                                    <div class="mt-2 flex items-center justify-between text-sm">
+                                        <span class="text-gray-500">Rush fee</span>
+                                        <span class="font-bold text-brand-navy">{{ rushFee() | currency:'USD':'symbol':'1.2-2' }}</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="mt-5 rounded-2xl border border-gray-200 bg-white p-5 sim-right-summary">
+                                <p class="text-xs uppercase tracking-[0.14em] text-gray-500 font-bold">Configuration summary</p>
+
+                                <div class="mt-4 grid gap-2 text-sm text-gray-700">
+                                    <p><strong>Binding:</strong> {{ getSelectedBindingTypeLabel() }}</p>
+                                    <p><strong>Text paper:</strong> {{ getTextPaperTypeLabel(textPaperType()) }}</p>
+                                    <p><strong>Text color:</strong> {{ getTextColorLabel(textColor()) }}</p>
+                                    <p><strong>Cover paper:</strong> {{ getCoverPaperTypeLabel(coverPaperType()) }}</p>
+                                    <p><strong>Cover finish:</strong> {{ getCoverFinishLabel(coverFinish()) }}</p>
+                                    <p><strong>Cover color:</strong> {{ getCoverColorLabel(coverColor()) }}</p>
+                                    <p><strong>Priority:</strong> {{ priorityLevel() }}</p>
+                                    <p><strong>Head and tail:</strong> {{ headAndTail() }}</p>
+                                    <p><strong>Quantity:</strong> {{ quantity() }}</p>
+                                    <p><strong>Pages:</strong> {{ pageCount() }}</p>
+                                    <p><strong>Production page:</strong> {{ productionPage() }}</p>
+                                    <p><strong>Dimensions:</strong> {{ width() }} x {{ height() }} x {{ thickness() }} cm</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+                            <div class="flex flex-wrap items-end justify-between gap-4">
+                                <div>
+                                    <p class="text-xs uppercase tracking-[0.14em] text-gray-500 font-bold">Estimated total</p>
+                                    <p class="mt-1 text-4xl font-display font-extrabold text-brand-navy">
+                                        {{ estimatedTotal() | currency:'USD':'symbol':'1.2-2' }}
+                                    </p>
+                                    <p class="text-sm text-gray-500 mt-1">{{ quantity() }} copies - {{ pageCount() }} pages</p>
+                                </div>
+
+                                <div class="flex flex-wrap gap-3">
+                                    <a
+                                            routerLink="/marketplace"
+                                            class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-200 text-brand-navy font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                                    >
+                                        Browse products
+                                    </a>
+
+                                    <button
+                                            type="button"
+                                            (click)="goToDetailedDesign()"
+                                            [disabled]="isLoading() || (quoteResponse() && !quoteResponse()?.available)"
+                                            class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-brand-orange text-white font-extrabold hover:bg-brand-navy transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        @if (isLoading()) {
+                                            <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                                        }
+                                        Design detailly your own printing book
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (authMessage()) {
+                                <p class="mt-4 text-sm font-medium text-brand-orange">
+                                    {{ authMessage() }}
+                                </p>
+                            }
+
+                            @if (quoteResponse()?.selectedStrategy && !isLoading()) {
+                                <p class="mt-3 text-xs text-gray-400 text-center">
+                                    Pricing strategy: {{ quoteResponse()?.selectedStrategy }}
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

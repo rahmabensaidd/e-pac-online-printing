@@ -1,0 +1,125 @@
+<section id="price-simulation-preview" class="py-24 bg-white relative overflow-hidden">
+  <div class="absolute inset-0 bg-linear-to-br from-brand-cream via-white to-brand-cream opacity-50"></div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+      <div class="lg:col-span-5 lg:pr-4" appReveal [revealDelay]="40">
+        <div class="inline-flex items-center gap-2 bg-brand-lime/20 px-4 py-2 rounded-full mb-6">
+          <i class="fas fa-calculator text-brand-orange"></i>
+          <span class="text-sm font-bold text-brand-navy">Price Simulation Demo</span>
+        </div>
+
+        <h2 class="font-display font-bold text-4xl lg:text-5xl mb-6 leading-tight">
+          Estimate Before You Order<br />
+          <span class="text-brand-orange">Fast, Transparent, Accurate</span>
+        </h2>
+
+        <p class="text-gray-600 text-lg mb-8 leading-relaxed">
+          This preview shows a sample of the full price simulator. Configure key specifications and open the complete page for advanced personalization.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <a
+            routerLink="/price-simulator"
+            class="inline-flex bg-brand-navy text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-brand-orange transition-all transform hover:scale-105 shadow-xl"
+          >
+            Open Full Price Simulator
+          </a>
+          <p class="text-sm text-gray-500">Tune values on the right to test real-time pricing behavior.</p>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7" appReveal [revealOrigin]="'right'" [revealDelay]="140">
+        <div class="relative float-soft">
+          <div class="absolute -inset-1 bg-linear-to-r from-brand-orange via-brand-pink to-brand-teal rounded-3xl blur opacity-25"></div>
+          <div class="relative bg-white rounded-3xl p-6 lg:p-7 shadow-2xl border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="font-display font-extrabold text-lg">Simulation Preview</div>
+              <span class="px-3 py-1 rounded-full text-sm font-bold bg-brand-lime/30 text-brand-navy">
+                {{ trimSize() }} · {{ binding() }}
+              </span>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 bg-brand-cream p-6 min-h-96 grid place-items-center">
+              <div [class]="'relative overflow-hidden shadow-2xl text-white ' + demoCoverShapeClass() + ' ' + demoCoverToneClass()">
+                <div class="absolute inset-0 opacity-25" style="background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,.25) 1px, transparent 0); background-size: 22px 22px;"></div>
+
+                @if (isMagazineDemo()) {
+                  <div class="absolute top-0 left-0 right-0 h-9 bg-black/15 border-b border-white/20"></div>
+                  <p class="absolute top-2 left-4 text-[0.65rem] uppercase tracking-[0.25em] text-white/85 font-bold">
+                    Monthly edition
+                  </p>
+                } @else {
+                  <div class="absolute right-0 top-0 h-full w-3 bg-white/25"></div>
+                }
+
+                <div class="absolute inset-0 px-7 py-8 flex flex-col justify-center text-center text-white">
+                  <p class="font-display font-bold text-3xl leading-tight">Your Title</p>
+                  <p class="mt-4 text-sm uppercase tracking-[0.2em] text-white/80">Author Name</p>
+                  <span class="w-14 h-1 mx-auto mt-8 rounded-full bg-brand-orange"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 text-sm text-gray-600">
+              Open the full simulator for manuscript upload, paper selection, finish options, and full price breakdown.
+            </div>
+
+            <div class="mt-6 border-t border-gray-200 pt-5">
+              <div class="flex items-center justify-between gap-4 mb-4">
+                <p class="text-xs uppercase tracking-[0.14em] text-gray-500 font-bold">Quick controls</p>
+                <div class="text-right">
+                  <p class="text-[0.68rem] uppercase tracking-[0.16em] text-gray-500">Estimated Price</p>
+                  <p class="text-2xl font-extrabold text-brand-orange">{{ demoTotal() | currency:'USD':'symbol':'1.2-2' }}</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2">
+                @for (type of productTypes; track type) {
+                  <button
+                    type="button"
+                    [class]="'px-3 py-2 rounded-xl border text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 ' + productTypeClass(type)"
+                    (click)="setProductType(type)"
+                  >
+                    {{ type }}
+                  </button>
+                }
+              </div>
+
+              <div class="mt-4 grid sm:grid-cols-[1fr_auto] gap-4 items-end">
+                <div>
+                  <label for="preview-page-count" class="text-sm font-bold text-brand-navy">
+                    Page count: {{ pageCount() }}
+                  </label>
+                  <input
+                    id="preview-page-count"
+                    type="range"
+                    min="24"
+                    max="320"
+                    step="2"
+                    [value]="pageCount()"
+                    (input)="onPageCountChange($event)"
+                    class="mt-2 w-full accent-brand-orange"
+                  />
+                </div>
+
+                <div class="sm:w-36">
+                  <label for="preview-quantity" class="block text-sm font-bold text-brand-navy mb-2">Quantity</label>
+                  <input
+                    id="preview-quantity"
+                    type="number"
+                    min="1"
+                    max="2500"
+                    [value]="quantity()"
+                    (input)="onQuantityChange($event)"
+                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-brand-navy font-bold outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

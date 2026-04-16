@@ -1,0 +1,119 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+    [breadcrumb]="['Backoffice', 'Employees']"
+    title="Team visibility"
+    description="Coverage and workload at a glance."
+  />
+
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <app-backoffice-stat-card
+      label="Active teammates"
+      [value]="backofficeData.activeEmployees().toString()"
+      change="Available"
+      hint="excluding offline"
+      icon="fa-user-group"
+      tone="positive"
+    />
+    <app-backoffice-stat-card
+      label="Average workload"
+      [value]="averageWorkload() + '%'"
+      change="Balanced"
+      hint="current team"
+      icon="fa-gauge-high"
+      tone="neutral"
+    />
+    <app-backoffice-stat-card
+      label="Reviewing"
+      [value]="reviewingCount().toString()"
+      change="In progress"
+      hint="proof review"
+      icon="fa-magnifying-glass-chart"
+      tone="warning"
+    />
+    <app-backoffice-stat-card
+      label="Remote"
+      [value]="remoteCount().toString()"
+      change="Distributed"
+      hint="customer-facing"
+      icon="fa-house-laptop"
+      tone="neutral"
+    />
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+    <app-backoffice-card title="Shift coverage">
+      <div class="grid gap-4 lg:grid-cols-2">
+        @for (employee of backofficeData.employees(); track employee.id) {
+          <article class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[0.95rem] font-semibold text-brand-navy">{{ employee.name }}</p>
+                <p class="mt-1 text-[0.8125rem] text-slate-500">{{ employee.role }}</p>
+              </div>
+              <span
+                class="rounded-full px-2.5 py-1 text-[0.72rem] font-semibold"
+                [class]="stateClass(employee.state)"
+              >
+                {{ employee.state }}
+              </span>
+            </div>
+
+            <div class="mt-4">
+              <div class="flex items-center justify-between text-[0.8125rem] text-slate-500">
+                <span>Workload</span>
+                <span class="font-bold text-brand-navy">{{ employee.workloadPercent }}%</span>
+              </div>
+              <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  class="h-full rounded-full bg-linear-to-r from-brand-orange via-brand-pink to-brand-teal"
+                  [style.width.%]="employee.workloadPercent"
+                ></div>
+              </div>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              <div class="rounded-[0.9rem] bg-brand-cream/80 px-3 py-2.5">
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Shift
+                </p>
+                <p class="mt-2 text-[0.8125rem] font-semibold text-brand-navy">
+                  {{ employee.shift }}
+                </p>
+              </div>
+              <div class="rounded-[0.9rem] bg-brand-cream/80 px-3 py-2.5">
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Active jobs
+                </p>
+                <p class="mt-2 text-[0.8125rem] font-semibold text-brand-navy">
+                  {{ employee.activeOrders }}
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-4 text-[0.8125rem] leading-6 text-slate-500">
+              <p>{{ employee.email }}</p>
+              <p>{{ employee.phone }}</p>
+            </div>
+          </article>
+        }
+      </div>
+    </app-backoffice-card>
+
+    <app-backoffice-card title="Team notes">
+      <div class="space-y-3">
+        <div class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3.5">
+          <p class="font-bold text-brand-navy">Hand-off risk</p>
+          <p class="mt-2 text-[0.8125rem] leading-6 text-slate-500">Keep backup approval coverage between 11:00 and 13:00.</p>
+        </div>
+        <div class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3.5">
+          <p class="font-bold text-brand-navy">Training focus</p>
+          <p class="mt-2 text-[0.8125rem] leading-6 text-slate-500">Schedule foil refresher training after the restock lands.</p>
+        </div>
+        <div class="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3.5">
+          <p class="font-bold text-brand-navy">Coverage reminder</p>
+          <p class="mt-2 text-[0.8125rem] leading-6 text-slate-500">Keep production review ownership visible during lunch overlap.</p>
+        </div>
+      </div>
+    </app-backoffice-card>
+  </div>
+</div>

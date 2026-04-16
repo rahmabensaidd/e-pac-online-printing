@@ -1,0 +1,241 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+    [breadcrumb]="['Backoffice', 'Dashboard']"
+    title="Dashboard"
+    description="Today’s operations at a glance."
+  >
+    <div header-actions>
+      <a routerLink="/backoffice/orders" class="admin-focus-ring admin-btn-secondary">Orders</a>
+      <a
+        routerLink="/backoffice/orders"
+        [queryParams]="{ mode: 'new' }"
+        class="admin-focus-ring admin-btn-primary"
+      >
+        New order
+      </a>
+    </div>
+  </app-backoffice-section-header>
+
+  @if (isLoading()) {
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      @for (card of [1, 2, 3, 4]; track card) {
+        <div class="admin-panel h-28 animate-pulse rounded-[1rem] bg-slate-100"></div>
+      }
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_22rem]">
+      <div class="admin-panel h-[21rem] animate-pulse rounded-[1rem] bg-slate-100"></div>
+      <div class="space-y-4">
+        <div class="admin-panel h-44 animate-pulse rounded-[1rem] bg-slate-100"></div>
+        <div class="admin-panel h-40 animate-pulse rounded-[1rem] bg-slate-100"></div>
+      </div>
+    </div>
+
+    <div class="admin-panel h-[20rem] animate-pulse rounded-[1rem] bg-slate-100"></div>
+  } @else {
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      @for (metric of backofficeData.dashboardMetrics(); track metric.label) {
+        <app-backoffice-stat-card
+          [label]="metric.label"
+          [value]="metric.value"
+          [change]="metric.change"
+          [hint]="metric.hint"
+          [icon]="metric.icon"
+          [tone]="metric.tone"
+        />
+      }
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_22rem]">
+      <app-backoffice-card title="Operations" description="Queue, blockers, and shift readiness.">
+        <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12.5rem]">
+          <div class="grid gap-3 sm:grid-cols-3">
+            @for (area of focusAreas(); track area.label) {
+              <div class="rounded-[0.95rem] border border-slate-200/80 bg-white/72 p-3">
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {{ area.label }}
+                </p>
+                <p class="mt-2 text-[1.05rem] font-semibold text-brand-navy">{{ area.value }}</p>
+                <p class="mt-1 text-[0.75rem] text-slate-500">{{ area.hint }}</p>
+              </div>
+            }
+          </div>
+
+          <div class="rounded-[0.95rem] border border-slate-200/80 bg-slate-50/85 p-3.5">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Readiness
+            </p>
+            <div class="mt-2 flex items-end gap-2">
+              <p class="text-[1.9rem] font-semibold leading-none text-brand-navy">
+                {{ readinessScore() }}%
+              </p>
+              <span class="pb-1 text-[0.72rem] font-medium text-slate-500">
+                {{ readinessLabel() }}
+              </span>
+            </div>
+            <div class="mt-4 space-y-2">
+              @for (lane of deliveryMix(); track lane.label) {
+                <div class="flex items-center justify-between text-[0.75rem] text-slate-500">
+                  <span>{{ lane.label }}</span>
+                  <span class="font-semibold text-brand-navy">{{ lane.value }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200/70 pt-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <h3 class="text-[0.84rem] font-semibold text-brand-navy">Attention</h3>
+            <a
+              routerLink="/backoffice/orders"
+              class="admin-focus-ring text-[0.74rem] font-medium text-slate-500 transition hover:text-brand-navy"
+            >
+              Open queue
+            </a>
+          </div>
+
+          <div class="space-y-2.5">
+            @for (alert of attentionItems(); track alert.id) {
+              <a
+                [routerLink]="alert.route"
+                class="admin-focus-ring flex items-start gap-3 rounded-[0.95rem] border border-slate-200/70 bg-white/75 px-3 py-3 transition duration-200 hover:border-slate-300 hover:bg-white"
+              >
+                <span
+                  class="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                  [class]="
+                    alert.tone === 'danger'
+                      ? 'bg-brand-pink'
+                      : alert.tone === 'warning'
+                        ? 'bg-brand-orange'
+                        : 'bg-brand-teal'
+                  "
+                ></span>
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="text-[0.82rem] font-semibold text-brand-navy">{{ alert.title }}</p>
+                    <span class="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-slate-400">
+                      {{ alert.tone }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-[0.76rem] text-slate-500">{{ alert.description }}</p>
+                </div>
+              </a>
+            }
+          </div>
+        </div>
+      </app-backoffice-card>
+
+      <div class="space-y-4">
+        <app-backoffice-card title="Recent activity">
+          <div class="space-y-2.5">
+            @for (activity of backofficeData.recentActivity(); track activity.id) {
+              <a
+                [routerLink]="activity.route"
+                class="admin-focus-ring flex items-start gap-3 rounded-[0.95rem] border border-slate-200/70 bg-white/75 px-3 py-3 transition duration-200 hover:border-slate-300 hover:bg-white"
+              >
+                <span
+                  class="grid h-8 w-8 shrink-0 place-items-center rounded-[0.9rem]"
+                  [class]="toneClass(activity.tone)"
+                >
+                  <i class="fas" [class]="activity.icon"></i>
+                </span>
+                <div class="min-w-0">
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="truncate text-[0.8rem] font-semibold text-brand-navy">
+                      {{ activity.title }}
+                    </p>
+                    <span class="shrink-0 text-[0.68rem] font-medium text-slate-400">
+                      {{ activity.timestamp }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-[0.74rem] text-slate-500">{{ activity.description }}</p>
+                </div>
+              </a>
+            }
+          </div>
+        </app-backoffice-card>
+
+        <app-backoffice-card title="Quick actions">
+          <div class="space-y-2">
+            @for (action of quickActions(); track action.label) {
+              <a
+                [routerLink]="action.route"
+                [fragment]="action.fragment"
+                [queryParams]="action.queryParams"
+                class="admin-focus-ring flex items-center justify-between gap-3 rounded-[0.95rem] border border-slate-200/70 bg-white/75 px-3 py-3 transition duration-200 hover:border-slate-300 hover:bg-white"
+              >
+                <div class="flex min-w-0 items-center gap-3">
+                  <span
+                    class="grid h-8 w-8 place-items-center rounded-[0.9rem] bg-brand-cream text-brand-navy"
+                  >
+                    <i class="fas" [class]="action.icon"></i>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="text-[0.8rem] font-semibold text-brand-navy">{{ action.label }}</p>
+                    <p class="text-[0.74rem] text-slate-500">{{ action.meta }}</p>
+                  </div>
+                </div>
+                <i class="fas fa-arrow-right text-[0.72rem] text-slate-300"></i>
+              </a>
+            }
+          </div>
+        </app-backoffice-card>
+      </div>
+    </div>
+
+    <app-backoffice-card title="Recent orders" description="Latest production requests.">
+      <div
+        class="hidden items-center gap-3 border-b border-slate-200/70 px-1 pb-2 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-slate-400 md:grid md:grid-cols-[minmax(0,1.4fr)_0.95fr_0.8fr_0.8fr_auto]"
+      >
+        <span>Order</span>
+        <span>Owner</span>
+        <span>Status</span>
+        <span>Due</span>
+        <span class="text-right">Total</span>
+      </div>
+
+      <div class="space-y-2.5">
+        @for (order of backofficeData.recentOrders(); track order.id) {
+          <a
+            routerLink="/backoffice/orders"
+            class="admin-focus-ring grid gap-3 rounded-[0.95rem] border border-slate-200/70 bg-white/75 px-3 py-3 transition duration-200 hover:border-slate-300 hover:bg-white md:grid-cols-[minmax(0,1.4fr)_0.95fr_0.8fr_0.8fr_auto] md:items-center"
+          >
+            <div class="min-w-0">
+              <p class="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {{ order.reference }}
+              </p>
+              <p class="mt-1 truncate text-[0.84rem] font-semibold text-brand-navy">
+                {{ order.companyName }}
+              </p>
+              <p class="mt-1 truncate text-[0.74rem] text-slate-500">{{ order.customerName }}</p>
+            </div>
+
+            <div class="text-[0.78rem] text-slate-500">
+              <p class="font-medium text-brand-navy">{{ order.assignee }}</p>
+              <p class="mt-1">{{ order.items }} items</p>
+            </div>
+
+            <div>
+              <span
+                class="inline-flex rounded-full border px-2 py-1 text-[0.7rem] font-semibold"
+                [class]="statusClass(order.status)"
+              >
+                {{ order.status }}
+              </span>
+            </div>
+
+            <div class="text-[0.78rem] text-slate-500">
+              <p class="font-medium text-brand-navy">{{ formatShortDate(order.dueDate) }}</p>
+              <p class="mt-1">{{ order.shippingMethod }}</p>
+            </div>
+
+            <p class="text-left text-[0.84rem] font-semibold text-brand-navy md:text-right">
+              {{ formatCurrency(order.total) }}
+            </p>
+          </a>
+        }
+      </div>
+    </app-backoffice-card>
+  }
+</div>

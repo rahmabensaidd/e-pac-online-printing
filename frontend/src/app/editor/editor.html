@@ -1,0 +1,159 @@
+<div
+    class="editor-shell"
+    [style.gridTemplateColumns]="isLibraryPanelOpen ? '100px 340px minmax(0, 1fr)' : '100px minmax(0, 1fr)'"
+>
+    <aside class="library-rail">
+        <div class="library-rail-brand">LIB</div>
+
+        <div class="library-rail-tabs">
+            @for (tab of libraryTabs; track tab.id) {
+                <button
+                        type="button"
+                        class="library-rail-tab"
+                        [class.is-active]="isTabActive(tab.id)"
+                        [attr.aria-label]="tab.title"
+                        [title]="tab.title"
+                        (click)="selectLibraryTab(tab.id)"
+                >
+                    <span class="library-rail-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                            @switch (tab.icon) {
+                                @case ('blanks') {
+                                    <path d="M4 5.5h7v6H4z" />
+                                    <path d="M13 5.5h7v6h-7z" />
+                                    <path d="M4 13.5h7V20H4z" />
+                                    <path d="M13 13.5h7V20h-7z" />
+                                }
+                                @case ('myTemplates') {
+                                    <path d="M6 4h9l3 3v13H6z" />
+                                    <path d="M15 4v4h4" />
+                                    <path d="M9 12h6" />
+                                    <path d="M9 16h4" />
+                                }
+                                @case ('published') {
+                                    <path d="M20 7 9 18l-5-5" />
+                                }
+                                @case ('templates') {
+                                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                                    <path d="M8 8h8" />
+                                    <path d="M8 12h8" />
+                                    <path d="M8 16h5" />
+                                }
+                                @case ('images') {
+                                    <rect x="4" y="5" width="16" height="14" rx="2" />
+                                    <circle cx="9" cy="10" r="1.5" />
+                                    <path d="m6 17 4-4 3 3 2-2 3 3" />
+                                }
+                                @case ('text') {
+                                    <path d="M5 6h14" />
+                                    <path d="M12 6v12" />
+                                    <path d="M8 18h8" />
+                                }
+                                @case ('shapes') {
+                                    <circle cx="8" cy="8" r="3" />
+                                    <path d="m14 6 4 4-4 4-4-4z" />
+                                    <path d="M7 17h10" />
+                                }
+                                @case ('stickers') {
+                                    <path d="M7 4h10a3 3 0 0 1 3 3v5c0 4.5-3.7 8-8.2 8H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+                                    <path d="M14 20c0-3 2-5 6-5" />
+                                }
+                            }
+                        </svg>
+                    </span>
+                    <span class="library-rail-label">{{ tab.title }}</span>
+                </button>
+            }
+        </div>
+    </aside>
+
+    @if (isLibraryPanelOpen) {
+        <aside class="library-drawer">
+            <div class="library-drawer-header">
+                <div>
+                    <p class="library-eyebrow">Local + CE.SDK</p>
+                    <h2 class="library-title">{{ getActiveTab().title }}</h2>
+                </div>
+                <button
+                        type="button"
+                        class="library-close"
+                        aria-label="Close library"
+                        title="Close library"
+                        (click)="closeLibraryPanel()"
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                        <path d="M6 6 18 18" />
+                        <path d="M18 6 6 18" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="library-panel">
+                @if (isLibraryLoading) {
+                    <div class="library-state">Loading assets...</div>
+                } @else if (libraryError) {
+                    <div class="library-state library-state-error">{{ libraryError }}</div>
+                } @else if (libraryAssets.length === 0) {
+                    <div class="library-state">
+                        @if (currentLibraryEntry === 'system-blanks') {
+                            No system blanks found. Add your blanks to /cesdk/1.67.0/ly.img.template/blanks/
+                        } @else if (currentLibraryEntry === 'my-templates') {
+                            No templates yet. Select a published template and click "Save Template".
+                        } @else if (currentLibraryEntry === 'published') {
+                            No published templates available yet.
+                        } @else {
+                            No assets found in this library.
+                        }
+                    </div>
+                } @else {
+                    <div class="library-grid">
+                        @for (asset of libraryAssets; track asset.id) {
+                            <button
+                                    type="button"
+                                    class="library-card"
+                                    (click)="applyLibraryAsset(asset)"
+                                    [title]="asset.description || asset.label || asset.id"
+                            >
+                                @if (asset.meta?.thumbUri && asset.meta.thumbUri !== '') {
+                                    <img
+                                            class="library-thumb"
+                                            [src]="asset.meta.thumbUri"
+                                            [alt]="asset.label || asset.id"
+                                            loading="lazy"
+                                    />
+                                } @else {
+                                    <div class="library-thumb library-thumb-placeholder">
+                                        {{ (asset.label || asset.id || '?').slice(0, 1) }}
+                                    </div>
+                                }
+                                <span class="library-label">{{ asset.label || asset.id }}</span>
+                                @if (asset.family) {
+                                    <span class="library-badge">{{ asset.family }}</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (libraryNotice) {
+                <div class="library-state">{{ libraryNotice }}</div>
+            }
+        </aside>
+    }
+
+    <div class="editor-canvas">
+        <div id="editor"></div>
+    </div>
+</div>
+
+<app-book-preview-3d-floating
+        class="editor-floating-preview"
+        [bindingType]="bookBindingType"
+        [coverColor]="bookCoverColor"
+        [bookWidth]="bookWidth"
+        [bookHeight]="bookHeight"
+        [bookThickness]="bookThickness"
+        [textures]="previewTextures"
+        [dragBoundarySelector]="'body'"
+></app-book-preview-3d-floating>

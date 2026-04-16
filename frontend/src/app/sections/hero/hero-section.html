@@ -1,0 +1,105 @@
+<section class="relative overflow-hidden min-h-[calc(100vh-5rem)]">
+  <div class="absolute inset-0 hero-pattern opacity-60 z-0"></div>
+
+  <!-- blobs -->
+  <div class="absolute -top-28 -left-28 w-105 h-105 bg-brand-orange/30 blob z-0 pointer-events-none" aria-hidden="true"></div>
+  <div
+    class="absolute right-0 bottom-0 w-130 h-130 bg-brand-teal/30 blob z-0 pointer-events-none translate-x-[34%] translate-y-[34%] sm:translate-x-[30%] sm:translate-y-[30%]"
+    aria-hidden="true"
+  ></div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-28 relative z-10">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <div appReveal [revealDelay]="40" [revealDistance]="28">
+        <div class="inline-flex items-center gap-2 bg-white/70 border border-gray-200 px-4 py-2 rounded-full mb-6">
+          <span class="w-2.5 h-2.5 rounded-full bg-brand-lime"></span>
+          <span class="text-sm font-bold">Print Configurator + Marketplace</span>
+        </div>
+
+        <h1 class="font-display font-extrabold text-5xl lg:text-6xl leading-tight">
+          Personalize. Estimate.
+          <span class="gradient-text">Print.</span>
+        </h1>
+
+        <p class="text-gray-600 text-lg mt-6 max-w-xl">
+          Create your print product, see real-time cost updates, and place production-ready orders with confidence.
+        </p>
+
+        <div class="flex flex-wrap gap-4 mt-10">
+          <a
+            routerLink="/price-simulator"
+            class="inline-flex items-center bg-brand-navy text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-brand-orange transition-all transform hover:scale-105 shadow-xl"
+          >
+            <i class="fas fa-print mr-2"></i>
+            Start Your Print
+          </a>
+
+          <a
+            routerLink="/marketplace"
+            class="inline-flex items-center bg-white border-2 border-brand-navy text-brand-navy px-8 py-4 rounded-full font-bold text-lg hover:bg-brand-navy hover:text-white transition-all"
+          >
+            Browse Catalog
+          </a>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mt-12">
+          <div class="bg-white/70 border border-gray-200 rounded-2xl p-4">
+            <div class="font-bold text-xl">Live</div>
+            <div class="text-sm text-gray-600">Instant price simulation</div>
+          </div>
+          <div class="bg-white/70 border border-gray-200 rounded-2xl p-4">
+            <div class="font-bold text-xl">Specs</div>
+            <div class="text-sm text-gray-600">Production-grade options</div>
+          </div>
+          <div class="bg-white/70 border border-gray-200 rounded-2xl p-4">
+            <div class="font-bold text-xl">Clear</div>
+            <div class="text-sm text-gray-600">Transparent cost breakdown</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative float-soft" appReveal [revealOrigin]="'right'" [revealDelay]="140" [revealDistance]="34">
+        <div class="absolute -inset-1 bg-linear-to-r from-brand-orange via-brand-pink to-brand-teal rounded-3xl blur opacity-25"></div>
+        <div class="relative bg-white rounded-3xl p-8 shadow-2xl border border-gray-100">
+          <div class="flex items-center justify-between mb-6">
+            <div class="font-display font-extrabold text-xl">Live Price Simulator</div>
+            <span class="px-3 py-1 rounded-full text-sm font-bold bg-brand-lime/30 text-brand-navy">Transparent pricing</span>
+          </div>
+
+          <div class="rounded-2xl p-6 bg-brand-cream border border-gray-200">
+            <div class="h-44 rounded-2xl bg-white border border-gray-200 grid place-items-center">
+              <div class="text-center">
+                <div class="font-display font-extrabold text-2xl">Your print order</div>
+                <div class="text-sm text-gray-500">Format, paper, quantity</div>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-1.5 text-sm text-gray-600">
+              <div class="flex items-center justify-between">
+                <span>Base print</span>
+                <span>$9.50</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Paper finish</span>
+                <span>$2.00</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Quantity adjustment</span>
+                <span>$1.00</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-6">
+              <div class="text-sm text-gray-600">Estimated total</div>
+              <div class="text-2xl font-extrabold text-brand-orange">$12.50</div>
+            </div>
+          </div>
+
+          <div class="mt-6 text-sm text-gray-600">
+            Update specifications and quantity to simulate cost in real time before ordering.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "assets": [
+    {
+      "id": "wrap-1p-blank",
+      "label": "WRAP 1P Blank",
+      "description": "Blank template for 1-page wrap book",
+      "family": "WRAP_1P",
+      "type": "wrap",
+      "pages": 1,
+      "meta": {
+        "uri": "/cesdk/1.67.0/ly.img.template/blanks/WRAP_1P_BLANK/scene.scene",
+        "thumbUri": "/cesdk/1.67.0/ly.img.template/blanks/WRAP_1P_BLANK/thumbnail.jpg",
+        "width": 210,
+        "height": 297,
+        "thickness": 20
+      }
+    },
+    {
+      "id": "wrap-2p-blank",
+      "label": "WRAP 2P Blank",
+      "description": "Blank template for 2-page wrap book",
+      "family": "WRAP_2P",
+      "type": "wrap",
+      "pages": 2,
+      "meta": {
+        "uri": "/cesdk/1.67.0/ly.img.template/blanks/WRAP_2P_BLANK/scene.scene",
+        "thumbUri": "/cesdk/1.67.0/ly.img.template/blanks/WRAP_2P_BLANK/thumbnail.jpg",
+        "width": 210,
+        "height": 297,
+        "thickness": 20
+      }
+    },
+    {
+      "id": "flat-2p-blank",
+      "label": "FLAT 2P Blank",
+      "description": "Blank template for 2-page flat book",
+      "family": "FLAT_2P",
+      "type": "flat",
+      "pages": 2,
+      "meta": {
+        "uri": "/cesdk/1.67.0/ly.img.template/blanks/FLAT_2P_BLANK/scene.scene",
+        "thumbUri": "/cesdk/1.67.0/ly.img.template/blanks/FLAT_2P_BLANK/thumbnail.jpg",
+        "width": 210,
+        "height": 297
+      }
+    },
+    {
+      "id": "flat-4p-blank",
+      "label": "FLAT 4P Blank",
+      "description": "Blank template for 4-page flat book",
+      "family": "FLAT_4P",
+      "type": "flat",
+      "pages": 4,
+      "meta": {
+        "uri": "/cesdk/1.67.0/ly.img.template/blanks/FLAT_4P_BLANK/scene.scene",
+        "thumbUri": "/cesdk/1.67.0/ly.img.template/blanks/FLAT_4P_BLANK/thumbnail.jpg",
+        "width": 210,
+        "height": 297
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "pages": [
+    {
+      "id": "front-cover",
+      "name": "Front Cover",
+      "width": 210,
+      "height": 297,
+      "backgroundColor": "#FFFFFF",
+      "blocks": [
+        {
+          "id": "title-placeholder",
+          "type": "text",
+          "x": 20,
+          "y": 80,
+          "width": 170,
+          "height": 50,
+          "text": "TITLE ZONE",
+          "fontSize": 28,
+          "fontFamily": "Arial, Helvetica, sans-serif",
+          "fontWeight": "bold",
+          "color": "#000000",
+          "alignment": "center"
+        },
+        {
+          "id": "author-placeholder",
+          "type": "text",
+          "x": 20,
+          "y": 140,
+          "width": 170,
+          "height": 30,
+          "text": "Author Name",
+          "fontSize": 16,
+          "fontFamily": "Arial, Helvetica, sans-serif",
+          "color": "#666666",
+          "alignment": "center"
+        },
+        {
+          "id": "image-placeholder",
+          "type": "image",
+          "x": 30,
+          "y": 190,
+          "width": 150,
+          "height": 80,
+          "placeholder": true
+        },
+        {
+          "id": "pnl-placeholder",
+          "type": "text",
+          "x": 20,
+          "y": 280,
+          "width": 170,
+          "height": 15,
+          "text": "PNL: ___________",
+          "fontSize": 10,
+          "fontFamily": "Arial, Helvetica, sans-serif",
+          "color": "#999999",
+          "alignment": "center"
+        }
+      ]
+    }
+  ]
+}

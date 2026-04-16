@@ -1,0 +1,175 @@
+<section class="relative min-h-[calc(100vh-10rem)] overflow-hidden bg-brand-cream py-10 sm:py-14">
+    <div class="absolute inset-0 hero-pattern opacity-20"></div>
+    <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <header class="rounded-3xl border border-gray-200/80 bg-white/90 p-6 shadow-lg sm:p-8">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">User Space</p>
+            <h1 class="mt-1 font-display text-4xl font-extrabold text-brand-navy">Order Tracking</h1>
+            <p class="mt-3 text-gray-600">Track custom production and shipping progress in one place.</p>
+        </header>
+
+        @if (loading()) {
+            <div class="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">
+                Loading your orders...
+            </div>
+        } @else if (error()) {
+            <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ error() }}
+            </div>
+        } @else if (orders().length === 0) {
+            <div class="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-8 text-center">
+                <p class="text-base font-semibold text-brand-navy">You do not have orders yet.</p>
+                <a
+                        routerLink="/marketplace"
+                        class="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-orange px-5 py-3 font-extrabold text-white transition hover:bg-brand-navy"
+                >
+                    Go to Marketplace
+                </a>
+            </div>
+        } @else {
+            <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Select order</label>
+                <select
+                        class="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+                        [value]="selectedOrderId() ?? ''"
+                        (change)="onOrderChange($event)"
+                >
+                    @for (order of orders(); track order.orderId) {
+                        <option [value]="order.orderId">
+                            {{ order.reference || ('#' + order.orderId) }} · {{ order.orderDate | date:'mediumDate' }} · {{ order.totalAmount | currency:'USD':'symbol':'1.2-2' }}
+                        </option>
+                    }
+                </select>
+            </div>
+
+            @if (selectedOrder(); as order) {
+                <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Order number</p>
+                            <p class="mt-1 text-sm font-semibold text-brand-navy">{{ tracking()?.orderNumber || order.reference || ('#' + order.orderId) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Order date</p>
+                            <p class="mt-1 text-sm font-semibold text-brand-navy">{{ order.orderDate | date:'mediumDate' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</p>
+                            <p class="mt-1 text-sm font-semibold text-brand-navy">{{ tracking()?.priority || order.priority || 'NORMAL' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Global status</p>
+                            <p class="mt-1 text-sm font-semibold text-brand-navy">{{ tracking()?.globalStatus || order.status }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Shipping status</p>
+                            <p class="mt-1 text-sm font-semibold text-brand-navy">{{ tracking()?.shippingStatus || order.shippingStatus || 'N/A' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Carrier</p>
+                            <p class="mt-1 text-sm font-semibold text-brand-navy">{{ tracking()?.carrier || order.carrier || 'N/A' }}</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tracking number</p>
+                            <p class="mt-1 text-sm font-semibold text-brand-navy">{{ tracking()?.trackingNumber || order.trackingNumber || 'N/A' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 flex flex-wrap gap-3">
+                        <button
+                                type="button"
+                                (click)="onDownloadInvoice()"
+                                class="inline-flex items-center justify-center rounded-xl bg-brand-navy px-4 py-2 font-bold text-white transition hover:bg-brand-orange disabled:cursor-not-allowed disabled:opacity-60"
+                                [disabled]="downloadingInvoice()"
+                        >
+                            {{ downloadingInvoice() ? 'Downloading...' : 'Download invoice PDF' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid gap-5 xl:grid-cols-2">
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-lg font-bold text-brand-navy">Production tracking</h2>
+                        <p class="mt-1 text-sm text-slate-600">Only custom books are tracked for production.</p>
+                        @if (loadingTracking()) {
+                            <p class="mt-4 text-sm text-slate-500">Loading production details...</p>
+                        } @else if (productionLines().length === 0) {
+                            <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                                No custom production required. All items are ready for shipping.
+                            </div>
+                        } @else {
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="min-w-full text-left text-sm">
+                                    <thead class="text-xs uppercase tracking-wide text-slate-500">
+                                    <tr>
+                                        <th class="px-2 py-2">Book</th>
+                                        <th class="px-2 py-2">Type</th>
+                                        <th class="px-2 py-2">Quantity</th>
+                                        <th class="px-2 py-2">Production status</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (line of productionLines(); track line.orderLineId) {
+                                            <tr class="border-t border-slate-200">
+                                                <td class="px-2 py-2 font-semibold text-brand-navy">{{ line.bookTitle }}</td>
+                                                <td class="px-2 py-2">{{ line.type }}</td>
+                                                <td class="px-2 py-2">{{ line.quantity }}</td>
+                                                <td class="px-2 py-2">{{ line.productionStatus }}</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </article>
+
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-lg font-bold text-brand-navy">Shipping tracking</h2>
+                        <p class="mt-1 text-sm text-slate-600">Includes marketplace and custom items.</p>
+                        @if (loadingTracking()) {
+                            <p class="mt-4 text-sm text-slate-500">Loading shipping details...</p>
+                        } @else {
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="min-w-full text-left text-sm">
+                                    <thead class="text-xs uppercase tracking-wide text-slate-500">
+                                    <tr>
+                                        <th class="px-2 py-2">Book</th>
+                                        <th class="px-2 py-2">Type</th>
+                                        <th class="px-2 py-2">Qty</th>
+                                        <th class="px-2 py-2">Status</th>
+                                        <th class="px-2 py-2 text-right">Total</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (line of shippingLines(); track line.orderLineId) {
+                                            <tr class="border-t border-slate-200">
+                                                <td class="px-2 py-2 font-semibold text-brand-navy">{{ line.bookTitle }}</td>
+                                                <td class="px-2 py-2">
+                          <span
+                                  class="rounded-full px-2 py-1 text-xs font-semibold"
+                                  [class]="line.type === 'Custom' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'"
+                          >
+                            {{ line.type }}
+                          </span>
+                                                </td>
+                                                <td class="px-2 py-2">{{ line.quantity }}</td>
+                                                <td class="px-2 py-2">
+                                                    {{ line.productionStatus }}
+                                                    @if (line.estimatedPrice) {
+                                                        <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Estimated</span>
+                                                    }
+                                                </td>
+                                                <td class="px-2 py-2 text-right font-semibold text-brand-navy">
+                                                    {{ line.totalPrice | currency:'USD':'symbol':'1.2-2' }}
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </article>
+                </div>
+            }
+        }
+    </div>
+</section>

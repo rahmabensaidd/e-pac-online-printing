@@ -1,0 +1,907 @@
+<div class="space-y-6">
+    <app-backoffice-section-header
+            [breadcrumb]="['Backoffice', 'Inventory']"
+            title="Inventory coverage"
+            description="Stock health and incoming supply."
+    />
+
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <app-backoffice-stat-card
+                label="Materials tracked"
+                [value]="backofficeData.inventory().length.toString()"
+                change="Tracked"
+                hint="total records"
+                icon="fa-boxes-stacked"
+                tone="neutral"
+        />
+        <app-backoffice-stat-card
+                label="Low stock"
+                [value]="backofficeData.lowStockItems().toString()"
+                change="Needs purchase"
+                hint="below target"
+                icon="fa-triangle-exclamation"
+                tone="warning"
+        />
+        <app-backoffice-stat-card
+                label="Average coverage"
+                [value]="warehouseCoverage() + ' days'"
+                change="Average"
+                hint="all materials"
+                icon="fa-warehouse"
+                tone="positive"
+        />
+        <app-backoffice-stat-card
+                label="Incoming units"
+                [value]="incomingUnitsTotal().toString()"
+                change="Booked"
+                hint="already expected"
+                icon="fa-truck-ramp-box"
+                tone="neutral"
+        />
+    </div>
+
+    <div header-actions>
+        <button type="button" class="admin-focus-ring admin-btn-primary" (click)="openCreateDrawer()">
+            New book
+        </button>
+    </div>
+
+    <div class="w-full">
+        <app-bookstable
+                title="Books overview"
+                description="Search and manage books in the catalog."
+                [columns]="bookColumns"
+                [rows]="bookRows()"
+                [rowActions]="bookActions"
+                [searchKeys]="['title', 'authors', 'description', 'bindingType']"
+                (rowAction)="handleBookRowAction($event)"
+        />
+
+        @if (drawerOpen()) {
+            <div class="fixed inset-0 z-[9998] bg-brand-navy/35"></div>
+
+            <div class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 lg:p-8">
+                <section
+                        class="flex h-[95vh] w-[96vw] max-w-[1850px] flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl"
+                        role="dialog"
+                        aria-modal="true"
+                        [attr.aria-label]="editingBookId() ? 'Edit book' : 'Create book'"
+                >
+                    <!-- Header -->
+                    <div class="flex items-center justify-between border-b border-slate-200/70 px-4 py-1.5">
+                        <div class="flex items-end gap-3">
+                            <h2 class="text-[1.05rem] font-semibold text-brand-navy">
+                                {{ editingBookId() ? 'Edit book' : 'Create a new book' }}
+                            </h2>
+                            <p class="text-[0.72rem] text-slate-500">
+                                Step {{ currentStep() + 1 }} / {{ totalVisibleSteps }}
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button
+                                    type="button"
+                                    class="admin-focus-ring admin-icon-button"
+                                    (click)="prevStep()"
+                                    [disabled]="currentStep() === 0"
+                                    aria-label="Previous step"
+                            >
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+
+                            <button
+                                    type="button"
+                                    class="admin-focus-ring admin-icon-button"
+                                    (click)="nextStep()"
+                                    [disabled]="currentStep() === totalVisibleSteps - 1"
+                                    aria-label="Next step"
+                            >
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+
+                            <button
+                                    type="button"
+                                    class="admin-focus-ring admin-icon-button"
+                                    (click)="closeDrawer()"
+                                    aria-label="Close book editor"
+                            >
+                                <i class="fas fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step tabs -->
+                    <div class="border-b border-slate-200/70 bg-slate-50 px-4 py-1">
+                        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            @for (step of visibleCreationSteps; track step.id; let i = $index) {
+                                <button
+                                        type="button"
+                                        class="text-[0.6rem] font-semibold uppercase tracking-[0.08em] transition"
+                                        [class.text-brand-navy]="currentStep() === i"
+                                        [class.text-slate-400]="currentStep() !== i"
+                                        (click)="goToStep(i)"
+                                >
+                                    {{ i + 1 }} • {{ step.label }}
+                                </button>
+                            }
+                        </div>
+
+                        <div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-slate-200">
+                            <div
+                                    class="h-full rounded-full bg-brand-navy transition-all duration-300 ease-out"
+                                    [style.width.%]="stepProgressPercent"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <form
+                            class="flex min-h-0 flex-1 flex-col overflow-hidden"
+                            [formGroup]="bookForm"
+                            (ngSubmit)="onSubmit()"
+                            novalidate
+                    >
+                        <div class="flex-1 overflow-y-auto px-4 py-3">
+                            <div class="mx-auto w-full space-y-5">
+
+                                <!-- STEP 1 : ATTRIBUTS -->
+                                @if (isCurrentStep('attributes')) {
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Basic Information</h3>
+                                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                            <div class="md:col-span-2 xl:col-span-4">
+                                                <label class="admin-label" for="book-title">Title *</label>
+                                                <input id="book-title" class="admin-input" formControlName="title" placeholder="Enter book title" />
+                                                @if (showError('title')) {
+                                                    <p class="admin-error">Title is required.</p>
+                                                }
+                                            </div>
+
+                                            <div class="md:col-span-2 xl:col-span-4">
+                                                <label class="admin-label" for="book-description">Description</label>
+                                                <textarea
+                                                        id="book-description"
+                                                        rows="3"
+                                                        class="admin-textarea"
+                                                        formControlName="description"
+                                                        placeholder="Enter book description"
+                                                ></textarea>
+                                            </div>
+
+                                            <div class="md:col-span-1 xl:col-span-2">
+                                                <label class="admin-label" for="book-authors">Authors *</label>
+                                                <input
+                                                        id="book-authors"
+                                                        class="admin-input"
+                                                        formControlName="authors"
+                                                        placeholder="Enter authors (comma separated)"
+                                                />
+                                                @if (showError('authors')) {
+                                                    <p class="admin-error">At least one author is required.</p>
+                                                }
+                                            </div>
+
+                                            <div class="md:col-span-1 xl:col-span-2">
+                                                <label class="admin-label" for="book-binding-type">Binding Type *</label>
+                                                <select id="book-binding-type" class="admin-select" formControlName="bindingType">
+                                                    <option value="">Select binding type</option>
+                                                    <option value="CASEBIND">Casebind</option>
+                                                    <option value="CASEBIND_INS">Casebind with insert</option>
+                                                    <option value="CASEBIND_ES">Casebind with Endsheet</option>
+                                                    <option value="CASEBIND_ES_INS">Casebind with Endsheet and insert</option>
+                                                    <option value="PERFECT">Perfect</option>
+                                                    <option value="PERFECT_INS">Perfect with insert</option>
+                                                    <option value="PERFECT_NC">Perfect (No Cover)</option>
+                                                    <option value="PERFECT_NC_INS">Perfect with insert (No Cover)</option>
+                                                    <option value="COILHARD">Coil Hard</option>
+                                                    <option value="COILHARD_INS">Coil Hard with insert</option>
+                                                    <option value="COILHARD_TAB">Coil Hard with Tab</option>
+                                                    <option value="COILSOFT">Coil Soft</option>
+                                                    <option value="LOOSELEAF">Looseleaf</option>
+                                                    <option value="LOOSELEAF_INS">Looseleaf with insert</option>
+                                                    <option value="LOOSELEAF_NC">Looseleaf (No Cover)</option>
+                                                    <option value="LOOSELEAF_NC_INS">Looseleaf (No Cover) with insert</option>
+                                                    <option value="LOOSELEAF_NC_Tab">Looseleaf (No Cover) with tab</option>
+                                                    <option value="SS">Saddle Stitch</option>
+                                                    <option value="CARD">Card</option>
+                                                    <option value="DIVIDER_SHEET">Divider Sheet</option>
+                                                    <option value="NONE">None</option>
+                                                </select>
+                                                @if (showError('bindingType')) {
+                                                    <p class="admin-error">Binding type is required.</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Stock & Pricing</h3>
+                                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                            <div>
+                                                <label class="admin-label" for="book-quantity">Quantity *</label>
+                                                <input
+                                                        id="book-quantity"
+                                                        type="number"
+                                                        min="0"
+                                                        class="admin-input"
+                                                        formControlName="quantity"
+                                                />
+                                                @if (showError('quantity')) {
+                                                    <p class="admin-error">Quantity must be 0 or greater.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-sale-price">Sale Price ($) *</label>
+                                                <input
+                                                        id="book-sale-price"
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        class="admin-input"
+                                                        formControlName="salePrice"
+                                                />
+                                                @if (showError('salePrice')) {
+                                                    <p class="admin-error">Sale price must be 0 or greater.</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Physical Specifications</h3>
+                                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                            <div>
+                                                <label class="admin-label" for="book-production-page">Production Page *</label>
+                                                <input
+                                                        id="book-production-page"
+                                                        type="number"
+                                                        min="1"
+                                                        class="admin-input"
+                                                        formControlName="productionPage"
+                                                />
+                                                @if (showError('productionPage')) {
+                                                    <p class="admin-error">Production page must be at least 1.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-height">Height (cm) *</label>
+                                                <input
+                                                        id="book-height"
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        class="admin-input"
+                                                        formControlName="height"
+                                                />
+                                                @if (showError('height')) {
+                                                    <p class="admin-error">Height is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-width">Width (cm) *</label>
+                                                <input
+                                                        id="book-width"
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        class="admin-input"
+                                                        formControlName="width"
+                                                />
+                                                @if (showError('width')) {
+                                                    <p class="admin-error">Width is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-thickness">Thickness (cm) *</label>
+                                                <input
+                                                        id="book-thickness"
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        class="admin-input"
+                                                        formControlName="thickness"
+                                                />
+                                                @if (showError('thickness')) {
+                                                    <p class="admin-error">Thickness is required.</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Print Specifications</h3>
+                                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                            <div>
+                                                <label class="admin-label" for="book-text-paper-type">Text Paper Type *</label>
+                                                <select id="book-text-paper-type" class="admin-select" formControlName="textPaperType">
+                                                    <option value="">Select paper type</option>
+                                                    <option value="NONE">None</option>
+                                                    <option value="PT_10_C2S">10PT C2S</option>
+                                                    <option value="PT_12_C2S">12PT C2S</option>
+                                                    <option value="PAP1_70">PAP1 70</option>
+                                                    <option value="PAP1_75">PAP1 75</option>
+                                                    <option value="LETSGO_MATTE_115">Letsgo Matte 115</option>
+                                                    <option value="LETSGO_MATTE_90">Letsgo Matte 90</option>
+                                                    <option value="BIRCH_W40_TB">Birch W40 TB</option>
+                                                    <option value="GLOSS_80_TEXT">80 Gloss Text</option>
+                                                    <option value="GLOSS_80_COVER">80 Gloss Cover</option>
+                                                </select>
+                                                @if (showError('textPaperType')) {
+                                                    <p class="admin-error">Text paper type is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-text-color">Text Color *</label>
+                                                <select id="book-text-color" class="admin-select" formControlName="textColor">
+                                                    <option value="">Select text color</option>
+                                                    <option value="ONE_ONE">1/1</option>
+                                                    <option value="FOUR_FOUR">4/4</option>
+                                                </select>
+                                                @if (showError('textColor')) {
+                                                    <p class="admin-error">Text color is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-cover-paper-type">Cover Paper Type *</label>
+                                                <select id="book-cover-paper-type" class="admin-select" formControlName="coverPaperType">
+                                                    <option value="">Select cover paper type</option>
+                                                    <option value="NONE">None</option>
+                                                    <option value="GLOSS_TEXT_100">100 Gloss Text</option>
+                                                    <option value="GLOSS_TEXT_80">80 Gloss Text</option>
+                                                    <option value="GLOSS_COVER_80">80 Gloss Cover</option>
+                                                    <option value="PT10_C1S">10PT C1S</option>
+                                                    <option value="PT12_C1S">12PT C1S</option>
+                                                    <option value="PT16_C1S">16PT C1S</option>
+                                                    <option value="PT10_C2S">10PT C2S</option>
+                                                    <option value="PT12_C2S">12PT C2S</option>
+                                                </select>
+                                                @if (showError('coverPaperType')) {
+                                                    <p class="admin-error">Cover paper type is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-cover-finish-type">Cover Finish *</label>
+                                                <select id="book-cover-finish-type" class="admin-select" formControlName="coverFinishType">
+                                                    <option value="">Select finish type</option>
+                                                    <option value="LAYFLAT_GLOSS">Layflat Gloss</option>
+                                                    <option value="LAYFLAT_MATTE_SCUFF_FREE">Layflat Matte Scuff-Free</option>
+                                                    <option value="LAYFLAT_MATTE">Layflat Matte</option>
+                                                    <option value="MATT">Matt</option>
+                                                </select>
+                                                @if (showError('coverFinishType')) {
+                                                    <p class="admin-error">Cover finish type is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-cover-color">Cover Color *</label>
+                                                <select id="book-cover-color" class="admin-select" formControlName="coverColor">
+                                                    <option value="">Select cover color</option>
+                                                    <option value="FOUR_FOUR">4/4</option>
+                                                    <option value="FOUR_ZERO">4/0</option>
+                                                    <option value="FOUR_ONE">4/1</option>
+                                                    <option value="ZERO_ZERO">0/0</option>
+                                                    <option value="ONE_ZERO">1/0</option>
+                                                </select>
+                                                @if (showError('coverColor')) {
+                                                    <p class="admin-error">Cover color is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-cover-size">Cover Size *</label>
+                                                <select id="book-cover-size" class="admin-select" formControlName="coverSize">
+                                                    <option value="">Select cover size</option>
+                                                    <option value="L">L</option>
+                                                    <option value="M">M</option>
+                                                    <option value="XL">XL</option>
+                                                    <option value="XXL">XXL</option>
+                                                    <option value="NONE">None</option>
+                                                </select>
+                                                @if (showError('coverSize')) {
+                                                    <p class="admin-error">Cover size is required.</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Options & Finishing</h3>
+                                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                            <div>
+                                                <label class="admin-label" for="book-priority-level">Priority Level *</label>
+                                                <select id="book-priority-level" class="admin-select" formControlName="priorityLevel">
+                                                    <option value="">Select priority</option>
+                                                    <option value="NORMAL">Normal</option>
+                                                    <option value="HIGH1">High 1</option>
+                                                    <option value="HIGH2">High 2</option>
+                                                    <option value="HIGH3">High 3</option>
+                                                </select>
+                                                @if (showError('priorityLevel')) {
+                                                    <p class="admin-error">Priority level is required.</p>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <label class="admin-label" for="book-head-and-tail">Head and Tail *</label>
+                                                <select id="book-head-and-tail" class="admin-select" formControlName="headAndTail">
+                                                    <option value="">Select head and tail</option>
+                                                    <option value="BLACK_AND_WHITE">Black & White</option>
+                                                    <option value="WHITE">White</option>
+                                                    <option value="NONE">None</option>
+                                                </select>
+                                                @if (showError('headAndTail')) {
+                                                    <p class="admin-error">Head and tail is required.</p>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="securityLabel" />
+                                                <span>Security Label</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="hasCoil" />
+                                                <span>Has Coil</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="hasInsert" />
+                                                <span>Has Insert</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="hasTab" />
+                                                <span>Has Tab</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="hasBackcover" />
+                                                <span>Has Backcover</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="perf" />
+                                                <span>Perf</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="doubleSidedCover" />
+                                                <span>Double Sided Cover</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="shrinkwrap" />
+                                                <span>Shrinkwrap</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="threeHoleDrill" />
+                                                <span>Three Hole Drill</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="pnlCover" (change)="onPnlOptionsChange()" />
+                                                <span>PNL Cover</span>
+                                            </label>
+
+                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                <input type="checkbox" formControlName="pnlText" (change)="onPnlOptionsChange()" />
+                                                <span>PNL Text</span>
+                                            </label>
+                                        </div>
+                                    </section>
+
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Additional Options</h3>
+                                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                            @if (bookForm.get('securityLabel')?.value) {
+                                                <div>
+                                                    <label class="admin-label" for="book-label-type">Label Type</label>
+                                                    <select id="book-label-type" class="admin-select" formControlName="labelType">
+                                                        <option value="">Select label type</option>
+                                                        <option value="NONE">None</option>
+                                                        <option value="STANDARD">Standard</option>
+                                                        <option value="ISBN">ISBN</option>
+                                                        <option value="OTHER">Other</option>
+                                                    </select>
+                                                </div>
+                                            }
+
+                                            @if (shouldShowCoilType()) {
+                                                <div>
+                                                    <label class="admin-label" for="book-coil-type">Coil Type</label>
+                                                    <select id="book-coil-type" class="admin-select" formControlName="coilType">
+                                                        <option value="">Select coil type</option>
+                                                        <option value="NONE">None</option>
+                                                        <option value="METAL">Metal</option>
+                                                        <option value="PLASTIC">Plastic</option>
+                                                    </select>
+                                                </div>
+                                            }
+
+                                            @if (shouldShowTabColor()) {
+                                                <div>
+                                                    <label class="admin-label" for="book-tab-color">Tab Color</label>
+                                                    <select id="book-tab-color" class="admin-select" formControlName="tabColor">
+                                                        <option value="">Select tab color</option>
+                                                        <option value="NONE">None</option>
+                                                        <option value="FULL_COLOR_4_4">Full Color (4/4)</option>
+                                                        <option value="FRONT_COLOR_4_0">Front Color (4/0)</option>
+                                                        <option value="MONO_1_1">Mono (1/1)</option>
+                                                    </select>
+                                                </div>
+                                            }
+
+                                            @if (shouldShowInsertPaperType()) {
+                                                <div>
+                                                    <label class="admin-label" for="book-insert-paper-type">Insert Paper Type</label>
+                                                    <select id="book-insert-paper-type" class="admin-select" formControlName="insertPaperType">
+                                                        <option value="">Select insert paper type</option>
+                                                        <option value="NONE">None</option>
+                                                        <option value="C1S_10PT">10PT C1S</option>
+                                                        <option value="C2S_10PT">10PT C2S</option>
+                                                        <option value="C2S_12PT">12PT C2S</option>
+                                                        <option value="GLOSS_TEXT_80">80 Gloss Text</option>
+                                                    </select>
+                                                </div>
+                                            }
+
+                                            @if (shouldShowCaseFinishType()) {
+                                                <div>
+                                                    <label class="admin-label" for="book-case-finish-type">Case Finish Type</label>
+                                                    <select id="book-case-finish-type" class="admin-select" formControlName="caseFinishType">
+                                                        <option value="">Select case finish type</option>
+                                                        <option value="NONE">None</option>
+                                                        <option value="LAYFLAT_GLOSS">Layflat Gloss</option>
+                                                        <option value="LAYFLAT_MATTE">Layflat Matte</option>
+                                                        <option value="GLOSS_FILM">Gloss Film</option>
+                                                    </select>
+                                                </div>
+                                            }
+
+                                            <div>
+                                                <label class="admin-label" for="book-spine-type">Spine Type</label>
+                                                <select id="book-spine-type" class="admin-select" formControlName="spineType">
+                                                    <option value="">Select spine type</option>
+                                                    <option value="NONE">None</option>
+                                                    <option value="ROUND">Round</option>
+                                                    <option value="SQUARE">Square</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </section>
+                                }
+
+                                <!-- STEP 2 : CONTENT -->
+                                @if (isCurrentStep('content')) {
+                                    <div class="grid gap-6 xl:grid-cols-2">
+
+                                        <!-- COVER -->
+                                        <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                            <div class="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 class="text-[1rem] font-semibold text-brand-navy">Cover</h3>
+                                                    <p class="mt-1 text-[0.85rem] text-slate-500">
+                                                        Provide either manual cover content or a ready PDF file.
+                                                    </p>
+                                                </div>
+
+                                                <div class="flex gap-2">
+                                                    <button
+                                                            type="button"
+                                                            class="rounded-xl border px-3 py-2 text-sm"
+                                                            [class.bg-brand-navy]="coverGroup.get('mode')?.value === 'manual'"
+                                                            [class.text-white]="coverGroup.get('mode')?.value === 'manual'"
+                                                            (click)="onCoverModeChange('manual')"
+                                                    >
+                                                        Manual
+                                                    </button>
+
+                                                    <button
+                                                            type="button"
+                                                            class="rounded-xl border px-3 py-2 text-sm"
+                                                            [class.bg-brand-navy]="coverGroup.get('mode')?.value === 'pdf'"
+                                                            [class.text-white]="coverGroup.get('mode')?.value === 'pdf'"
+                                                            (click)="onCoverModeChange('pdf')"
+                                                    >
+                                                        Ready PDF
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-6" [formGroup]="coverGroup">
+                                                @if (coverGroup.get('mode')?.value === 'manual') {
+                                                    <div class="grid gap-4">
+
+
+
+
+
+                                                    </div>
+                                                } @else {
+                                                    <div class="grid gap-4">
+                                                        <div>
+                                                            <label class="admin-label">PDF file name</label>
+                                                            <input class="admin-input" formControlName="pdfFileName" placeholder="cover.pdf" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="admin-label">Upload PDF</label>
+                                                            <input class="admin-input" type="file" accept="application/pdf" (change)="onCoverPdfSelected($event)" />
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </section>
+
+                                        <!-- CONTENT -->
+                                        <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                            <div class="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 class="text-[1rem] font-semibold text-brand-navy">Content</h3>
+
+                                                </div>
+
+                                                <div class="flex gap-2">
+
+
+                                                    <button
+                                                            type="button"
+                                                            class="rounded-xl border px-3 py-2 text-sm"
+                                                            [class.bg-brand-navy]="contentGroup.get('mode')?.value === 'pdf'"
+                                                            [class.text-white]="contentGroup.get('mode')?.value === 'pdf'"
+                                                            (click)="onContentModeChange('pdf')"
+                                                    >
+                                                        Ready PDF
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-6" [formGroup]="contentGroup">
+                                                @if (contentGroup.get('mode')?.value === 'pdf') {
+
+                                                    <div class="grid gap-4">
+                                                        <div>
+                                                            <label class="admin-label">PDF file name</label>
+                                                            <input class="admin-input" formControlName="fileName" placeholder="content.pdf" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="admin-label">Upload PDF</label>
+                                                            <input class="admin-input" type="file" accept="application/pdf" (change)="onContentPdfSelected($event)" />
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </section>
+                                    </div>
+                                }
+
+                                <!-- STEP 3 : PNL -->
+                                @if (isCurrentStep('pnl')) {
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <h3 class="text-[1rem] font-semibold text-brand-navy">PNL</h3>
+                                                <p class="mt-1 text-[0.85rem] text-slate-500">
+                                                    PNL lines: lineId, ordering, value, font, size, bold, italic.
+                                                </p>
+                                            </div>
+
+                                            <button type="button" class="admin-btn-primary" (click)="addPnlLine()">
+                                                + Add line
+                                            </button>
+                                        </div>
+
+                                        <div class="mt-6 space-y-4" [formGroup]="pnlGroup">
+                                            <div class="rounded-2xl border border-slate-200 p-4">
+                                                <h4 class="mb-4 font-semibold text-brand-navy">PNL Information</h4>
+                                                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                                    <div>
+                                                        <label class="admin-label">Page Number</label>
+                                                        <input class="admin-input" type="number" formControlName="pnlPageNumber" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="admin-label">Printing Number</label>
+                                                        <input class="admin-input" type="number" formControlName="pnlPrintingNumber" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="admin-label">Horizontal Margin</label>
+                                                        <input class="admin-input" type="number" formControlName="pnlHorizontalMargin" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="admin-label">Vertical Margin</label>
+                                                        <input class="admin-input" type="number" formControlName="pnlVerticalMargin" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="admin-label">Line Spacing</label>
+                                                        <input class="admin-input" type="number" formControlName="pnlLineSpacing" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="admin-label">Default Font Type</label>
+                                                        <input class="admin-input" formControlName="pnlFontType" placeholder="Arial" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="admin-label">Default Font Size</label>
+                                                        <input class="admin-input" type="number" formControlName="pnlFontSize" />
+                                                    </div>
+
+                                                    <label class="flex items-center gap-2 pt-8 text-[0.82rem] text-slate-600">
+                                                        <input type="checkbox" formControlName="pnlExcluded" />
+                                                        <span>Excluded</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div formArrayName="lines" class="space-y-4">
+                                                @for (line of pnlLines.controls; track $index; let i = $index) {
+                                                    <div class="rounded-2xl border border-slate-200 p-4" [formGroupName]="$index">
+                                                        <div class="mb-4 flex items-center justify-between">
+                                                            <h4 class="font-semibold text-brand-navy">Line {{ i + 1 }}</h4>
+                                                            <button type="button" class="admin-btn-secondary" (click)="removePnlLine(i)">
+                                                                Remove
+                                                            </button>
+                                                        </div>
+
+                                                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                                            <div>
+                                                                <label class="admin-label">Line ID</label>
+                                                                <input class="admin-input" type="number" formControlName="lineId" />
+                                                            </div>
+
+                                                            <div>
+                                                                <label class="admin-label">Ordering</label>
+                                                                <input class="admin-input" type="number" formControlName="ordering" />
+                                                            </div>
+
+                                                            <div class="xl:col-span-2">
+                                                                <label class="admin-label">Value</label>
+                                                                <input class="admin-input" formControlName="value" />
+                                                            </div>
+
+                                                            <div>
+                                                                <label class="admin-label">Font type</label>
+                                                                <input class="admin-input" formControlName="pnlFontType" placeholder="Arial" />
+                                                            </div>
+
+                                                            <div>
+                                                                <label class="admin-label">Font size</label>
+                                                                <input class="admin-input" type="number" formControlName="pnlFontSize" />
+                                                            </div>
+
+                                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                                <input type="checkbox" formControlName="pnlFontBold" />
+                                                                <span>Bold</span>
+                                                            </label>
+
+                                                            <label class="flex items-center gap-2 text-[0.82rem] text-slate-600">
+                                                                <input type="checkbox" formControlName="pnlFontItalic" />
+                                                                <span>Italic</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </section>
+                                }
+
+                                <!-- STEP 4 : TEMPLATE -->
+                                @if (isCurrentStep('template')) {
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm" [formGroup]="templateGroup">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <h3 class="text-[1rem] font-semibold text-brand-navy">Template</h3>
+                                                <p class="mt-1 text-[0.85rem] text-slate-500">
+                                                    Use the CE.SDK editor to load, customize and associate a cover template.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-4 space-y-4">
+                                            <div class="rounded-2xl border border-slate-200 p-3" [formGroup]="coverGroup">
+                                                <h4 class="font-semibold text-brand-navy">Cover template</h4>
+                                                <p class="mt-1 text-[0.82rem] text-slate-500">
+                                                    Compatible templates are filtered by Binding Type and Cover Color.
+                                                </p>
+
+                                                <div class="mt-3">
+                                                    <div class="h-[52vh] min-h-[460px] overflow-hidden rounded-2xl border border-slate-200">
+                                                        <app-editor
+                                                                [mode]="'bookCreation'"
+                                                                [bookBindingType]="bookForm.get('bindingType')?.value"
+                                                                [bookCoverColor]="bookForm.get('coverColor')?.value"
+                                                                [bookWidth]="bookForm.get('width')?.value"
+                                                                [bookHeight]="bookForm.get('height')?.value"
+                                                                [bookThickness]="bookForm.get('thickness')?.value"
+                                                                [initialTemplateId]="coverGroup.get('coverTemplateId')?.value"
+                                                                (templateAssociated)="onEditorTemplateAssociated($event)"
+                                                                (templateSelectionCleared)="onEditorTemplateSelectionCleared()"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-2.5 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-[0.8rem] text-slate-700">
+                                                    <p><strong>Selected coverTemplateId:</strong> {{ coverGroup.get('coverTemplateId')?.value || 'Not selected' }}</p>
+                                                    <p><strong>Template name:</strong> {{ validatedCoverTemplateName || 'N/A' }}</p>
+                                                    <p><strong>Template family:</strong> {{ validatedCoverTemplateFamily || 'N/A' }}</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="rounded-2xl border border-slate-200 p-3" [formGroup]="contentGroup">
+                                                <h4 class="font-semibold text-brand-navy">Text template</h4>
+                                                <div class="mt-4">
+                                                    <label class="admin-label">Text Template ID</label>
+                                                    <input class="admin-input" type="number" formControlName="textTemplateId" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="border-t border-slate-200/70 bg-white px-5 py-3">
+                            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <button
+                                        type="button"
+                                        class="admin-focus-ring admin-btn-secondary"
+                                        (click)="closeDrawer()"
+                                >
+                                    Cancel
+                                </button>
+
+                                <div class="flex gap-3">
+                                @if (currentStep() > 0) {
+                                        <button
+                                                type="button"
+                                                class="admin-focus-ring admin-btn-secondary"
+                                                (click)="prevStep()"
+                                        >
+                                            Previous
+                                        </button>
+                                    }
+
+                                    @if (currentStep() < totalVisibleSteps - 1) {
+                                        <button
+                                                type="button"
+                                                class="admin-focus-ring admin-btn-primary"
+                                                (click)="nextStep()"
+                                        >
+                                            Next
+                                        </button>
+                                    } @else {
+                                        <button
+                                                type="submit"
+                                                class="admin-focus-ring admin-btn-primary"
+                                                [disabled]="bookForm.invalid"
+                                        >
+                                            {{ editingBookId() ? 'Save changes' : 'Create book' }}
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        }
+    </div>
+</div>
