@@ -36,6 +36,10 @@ export interface AdminUserOrderSummaryApiModel {
   priority: string;
   totalAmount: number;
   items: number;
+  orderType: string;
+  shippingMethod?: string | null;
+  shippingStatus?: string | null;
+  invoiceAvailable: boolean;
 }
 
 export interface AdminUserOrdersDetailsApiModel {
@@ -45,6 +49,7 @@ export interface AdminUserOrdersDetailsApiModel {
   email: string;
   username: string;
   role: string;
+  userType?: string | null;
   totalOrders: number;
   orders: AdminUserOrderSummaryApiModel[];
 }
@@ -75,6 +80,14 @@ export class BackofficeUsersApiService {
   async getUserOrders(userId: number): Promise<AdminUserOrdersDetailsApiModel> {
     return await firstValueFrom(
       this.http.get<AdminUserOrdersDetailsApiModel>(`${this.apiUrl}/${userId}/orders`),
+    );
+  }
+
+  async downloadInvoice(orderId: number): Promise<Blob> {
+    return await firstValueFrom(
+      this.http.get(`/api/invoices/${orderId}/download`, {
+        responseType: 'blob',
+      }),
     );
   }
 }

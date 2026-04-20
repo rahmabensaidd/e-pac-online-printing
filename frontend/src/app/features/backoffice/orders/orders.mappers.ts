@@ -21,7 +21,17 @@ export function mapApiOrderToViewModel(apiOrder: AdminOrderApiModel): OrderViewM
     assignee: String(rawOrder['assignee'] ?? apiOrder.assignee ?? ''),
     items: Number(rawOrder['items'] ?? apiOrder.items ?? rawLines.length),
     paymentStatus: String(rawOrder['paymentStatus'] ?? rawOrder['payment_status'] ?? apiOrder.paymentStatus ?? ''),
-    shippingMethod: String(rawOrder['shippingMethod'] ?? rawOrder['shipping_method'] ?? apiOrder.shippingMethod ?? ''),
+    shippingMethod: normalizeShippingMethod(String(rawOrder['shippingMethod'] ?? rawOrder['shipping_method'] ?? apiOrder.shippingMethod ?? '')),
+    shippingStatus: String(rawOrder['shippingStatus'] ?? rawOrder['shipping_status'] ?? apiOrder.shippingStatus ?? ''),
+    trackingNumber: String(rawOrder['trackingNumber'] ?? rawOrder['tracking_number'] ?? apiOrder.trackingNumber ?? ''),
+    trackingUrl: String(rawOrder['trackingUrl'] ?? rawOrder['tracking_url'] ?? apiOrder.trackingUrl ?? ''),
+    carrier: String(rawOrder['carrier'] ?? apiOrder.carrier ?? ''),
+    labelUrl: String(rawOrder['labelUrl'] ?? rawOrder['label_url'] ?? apiOrder.labelUrl ?? ''),
+    selectedRateId: String(rawOrder['selectedRateId'] ?? rawOrder['selected_rate_id'] ?? apiOrder.selectedRateId ?? ''),
+    selectedRateService: String(rawOrder['selectedRateService'] ?? rawOrder['selected_rate_service'] ?? apiOrder.selectedRateService ?? ''),
+    selectedRateCurrency: String(rawOrder['selectedRateCurrency'] ?? rawOrder['selected_rate_currency'] ?? apiOrder.selectedRateCurrency ?? ''),
+    selectedRateAmount: Number(rawOrder['selectedRateAmount'] ?? rawOrder['selected_rate_amount'] ?? apiOrder.selectedRateAmount ?? 0),
+    testShipment: Boolean(rawOrder['testShipment'] ?? rawOrder['test_shipment'] ?? false),
     orderLines: rawLines.map(mapApiOrderLineToViewModel),
   };
 }
@@ -73,11 +83,13 @@ function mapApiStatusToFilter(apiStatus: string): OrderFilter {
 
 function mapApiLineStatusToUi(apiStatus?: string): OrderLineStatusUi {
   switch (apiStatus) {
+    case 'PENDING': return 'PENDING';
+    case 'VALIDATED': return 'VALIDATED';
     case 'READY': return 'READY';
     case 'REJECTED': return 'REJECTED';
     case 'PRINTING': return 'PRINTING';
     case 'READY_TO_SHIP': return 'READY_TO_SHIP';
-    default: return 'PRINTING';
+    default: return 'READY';
   }
 }
 
@@ -107,4 +119,13 @@ export function mapUiStatusToApi(uiStatus: string): string {
     case 'Cancelled': return 'CANCELLED';
     default: return 'SHIPPED';
   }
+}
+
+function normalizeShippingMethod(value: string): string {
+  const normalized = (value ?? '').trim().toUpperCase();
+  if (normalized === 'FULLTRUCKLOAD_DHL' || normalized === 'FULL_TRUCKLOAD') return 'full_truckload';
+  if (normalized === 'FREIGHTSHIPPING' || normalized === 'FREIGHT_SHIPPING') return 'freight_shipping';
+  if (normalized === 'STANDARD') return 'standard';
+  if (normalized === 'EXPRESS') return 'express';
+  return value?.toLowerCase?.() ?? '';
 }

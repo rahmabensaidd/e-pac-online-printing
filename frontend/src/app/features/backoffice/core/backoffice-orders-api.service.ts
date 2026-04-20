@@ -26,6 +26,16 @@ export interface AdminOrderApiModel {
   assignee?: string;
   items: number;
   shippingMethod: string;
+  shippingStatus?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  carrier?: string;
+  labelUrl?: string;
+  selectedRateId?: string;
+  selectedRateService?: string;
+  selectedRateCurrency?: string;
+  selectedRateAmount?: number;
+  testShipment?: boolean;
   paymentStatus: string;
   notes?: string;
   orderLines?: AdminOrderLineApiModel[];
@@ -59,7 +69,7 @@ export interface AdminOrderStatsApiModel {
 // Nouveaux DTOs pour les updates batch
 export interface OrderLineUpdateDto {
   orderLineId: number;
-  status?: 'READY' | 'REJECTED' | 'PRINTING' | 'READY_TO_SHIP';
+  status?: 'PENDING' | 'VALIDATED' | 'READY' | 'REJECTED' | 'PRINTING' | 'READY_TO_SHIP';
   priority?: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
@@ -69,6 +79,61 @@ export interface BatchOrderLineUpdateDto {
 
 export interface OrderStatusUpdateDto {
   status: 'REJECTED' | 'CANCELLED' | 'SHIPPED';
+}
+
+export interface ShippingRateApiModel {
+  rateId: string;
+  carrierId?: string;
+  carrier?: string;
+  service?: string;
+  currency?: string;
+  amount?: number;
+  estimatedDays?: number;
+  selected?: boolean;
+}
+
+export interface AdminShippingRatesResponseApiModel {
+  orderId: number;
+  shippingMethod?: string;
+  selectedRateId?: string;
+  selectedService?: string;
+  testMode?: boolean;
+  ratesEnabled?: boolean;
+  informationMessage?: string;
+  rates: ShippingRateApiModel[];
+}
+
+export interface AdminCreateShipmentRequestDto {
+  rateId?: string;
+  carrier?: string;
+  service?: string;
+  currency?: string;
+  amount?: number;
+  autoSelect?: boolean;
+  testShipment?: boolean;
+}
+
+export interface AdminSelectRateRequestDto {
+  rateId: string;
+  carrier?: string;
+  service?: string;
+  currency?: string;
+  amount?: number;
+}
+
+export interface AdminShipmentActionResponseApiModel {
+  orderId: number;
+  carrier?: string;
+  service?: string;
+  shippingStatus?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  carrierShipmentId?: string;
+  labelUrl?: string;
+  selectedRateId?: string;
+  rateCurrency?: string;
+  rateAmount?: number;
+  testShipment?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -137,6 +202,30 @@ export class BackofficeOrdersApiService {
   async updateOrderLines(orderId: string, payload: BatchOrderLineUpdateDto): Promise<AdminOrderApiModel> {
     return await firstValueFrom(
         this.http.patch<AdminOrderApiModel>(`${this.apiUrl}/${orderId}/orderlines`, payload),
+    );
+  }
+
+  async getShippingRates(orderId: string): Promise<AdminShippingRatesResponseApiModel> {
+    return await firstValueFrom(
+        this.http.get<AdminShippingRatesResponseApiModel>(`${this.apiUrl}/${orderId}/shipping/rates`),
+    );
+  }
+
+  async selectShippingRate(orderId: string, payload: AdminSelectRateRequestDto): Promise<AdminShipmentActionResponseApiModel> {
+    return await firstValueFrom(
+      this.http.post<AdminShipmentActionResponseApiModel>(`${this.apiUrl}/${orderId}/shipping/rate-selection`, payload),
+    );
+  }
+
+  async createShipment(orderId: string, payload: AdminCreateShipmentRequestDto): Promise<AdminShipmentActionResponseApiModel> {
+    return await firstValueFrom(
+        this.http.post<AdminShipmentActionResponseApiModel>(`${this.apiUrl}/${orderId}/shipping/ship`, payload),
+    );
+  }
+
+  async refreshShipmentTracking(orderId: string): Promise<AdminShipmentActionResponseApiModel> {
+    return await firstValueFrom(
+        this.http.post<AdminShipmentActionResponseApiModel>(`${this.apiUrl}/${orderId}/shipping/tracking/refresh`, {}),
     );
   }
 

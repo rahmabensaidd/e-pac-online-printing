@@ -13,6 +13,7 @@ export interface CheckoutOrderRequest {
   city: string;
   state: string;
   postalCode: string;
+  country: string;
   notes: string;
   shippingMethod: string;
   paymentMethod: string;
@@ -41,8 +42,10 @@ export interface OrderResponse {
   status: string;
   priority?: string;
   validationStatus?: string;
+  shippingMethod?: string;
   shippingStatus?: string;
   trackingNumber?: string;
+  trackingUrl?: string;
   carrier?: string;
   totalAmount: number;
   customerEmail: string;
@@ -55,9 +58,11 @@ export interface OrderTrackingResponse {
   orderDate: string;
   priority: string;
   globalStatus: string;
+  shippingMethod?: string;
   shippingStatus?: string;
   carrier?: string;
   trackingNumber?: string;
+  trackingUrl?: string;
   productionLines: Array<{
     orderLineId: number;
     bookId: number;
@@ -79,6 +84,13 @@ export interface OrderTrackingResponse {
   }>;
 }
 
+export interface ShippingOption {
+  code: string;
+  label: string;
+  price: number;
+  currency: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private readonly http = inject(HttpClient);
@@ -94,6 +106,18 @@ export class OrderService {
 
   async getOrderTracking(orderId: number): Promise<OrderTrackingResponse> {
     return await firstValueFrom(this.http.get<OrderTrackingResponse>(`${this.apiUrl}/my/${orderId}/tracking`));
+  }
+  async refreshOrderTracking(orderId: number): Promise<OrderTrackingResponse> {
+    return await firstValueFrom(
+        this.http.post<OrderTrackingResponse>(`${this.apiUrl}/my/${orderId}/tracking/refresh`, {}),
+    );
+  }
+  async getShippingOptions(subtotal: number): Promise<ShippingOption[]> {
+    return await firstValueFrom(
+        this.http.get<ShippingOption[]>(`${this.apiUrl}/shipping/options`, {
+          params: { subtotal: String(subtotal) },
+        }),
+    );
   }
   async downloadInvoice(orderId: number): Promise<Blob> {
     return await firstValueFrom(

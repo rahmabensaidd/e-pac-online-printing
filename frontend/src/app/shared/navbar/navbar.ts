@@ -9,10 +9,7 @@ interface NavItem {
   label: string;
   path: string;
   exact?: boolean;
-}
-
-interface IconNavItem extends NavItem {
-  icon: string;
+  requiresAuth?: boolean;
 }
 
 @Component({
@@ -34,28 +31,20 @@ export class NavbarComponent {
     { label: 'Home', path: '/', exact: true },
     { label: 'Marketplace', path: '/marketplace', exact: true },
     { label: 'Price Simulator', path: '/price-simulator', exact: true },
+    { label: 'Design Studio', path: '/design-studio', exact: true },
   ];
-  readonly designStudioNav: IconNavItem = {
-    label: 'Design Studio',
-    path: '/design-studio',
-    icon: 'fa-compass-drafting',
-    exact: true,
-  };
-  readonly myCustomBooksNav: IconNavItem = {
-    label: 'My Custom Books',
-    path: '/my-custom-books',
-    icon: 'fa-book',
-    exact: true,
-  };
-  readonly myOrdersNav: IconNavItem = {
-    label: 'My Orders',
-    path: '/my-orders',
-    icon: 'fa-truck-fast',
-    exact: true,
-  };
+  readonly accountNav: NavItem[] = [
+    { label: 'Profile', path: '/profile', exact: true },
+    { label: 'My Custom Books', path: '/my-custom-books', exact: true },
+    { label: 'My Orders', path: '/my-orders', exact: true },
+  ];
   readonly loginNav: NavItem = { label: 'Login', path: '/login', exact: true };
+  readonly visiblePrimaryNav = computed(() =>
+    this.primaryNav.filter((item) => !item.requiresAuth || this.auth.isAuthenticated()),
+  );
 
   readonly mobileOpen = signal(false);
+  readonly accountMenuOpen = signal(false);
   readonly cartCount = computed(() => this.cart.count());
   readonly authActionLabel = computed(() => this.auth.isAuthenticated() ? 'Logout' : 'Login');
 
@@ -67,14 +56,24 @@ export class NavbarComponent {
     this.mobileOpen.set(false);
   }
 
+  toggleAccountMenu(): void {
+    this.accountMenuOpen.update((value) => !value);
+  }
+
+  closeAccountMenu(): void {
+    this.accountMenuOpen.set(false);
+  }
+
   onEscape(): void {
     this.mobileOpen.set(false);
+    this.closeAccountMenu();
   }
 
   onAuthAction(): void {
     if (this.auth.isAuthenticated()) {
       this.auth.logout();
       this.closeMobile();
+      this.closeAccountMenu();
     }
   }
 }

@@ -1,0 +1,213 @@
+<section class="relative min-h-[calc(100vh-10rem)] overflow-hidden bg-brand-cream py-10 sm:py-14">
+  <div class="absolute inset-0 profile-orbit opacity-60"></div>
+  <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <header class="rounded-[2rem] border border-white/60 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(255,247,237,0.94))] p-6 shadow-[0_24px_90px_-45px_rgba(15,23,42,0.65)] sm:p-8">
+      <p class="text-xs font-black uppercase tracking-[0.24em] text-brand-orange">My Space</p>
+      <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="font-display text-4xl font-extrabold text-brand-navy">Profile</h1>
+          <p class="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
+            Keep your contact details and your default shipping address ready, so checkout and order follow-up stay smooth.
+          </p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div class="rounded-2xl bg-brand-navy px-4 py-3 text-white shadow-lg">
+            <p class="text-[11px] font-black uppercase tracking-[0.2em] text-orange-200">Orders</p>
+            <p class="mt-2 text-2xl font-extrabold">{{ quickStats().totalOrders }}</p>
+          </div>
+          <div class="rounded-2xl bg-white px-4 py-3 shadow-md ring-1 ring-slate-200/80">
+            <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Member Since</p>
+            <p class="mt-2 text-sm font-bold text-brand-navy">
+              {{ quickStats().memberSince ? (quickStats().memberSince | date:'mediumDate') : 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl bg-white px-4 py-3 shadow-md ring-1 ring-slate-200/80">
+            <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Last Order</p>
+            <p class="mt-2 text-sm font-bold text-brand-navy">
+              {{ quickStats().lastOrderDate ? (quickStats().lastOrderDate | date:'mediumDate') : 'No orders yet' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="mt-6 rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm text-slate-600 shadow-sm">
+        Loading your profile...
+      </div>
+    } @else if (error()) {
+      <div class="mt-6 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+        {{ error() }}
+      </div>
+    } @else if (profile(); as profile) {
+      <div class="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <article class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Account overview</p>
+              <h2 class="mt-2 text-2xl font-extrabold text-brand-navy">{{ profileName() }}</h2>
+              <p class="mt-2 text-sm text-slate-600">
+                Your login email is <span class="font-semibold text-brand-navy">{{ profile.email }}</span>
+                @if (profile.username) {
+                  <span> and your username is <span class="font-semibold text-brand-navy">{{ profile.username }}</span>.</span>
+                }
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <a
+                routerLink="/my-orders"
+                class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-brand-navy transition hover:border-brand-orange hover:text-brand-orange"
+              >
+                My Orders
+              </a>
+              <a
+                routerLink="/my-custom-books"
+                class="inline-flex items-center justify-center rounded-full bg-brand-orange px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-navy"
+              >
+                My Custom Books
+              </a>
+            </div>
+          </div>
+
+          <form class="mt-8 grid gap-8" (ngSubmit)="saveProfile()">
+            <section>
+              <div class="mb-4">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-brand-orange">Personal Information</p>
+                <p class="mt-1 text-sm text-slate-600">These details help us personalise your account and contact you when needed.</p>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">First name</span>
+                  <input class="profile-input" [ngModel]="form().firstName" (ngModelChange)="updateField('firstName', $event)" name="firstName" />
+                </label>
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">Last name</span>
+                  <input class="profile-input" [ngModel]="form().lastName" (ngModelChange)="updateField('lastName', $event)" name="lastName" />
+                </label>
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">Phone</span>
+                  <input class="profile-input" [ngModel]="form().phone" (ngModelChange)="updateField('phone', $event)" name="phone" />
+                </label>
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">Company</span>
+                  <input class="profile-input" [ngModel]="form().company" (ngModelChange)="updateField('company', $event)" name="company" />
+                </label>
+              </div>
+            </section>
+
+            <section>
+              <div class="mb-4">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-brand-orange">Default Shipping Address</p>
+                <p class="mt-1 text-sm text-slate-600">We reuse this address as your default delivery profile at checkout.</p>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="grid gap-2 md:col-span-2">
+                  <span class="text-sm font-bold text-brand-navy">Address line 1</span>
+                  <input class="profile-input" [ngModel]="form().addressLine1" (ngModelChange)="updateField('addressLine1', $event)" name="addressLine1" />
+                </label>
+                <label class="grid gap-2 md:col-span-2">
+                  <span class="text-sm font-bold text-brand-navy">Address line 2</span>
+                  <input class="profile-input" [ngModel]="form().addressLine2" (ngModelChange)="updateField('addressLine2', $event)" name="addressLine2" />
+                </label>
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">City</span>
+                  <input class="profile-input" [ngModel]="form().city" (ngModelChange)="updateField('city', $event)" name="city" />
+                </label>
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">State / Region</span>
+                  <input class="profile-input" [ngModel]="form().state" (ngModelChange)="updateField('state', $event)" name="state" />
+                </label>
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">Postal code</span>
+                  <input class="profile-input" [ngModel]="form().postalCode" (ngModelChange)="updateField('postalCode', $event)" name="postalCode" />
+                </label>
+                <label class="grid gap-2">
+                  <span class="text-sm font-bold text-brand-navy">Country</span>
+                  <input class="profile-input" [ngModel]="form().country" (ngModelChange)="updateField('country', $event)" name="country" />
+                </label>
+              </div>
+            </section>
+
+            @if (success()) {
+              <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ success() }}
+              </div>
+            }
+
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center rounded-full bg-brand-navy px-6 py-3 font-bold text-white transition hover:bg-brand-orange disabled:cursor-not-allowed disabled:opacity-60"
+                [disabled]="saving()"
+              >
+                {{ saving() ? 'Saving...' : 'Save profile' }}
+              </button>
+              <p class="text-sm text-slate-500">Your email and username stay managed by your account authentication.</p>
+            </div>
+          </form>
+        </article>
+
+        <aside class="grid gap-6">
+          <article class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <p class="text-xs font-black uppercase tracking-[0.2em] text-brand-orange">Profile Snapshot</p>
+            <dl class="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Full name</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.fullName || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.email }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Username</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.username || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.phone || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Company</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.company || 'Personal account' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Address line 1</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.addressLine1 || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Address line 2</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.addressLine2 || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">City</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.city || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">State / Region</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.state || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Postal code</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.postalCode || 'Not set yet' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Country</dt>
+                <dd class="mt-1 text-sm font-bold text-brand-navy">{{ profile.country || 'Not set yet' }}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="rounded-[2rem] border border-slate-200 bg-[linear-gradient(160deg,#fff7ed_0%,#ffffff_48%,#eff6ff_100%)] p-6 shadow-sm">
+            <p class="text-xs font-black uppercase tracking-[0.2em] text-brand-orange">Why this matters</p>
+            <ul class="mt-4 grid gap-3 text-sm text-slate-700">
+              <li class="rounded-2xl bg-white/80 px-4 py-3 shadow-sm">Your shipping defaults help Shippo generate cleaner rates and shipments.</li>
+              <li class="rounded-2xl bg-white/80 px-4 py-3 shadow-sm">Your phone number makes carrier communication and delivery follow-up smoother.</li>
+              <li class="rounded-2xl bg-white/80 px-4 py-3 shadow-sm">Keeping this page up to date reduces re-entry during checkout.</li>
+            </ul>
+          </article>
+        </aside>
+      </div>
+    }
+  </div>
+</section>

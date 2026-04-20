@@ -19,7 +19,7 @@ export class StripePaymentService {
         return this.stripePromise;
     }
 
-    async createPaymentElement(clientSecret: string): Promise<{
+    async createPaymentElement(clientSecret: string, countryCode = 'FR'): Promise<{
         stripe: Stripe;
         elements: StripeElements;
         paymentElement: StripePaymentElement;
@@ -96,7 +96,7 @@ export class StripePaymentService {
             defaultValues: {
                 billingDetails: {
                     address: {
-                        country: 'US',
+                        country: countryCode,
                     },
                 },
             },

@@ -21,6 +21,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { OrderService } from '../../core/services/order.service';
 import { UiService } from '../../core/services/ui.service';
 import { StripePaymentService } from './stripe-payment.service';
+import { ProfileService, UserProfile } from '../../core/services/profile.service';
 
 type ShippingMethod = 'standard' | 'express' | 'full_truckload' | 'freight_shipping';
 type PaymentMethod = 'card' | 'invoice';
@@ -32,6 +33,7 @@ type CheckoutField =
     | 'city'
     | 'state'
     | 'postalCode'
+    | 'country'
     | 'shippingMethod'
     | 'paymentMethod';
 
@@ -50,6 +52,7 @@ export class CheckoutPageComponent implements AfterViewInit {
   private readonly orderService = inject(OrderService);
   private readonly ui = inject(UiService);
   private readonly stripePaymentService = inject(StripePaymentService);
+  private readonly profileService = inject(ProfileService);
 
   readonly submitted = signal(false);
   readonly orderPlaced = signal(false);
@@ -61,6 +64,7 @@ export class CheckoutPageComponent implements AfterViewInit {
 
   readonly shippingMethod = signal<ShippingMethod>('standard');
   readonly paymentMethod = signal<PaymentMethod>('card');
+  readonly shippingOptions = signal<{ code: ShippingMethod; label: string; price: number }[]>([]);
 
   readonly stripeReady = signal(false);
   readonly stripeLoading = signal(false);
@@ -68,6 +72,7 @@ export class CheckoutPageComponent implements AfterViewInit {
   readonly stripeClientSecret = signal<string | null>(null);
   readonly stripeOrderId = signal<number | null>(null);
   readonly stripePaymentIntentId = signal<string | null>(null);
+  readonly profile = signal<UserProfile | null>(null);
 
   private stripe: Stripe | null = null;
   private elements: StripeElements | null = null;
@@ -79,6 +84,20 @@ export class CheckoutPageComponent implements AfterViewInit {
       () => this.isOrganizationUser() && this.shippingMethod() === 'full_truckload'
   );
   readonly shouldShowOrganizationShippingSelector = computed(() => this.isOrganizationUser());
+  readonly countryOptions = [
+    { code: 'FR', label: 'France' },
+    { code: 'TN', label: 'Tunisia' },
+    { code: 'US', label: 'United States' },
+    { code: 'GB', label: 'United Kingdom' },
+    { code: 'DE', label: 'Germany' },
+    { code: 'IT', label: 'Italy' },
+    { code: 'ES', label: 'Spain' },
+    { code: 'BE', label: 'Belgium' },
+    { code: 'NL', label: 'Netherlands' },
+    { code: 'PT', label: 'Portugal' },
+    { code: 'CH', label: 'Switzerland' },
+    { code: 'CA', label: 'Canada' },
+  ] as const;
 
   readonly form = this.fb.group({
     fullName: ['', [Validators.required, Validators.minLength(2)]],
@@ -90,6 +109,7 @@ export class CheckoutPageComponent implements AfterViewInit {
     city: ['', [Validators.required]],
     state: ['', [Validators.required]],
     postalCode: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9 -]{4,12}$/)]],
+    country: ['FR', [Validators.required]],
     notes: [''],
     shippingMethod: ['standard' as ShippingMethod, [Validators.required]],
     paymentMethod: ['card' as PaymentMethod, [Validators.required]],
@@ -100,14 +120,10 @@ export class CheckoutPageComponent implements AfterViewInit {
 
   readonly shippingFee = computed(() => {
     if (!this.hasItems()) return 0;
+    const option = this.shippingOptions().find((o) => o.code === this.shippingMethod());
+    if (option) return option.price;
 
-    if (this.isOrganizationUser()) {
-      if (this.shippingMethod() === 'full_truckload') return 0;
-      if (this.shippingMethod() === 'freight_shipping') {
-        return this.cart.subtotal() >= 150 ? 0 : 8.5;
-      }
-    }
-
+    if (this.shippingMethod() === 'full_truckload') return 0;
     if (this.shippingMethod() === 'express') return 18;
     return this.cart.subtotal() >= 150 ? 0 : 8.5;
   });
@@ -154,15 +170,38 @@ export class CheckoutPageComponent implements AfterViewInit {
           }
         });
 
+    this.form.statusChanges
+        .pipe(startWith(this.form.status), takeUntilDestroyed())
+        .subscribe((status) => {
+          if (
+              status === 'VALID' &&
+              this.paymentMethod() === 'card' &&
+              this.hasItems() &&
+              !this.stripeReady() &&
+              !this.stripeLoading()
+          ) {
+            queueMicrotask(() => {
+              void this.prepareStripeIfNeeded(true);
+            });
+          }
+        });
+
     this.syncShippingValidators();
+    void this.loadShippingOptions();
+    void this.prefillFromProfile();
   }
 
+  readonly organizationShippingOptions = computed(() =>
+      this.shippingOptions().filter((o) => o.code === 'full_truckload' || o.code === 'freight_shipping'),
+  );
+
+  readonly customerShippingOptions = computed(() =>
+      this.shippingOptions().filter((o) => o.code === 'standard' || o.code === 'express'),
+  );
+
   async ngAfterViewInit(): Promise<void> {
-    if (this.paymentMethod() === 'card') {
-      queueMicrotask(() => {
-        void this.prepareStripeIfNeeded();
-      });
-    }
+    // Intentionally no eager Stripe initialization.
+    // We initialize only when checkout form is valid to avoid creating orders with incomplete addresses.
   }
 
   showError(field: CheckoutField): boolean {
@@ -186,6 +225,7 @@ export class CheckoutPageComponent implements AfterViewInit {
       city: this.form.getRawValue().city,
       state: this.form.getRawValue().state,
       postalCode: this.form.getRawValue().postalCode,
+      country: this.form.getRawValue().country,
       notes: this.form.getRawValue().notes,
       shippingMethod: this.form.getRawValue().shippingMethod,
       paymentMethod: paymentMethodOverride ?? this.form.getRawValue().paymentMethod,
@@ -193,11 +233,26 @@ export class CheckoutPageComponent implements AfterViewInit {
     };
   }
 
+  private async loadShippingOptions(): Promise<void> {
+    try {
+      const options = await this.orderService.getShippingOptions(this.cart.subtotal());
+      const mapped = (options ?? []).map((o) => ({
+        code: (o.code as ShippingMethod),
+        label: o.label || o.code,
+        price: o.price ?? 0,
+      }));
+      this.shippingOptions.set(mapped);
+    } catch {
+      this.shippingOptions.set([]);
+    }
+  }
+
   async prepareStripeIfNeeded(force = false): Promise<void> {
     if (this.paymentMethod() !== 'card') return;
     if (this.stripeLoading()) return;
     if (!force && this.stripeReady()) return;
     if (!this.hasItems()) return;
+    if (this.form.invalid) return;
 
     this.stripeInitAttempted.set(true);
     this.stripeLoading.set(true);
@@ -209,32 +264,33 @@ export class CheckoutPageComponent implements AfterViewInit {
       }
 
       const payload = this.buildCheckoutPayload('card');
+      let data = await this.requestPaymentIntent(payload);
 
-      const response = await fetch('/api/payments/create-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.auth.getBearerToken() ? { Authorization: this.auth.getBearerToken()! } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
+      if (!data) {
+        this.needsFinalPriceConfirmation.set(true);
+        await this.cart.refresh();
 
-      if (!response.ok) {
-        const raw = await response.text();
-        throw new Error(raw || 'Unable to initialize Stripe payment.');
+        this.ui.showToast?.({
+          message: 'Final price updated. Reinitializing payment with updated total.',
+          type: 'warning',
+        });
+
+        data = await this.requestPaymentIntent({ ...payload, confirmPriceUpdate: true });
+        if (!data) {
+          throw new Error('Unable to initialize Stripe payment after price update confirmation.');
+        }
       }
 
-      const data = (await response.json()) as {
-        clientSecret: string;
-        paymentIntentId: string;
-        orderId: number;
-      };
+      this.needsFinalPriceConfirmation.set(false);
 
       this.stripeClientSecret.set(data.clientSecret);
       this.stripePaymentIntentId.set(data.paymentIntentId);
-      this.stripeOrderId.set(data.orderId);
+      this.stripeOrderId.set(data.orderId ?? null);
 
-      const stripeBundle = await this.stripePaymentService.createPaymentElement(data.clientSecret);
+      const stripeBundle = await this.stripePaymentService.createPaymentElement(
+          data.clientSecret,
+          this.form.getRawValue().country,
+      );
       if (!stripeBundle) {
         throw new Error('Stripe initialization failed.');
       }
@@ -262,6 +318,50 @@ export class CheckoutPageComponent implements AfterViewInit {
       );
     } finally {
       this.stripeLoading.set(false);
+    }
+  }
+
+  private async requestPaymentIntent(payload: ReturnType<CheckoutPageComponent['buildCheckoutPayload']>): Promise<{
+    clientSecret: string;
+    paymentIntentId: string;
+    orderId: number | null;
+  } | null> {
+    const response = await fetch('/api/payments/create-intent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.auth.getBearerToken() ? { Authorization: this.auth.getBearerToken()! } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      return (await response.json()) as {
+        clientSecret: string;
+        paymentIntentId: string;
+        orderId: number | null;
+      };
+    }
+
+    const errorPayload = await this.extractBackendError(response);
+    if (response.status === 409) {
+      return null;
+    }
+
+    throw new Error(errorPayload || 'Unable to initialize Stripe payment.');
+  }
+
+  private async extractBackendError(response: Response): Promise<string | null> {
+    const raw = await response.text();
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { message?: string; error?: string };
+      return parsed.message || parsed.error || raw;
+    } catch {
+      return raw;
     }
   }
 
@@ -374,7 +474,7 @@ export class CheckoutPageComponent implements AfterViewInit {
                 city: this.form.getRawValue().city,
                 state: this.form.getRawValue().state,
                 postal_code: this.form.getRawValue().postalCode,
-                country: 'US',
+                country: this.form.getRawValue().country,
               },
             },
           },
@@ -388,10 +488,12 @@ export class CheckoutPageComponent implements AfterViewInit {
         return;
       }
 
+      const order = await this.orderService.checkout(this.buildCheckoutPayload('card'));
       this.orderPlaced.set(true);
-      this.orderNumber.set(this.stripeOrderId() ? `EP-${this.stripeOrderId()}` : 'Processing...');
-      this.placedTotal.set(this.orderTotal());
+      this.orderNumber.set(`EP-${order.orderId}`);
+      this.placedTotal.set(order.totalAmount);
       this.needsFinalPriceConfirmation.set(false);
+      this.stripeOrderId.set(order.orderId);
 
       await this.cart.refresh();
 
@@ -422,29 +524,77 @@ export class CheckoutPageComponent implements AfterViewInit {
         ? 'freight_shipping'
         : 'standard';
 
-    this.form.reset({
-      fullName: '',
-      email: '',
-      phone: '',
-      company: '',
-      addressLine1: '',
-      addressLine2: '',
-      city: '',
-      state: '',
-      postalCode: '',
-      notes: '',
-      shippingMethod: defaultShippingMethod,
-      paymentMethod: 'card',
-    });
+    this.form.reset(this.buildFormDefaults(defaultShippingMethod));
 
     this.shippingMethod.set(defaultShippingMethod);
     this.paymentMethod.set('card');
     this.destroyStripeElement();
     this.syncShippingValidators();
+  }
 
-    queueMicrotask(() => {
-      void this.prepareStripeIfNeeded(true);
-    });
+  private async prefillFromProfile(): Promise<void> {
+    if (!this.auth.isAuthenticated()) {
+      return;
+    }
+
+    try {
+      const profile = await this.profileService.getProfile();
+      this.profile.set(profile);
+      this.form.patchValue(this.buildFormDefaults(this.shippingMethod(), profile), { emitEvent: false });
+      this.syncShippingValidators();
+    } catch (error) {
+      console.error('Unable to prefill checkout from profile', error);
+    }
+  }
+
+  private buildFormDefaults(
+      shippingMethod: ShippingMethod,
+      profile: UserProfile | null = this.profile(),
+  ): {
+    fullName: string;
+    email: string;
+    phone: string;
+    company: string;
+    addressLine1: string;
+    addressLine2: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    notes: string;
+    shippingMethod: ShippingMethod;
+    paymentMethod: PaymentMethod;
+  } {
+    return {
+      fullName: profile?.fullName || [profile?.firstName, profile?.lastName].filter(Boolean).join(' ').trim(),
+      email: profile?.email || this.auth.userEmail() || '',
+      phone: profile?.phone || '',
+      company: profile?.company || '',
+      addressLine1: profile?.addressLine1 || '',
+      addressLine2: profile?.addressLine2 || '',
+      city: profile?.city || '',
+      state: profile?.state || '',
+      postalCode: profile?.postalCode || '',
+      country: this.resolveCountryCode(profile?.country) || 'FR',
+      notes: '',
+      shippingMethod,
+      paymentMethod: 'card',
+    };
+  }
+
+  private resolveCountryCode(country: string | null | undefined): string | null {
+    if (!country) {
+      return null;
+    }
+
+    const normalized = country.trim().toUpperCase();
+    const directMatch = this.countryOptions.find((option) => option.code === normalized);
+    if (directMatch) {
+      return directMatch.code;
+    }
+
+    const byLabel = this.countryOptions.find((option) => option.label.toUpperCase() === normalized);
+    return byLabel?.code ?? null;
   }
 
   private syncShippingValidators(): void {
@@ -455,6 +605,7 @@ export class CheckoutPageComponent implements AfterViewInit {
       this.form.controls.city,
       this.form.controls.state,
       this.form.controls.postalCode,
+      this.form.controls.country,
     ];
 
     if (hideShipping) {
@@ -462,6 +613,7 @@ export class CheckoutPageComponent implements AfterViewInit {
       this.form.controls.city.clearValidators();
       this.form.controls.state.clearValidators();
       this.form.controls.postalCode.clearValidators();
+      this.form.controls.country.clearValidators();
     } else {
       this.form.controls.addressLine1.setValidators([Validators.required]);
       this.form.controls.city.setValidators([Validators.required]);
@@ -470,6 +622,7 @@ export class CheckoutPageComponent implements AfterViewInit {
         Validators.required,
         Validators.pattern(/^[A-Za-z0-9 -]{4,12}$/),
       ]);
+      this.form.controls.country.setValidators([Validators.required]);
     }
 
     shippingFields.forEach((control) => {

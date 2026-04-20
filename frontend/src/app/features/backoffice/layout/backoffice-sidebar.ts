@@ -15,19 +15,20 @@ import { BackofficeShellService } from '../core/backoffice-shell.service';
 export class BackofficeSidebarComponent {
   readonly shell = inject(BackofficeShellService);
   readonly backofficeData = inject(BackofficeDataService);
+  private readonly hiddenLabels = new Set(['Employees', 'Settings', 'My Templates']);
 
   // ⚠️ Correction: Utiliser la même source pour tous les items
   // Les navItems sont dans backofficeData, pas dans shell
   readonly operationsItems = computed(() =>
-      this.backofficeData.navItems().filter((item) => item.group === 'Operations'),
+      this.backofficeData.navItems().filter((item) => item.group === 'Operations' && !this.hiddenLabels.has(item.label)),
   );
   readonly workspaceItems = computed(() =>
-      this.backofficeData.navItems().filter((item) => item.group === 'Workspace'),
+      this.backofficeData.navItems().filter((item) => item.group === 'Workspace' && !this.hiddenLabels.has(item.label)),
   );
 
   // 🆕 Computed pour les items Design
   readonly designItems = computed(() =>
-      this.backofficeData.navItems().filter((item) => item.group === 'Design'),
+      this.backofficeData.navItems().filter((item) => item.group === 'Design' && !this.hiddenLabels.has(item.label)),
   );
 
   navItemClass(isActive: boolean, collapsed: boolean): string {

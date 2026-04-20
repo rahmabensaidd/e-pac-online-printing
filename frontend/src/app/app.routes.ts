@@ -45,6 +45,12 @@ export const routes: Routes = [
       import('./pages/order-tracking/order-tracking-page').then((m) => m.OrderTrackingPageComponent),
   },
   {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/profile/profile-page').then((m) => m.ProfilePageComponent),
+  },
+  {
     path: 'products/:id',
     loadComponent: () =>
       import('./pages/product-details/product-details-page').then((m) => m.ProductDetailsPageComponent),

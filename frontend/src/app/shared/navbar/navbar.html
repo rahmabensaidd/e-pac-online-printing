@@ -20,7 +20,7 @@
 
         <!-- Desktop nav -->
         <div class="hidden lg:flex items-center gap-8">
-          @for (item of primaryNav; track item.path) {
+          @for (item of visiblePrimaryNav(); track item.path) {
             <a
               [routerLink]="item.path"
               routerLinkActive="text-brand-orange"
@@ -34,38 +34,39 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-3">
-          <a
-            [routerLink]="designStudioNav.path"
-            routerLinkActive="bg-brand-navy text-white border-brand-navy"
-            [routerLinkActiveOptions]="{ exact: designStudioNav.exact ?? false }"
-            class="hidden sm:inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-brand-navy transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-            [attr.aria-label]="designStudioNav.label"
-          >
-            <i class="fa-solid {{ designStudioNav.icon }}"></i>
-            <span class="hidden xl:inline">{{ designStudioNav.label }}</span>
-          </a>
-
           @if (auth.isAuthenticated()) {
-            <a
-              [routerLink]="myCustomBooksNav.path"
-              routerLinkActive="bg-brand-navy text-white border-brand-navy"
-              [routerLinkActiveOptions]="{ exact: myCustomBooksNav.exact ?? false }"
-              class="hidden sm:inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-brand-navy transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-              [attr.aria-label]="myCustomBooksNav.label"
-            >
-              <i class="fa-solid {{ myCustomBooksNav.icon }}"></i>
-              <span class="hidden xl:inline">{{ myCustomBooksNav.label }}</span>
-            </a>
-            <a
-              [routerLink]="myOrdersNav.path"
-              routerLinkActive="bg-brand-navy text-white border-brand-navy"
-              [routerLinkActiveOptions]="{ exact: myOrdersNav.exact ?? false }"
-              class="hidden sm:inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-brand-navy transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-              [attr.aria-label]="myOrdersNav.label"
-            >
-              <i class="fa-solid {{ myOrdersNav.icon }}"></i>
-              <span class="hidden xl:inline">{{ myOrdersNav.label }}</span>
-            </a>
+            <div class="relative hidden lg:block">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-white border border-gray-200 font-bold hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                (click)="toggleAccountMenu()"
+                [attr.aria-expanded]="accountMenuOpen()"
+                aria-haspopup="menu"
+              >
+                <span>My Space</span>
+                <i class="fas fa-chevron-down text-xs transition" [class.rotate-180]="accountMenuOpen()"></i>
+              </button>
+
+              @if (accountMenuOpen()) {
+                <div
+                  class="absolute right-0 top-full mt-3 w-60 rounded-3xl border border-gray-200 bg-white/95 backdrop-blur p-2 shadow-xl"
+                  role="menu"
+                >
+                  @for (item of accountNav; track item.path) {
+                    <a
+                      [routerLink]="item.path"
+                      routerLinkActive="text-brand-orange bg-orange-50"
+                      [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                      class="flex items-center rounded-2xl px-4 py-3 font-bold text-brand-navy transition hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                      role="menuitem"
+                      (click)="closeAccountMenu()"
+                    >
+                      {{ item.label }}
+                    </a>
+                  }
+                </div>
+              }
+            </div>
           }
 
           @if (auth.isAuthenticated()) {
@@ -124,41 +125,7 @@
         [class.hidden]="!mobileOpen()"
       >
         <div class="grid gap-2 pt-2">
-          <a
-            [routerLink]="designStudioNav.path"
-            routerLinkActive="text-brand-orange border-brand-orange/40"
-            [routerLinkActiveOptions]="{ exact: designStudioNav.exact ?? false }"
-            class="text-left px-4 py-3 rounded-xl bg-white/70 border border-gray-200 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-            (click)="closeMobile()"
-          >
-            <i class="fa-solid {{ designStudioNav.icon }} mr-2"></i>
-            {{ designStudioNav.label }}
-          </a>
-
-          @if (auth.isAuthenticated()) {
-            <a
-              [routerLink]="myCustomBooksNav.path"
-              routerLinkActive="text-brand-orange border-brand-orange/40"
-              [routerLinkActiveOptions]="{ exact: myCustomBooksNav.exact ?? false }"
-              class="text-left px-4 py-3 rounded-xl bg-white/70 border border-gray-200 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-              (click)="closeMobile()"
-            >
-              <i class="fa-solid {{ myCustomBooksNav.icon }} mr-2"></i>
-              {{ myCustomBooksNav.label }}
-            </a>
-            <a
-              [routerLink]="myOrdersNav.path"
-              routerLinkActive="text-brand-orange border-brand-orange/40"
-              [routerLinkActiveOptions]="{ exact: myOrdersNav.exact ?? false }"
-              class="text-left px-4 py-3 rounded-xl bg-white/70 border border-gray-200 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
-              (click)="closeMobile()"
-            >
-              <i class="fa-solid {{ myOrdersNav.icon }} mr-2"></i>
-              {{ myOrdersNav.label }}
-            </a>
-          }
-
-          @for (item of primaryNav; track item.path) {
+          @for (item of visiblePrimaryNav(); track item.path) {
             <a
               [routerLink]="item.path"
               routerLinkActive="text-brand-orange border-brand-orange/40"
@@ -168,6 +135,24 @@
             >
               {{ item.label }}
             </a>
+          }
+          @if (auth.isAuthenticated()) {
+            <div class="rounded-2xl border border-gray-200 bg-white/70 px-4 py-3">
+              <p class="text-xs font-black uppercase tracking-[0.2em] text-brand-orange">My Space</p>
+              <div class="mt-3 grid gap-2">
+                @for (item of accountNav; track item.path) {
+                  <a
+                    [routerLink]="item.path"
+                    routerLinkActive="text-brand-orange border-brand-orange/40"
+                    [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                    class="text-left rounded-xl border border-gray-200 bg-white px-4 py-3 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+                    (click)="closeMobile()"
+                  >
+                    {{ item.label }}
+                  </a>
+                }
+              </div>
+            </div>
           }
           @if (auth.isAuthenticated()) {
             <button

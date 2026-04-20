@@ -72,11 +72,11 @@
             />
 
             <app-backoffice-stat-card
-                    label="Username"
-                    [value]="user.username"
-                    change="Identity"
-                    hint="linked account"
-                    icon="fa-user"
+                    label="User type"
+                    [value]="(user.userType || 'SIMPLE')"
+                    change="Account model"
+                    hint="simple or organization"
+                    icon="fa-building-user"
                     tone="neutral"
             />
 
@@ -127,6 +127,13 @@
                     </p>
                 </div>
 
+                <div class="space-y-1">
+                    <p class="text-[0.7rem] uppercase tracking-[0.15em] text-slate-400">User type</p>
+                    <p class="text-[0.9rem] font-semibold text-brand-navy">
+                        {{ user.userType || 'SIMPLE' }}
+                    </p>
+                </div>
+
             </div>
 
         </section>
@@ -136,17 +143,19 @@
     <section class="rounded-[1.25rem] border border-slate-200/70 bg-white/70 p-4 shadow-sm">
         <app-backoffice-data-table
                 title="Orders list"
-                description="All orders linked to this user."
-                [columns]="orderColumns"
+                [description]="isOrganizationUser() ? 'Organization orders with order source, shipping type, invoice PDF, and freight shipping status.' : 'All orders linked to this user with order source, shipping status, and invoice PDF.'"
+                [columns]="orderColumns()"
                 [rows]="orderRows()"
+                [rowActions]="orderActions()"
                 [loading]="loading()"
-                [searchKeys]="['reference', 'status', 'priority']"
+                [searchKeys]="['reference', 'status', 'priority', 'orderType', 'shippingStatus', 'shippingMethodLabel']"
                 [emptyState]="{
         icon: 'fa-receipt',
         title: 'No orders',
         description: 'This user has no orders yet.',
         actionLabel: ''
       }"
+                (rowAction)="onOrderRowAction($event)"
         />
     </section>
 

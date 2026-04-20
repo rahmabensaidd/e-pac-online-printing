@@ -1,7 +1,7 @@
 // orders.models.ts
 export type OrderFilter = 'All' | 'Printing' | 'Ready to ship' | 'Shipped' | 'Rejected' | 'Cancelled';
 export type OrderStatusUi = 'Shipped' | 'Rejected' | 'Cancelled';
-export type OrderLineStatusUi = 'READY' | 'REJECTED' | 'PRINTING' | 'READY_TO_SHIP';
+export type OrderLineStatusUi = 'PENDING' | 'VALIDATED' | 'READY' | 'REJECTED' | 'PRINTING' | 'READY_TO_SHIP';
 export type OrderLinePriorityDisplay = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface OrderLineViewModel {
@@ -35,6 +35,16 @@ export interface OrderViewModel {
     items: number;
     paymentStatus: string;
     shippingMethod: string;
+    shippingStatus?: string;
+    trackingNumber?: string;
+    trackingUrl?: string;
+    carrier?: string;
+    labelUrl?: string;
+    selectedRateId?: string;
+    selectedRateService?: string;
+    selectedRateCurrency?: string;
+    selectedRateAmount?: number;
+    testShipment?: boolean;
     orderLines: OrderLineViewModel[];
 }
 

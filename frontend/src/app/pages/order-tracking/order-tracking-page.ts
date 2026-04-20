@@ -18,6 +18,8 @@ export class OrderTrackingPageComponent {
   readonly loadingTracking = signal(false);
   readonly downloadingInvoice = signal(false);
   readonly error = signal<string | null>(null);
+  readonly refreshInfo = signal<string | null>(null);
+  readonly lastRefreshAt = signal<Date | null>(null);
   readonly orders = signal<OrderResponse[]>([]);
   readonly selectedOrderId = signal<number | null>(null);
   readonly tracking = signal<OrderTrackingResponse | null>(null);
@@ -28,6 +30,10 @@ export class OrderTrackingPageComponent {
 
   readonly productionLines = computed(() => this.tracking()?.productionLines ?? []);
   readonly shippingLines = computed(() => this.tracking()?.shippingLines ?? []);
+  readonly trackingUrl = computed(() => {
+    const apiUrl = this.tracking()?.trackingUrl || this.selectedOrder()?.trackingUrl;
+    return apiUrl ?? null;
+  });
 
   constructor() {
     void this.loadOrders();
@@ -36,6 +42,8 @@ export class OrderTrackingPageComponent {
   async loadOrders(): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
+    this.refreshInfo.set(null);
+    this.lastRefreshAt.set(null);
     try {
       const orders = await this.ordersApi.getMyOrders();
       this.orders.set(orders ?? []);
@@ -63,6 +71,8 @@ export class OrderTrackingPageComponent {
       return;
     }
     this.selectedOrderId.set(orderId);
+    this.refreshInfo.set(null);
+    this.lastRefreshAt.set(null);
     await this.loadTracking(orderId);
   }
 
@@ -105,5 +115,55 @@ export class OrderTrackingPageComponent {
     } finally {
       this.downloadingInvoice.set(false);
     }
+  }
+
+  async refreshTracking(): Promise<void> {
+    const orderId = this.selectedOrderId();
+    if (!orderId) {
+      return;
+    }
+    this.loadingTracking.set(true);
+    this.error.set(null);
+    this.refreshInfo.set(null);
+    try {
+      const previousTracking = this.tracking();
+      const refreshedTracking = await this.ordersApi.refreshOrderTracking(orderId);
+      this.tracking.set(refreshedTracking);
+      const orders = await this.ordersApi.getMyOrders();
+      this.orders.set(orders ?? []);
+      this.lastRefreshAt.set(new Date());
+      this.refreshInfo.set(this.buildRefreshInfoMessage(previousTracking, refreshedTracking));
+    } catch (error) {
+      console.error('Unable to refresh live tracking', error);
+      this.error.set('Unable to refresh tracking now.');
+    } finally {
+      this.loadingTracking.set(false);
+    }
+  }
+
+  readonly lastRefreshLabel = computed(() => {
+    const value = this.lastRefreshAt();
+    if (!value) {
+      return null;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(value);
+  });
+
+  private buildRefreshInfoMessage(previous: OrderTrackingResponse | null, current: OrderTrackingResponse | null): string {
+    const currentStatus = current?.shippingStatus || 'unknown';
+    const changed = previous?.shippingStatus !== current?.shippingStatus
+      || previous?.carrier !== current?.carrier
+      || previous?.trackingUrl !== current?.trackingUrl
+      || previous?.trackingNumber !== current?.trackingNumber;
+
+    if (changed) {
+      return `Tracking refreshed. Current shipping status: ${currentStatus}.`;
+    }
+
+    return `Tracking checked. Shippo still reports ${currentStatus}.`;
   }
 }

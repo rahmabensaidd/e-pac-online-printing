@@ -4,7 +4,11 @@ import { BackofficeSectionHeaderComponent } from '../shared/backoffice-section-h
 import { BackofficeCardComponent } from '../shared/backoffice-card';
 import { BackofficeStatCardComponent } from '../shared/backoffice-stat-card';
 import { BackofficeDataTableComponent } from '../shared/backoffice-data-table';
-import { BackofficeDataTableColumn } from '../shared/backoffice-data-table.models';
+import {
+  BackofficeDataTableAction,
+  BackofficeDataTableColumn,
+  BackofficeDataTableRowActionEvent,
+} from '../shared/backoffice-data-table.models';
 import {
   AdminUserOrdersDetailsApiModel,
   BackofficeUsersApiService,
@@ -29,27 +33,53 @@ export class BackofficeUserOrdersPageComponent {
   private readonly usersApi = inject(BackofficeUsersApiService);
 
   readonly loading = signal(true);
+  readonly downloadingInvoiceId = signal<number | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly details = signal<AdminUserOrdersDetailsApiModel | null>(null);
 
-  readonly orderColumns: readonly BackofficeDataTableColumn[] = [
-    { key: 'reference', label: 'Reference', sortable: true, monospace: true },
-    { key: 'orderDate', label: 'Order date', type: 'date', sortable: true },
-    { key: 'status', label: 'Status', type: 'status', sortable: true },
-    { key: 'priority', label: 'Priority', type: 'priority', sortable: true },
-    { key: 'items', label: 'Items', type: 'numeric', sortable: true, align: 'right' },
-    { key: 'totalAmount', label: 'Total', type: 'currency', sortable: true, align: 'right' },
-  ];
+  readonly isOrganizationUser = computed(
+    () => (this.details()?.userType ?? 'SIMPLE').toUpperCase() === 'ORGANIZATION',
+  );
+
+  readonly orderColumns = computed<readonly BackofficeDataTableColumn[]>(() => {
+    const baseColumns: BackofficeDataTableColumn[] = [
+      { key: 'reference', label: 'Reference', sortable: true, monospace: true },
+      { key: 'orderDate', label: 'Order date', type: 'date', sortable: true },
+      { key: 'orderType', label: 'Order type', sortable: true },
+      { key: 'status', label: 'Status', type: 'status', sortable: true },
+      { key: 'priority', label: 'Priority', type: 'priority', sortable: true },
+      { key: 'shippingStatus', label: 'Shipping status', type: 'status', sortable: true },
+    ];
+
+    if (this.isOrganizationUser()) {
+      baseColumns.push({ key: 'shippingMethodLabel', label: 'Shipping type', sortable: true });
+    }
+
+    baseColumns.push(
+      { key: 'items', label: 'Items', type: 'numeric', sortable: true, align: 'right' },
+      { key: 'totalAmount', label: 'Total', type: 'currency', sortable: true, align: 'right' },
+    );
+
+    return baseColumns;
+  });
+
+  readonly orderActions = computed<readonly BackofficeDataTableAction[]>(() => [
+    { id: 'downloadInvoice', label: 'Download invoice PDF', icon: 'fa-file-arrow-down' },
+  ]);
 
   readonly orderRows = computed(() =>
     (this.details()?.orders ?? []).map((order) => ({
       id: String(order.orderId),
       reference: order.reference,
       orderDate: order.orderDate,
+      orderType: this.formatOrderType(order.orderType),
       status: order.status,
       priority: order.priority,
+      shippingStatus: order.shippingStatus ? this.formatStatus(order.shippingStatus) : 'N/A',
+      shippingMethodLabel: order.shippingMethod ? this.formatShippingMethod(order.shippingMethod) : 'N/A',
       items: order.items,
       totalAmount: order.totalAmount,
+      invoiceAvailable: order.invoiceAvailable,
     })),
   );
 
@@ -82,5 +112,80 @@ export class BackofficeUserOrdersPageComponent {
 
   async goBack(): Promise<void> {
     await this.router.navigate(['/backoffice/users']);
+  }
+
+  async onOrderRowAction(event: BackofficeDataTableRowActionEvent): Promise<void> {
+    if (event.actionId !== 'downloadInvoice') {
+      return;
+    }
+
+    const orderId = Number(event.rowId);
+    if (!Number.isFinite(orderId)) {
+      return;
+    }
+
+    const order = this.details()?.orders.find((item) => item.orderId === orderId);
+    if (!order?.invoiceAvailable) {
+      this.errorMessage.set('Invoice PDF is not available for this order yet.');
+      return;
+    }
+
+    this.downloadingInvoiceId.set(orderId);
+    this.errorMessage.set(null);
+
+    try {
+      const blob = await this.usersApi.downloadInvoice(orderId);
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `invoice-${order.reference || orderId}.pdf`;
+      anchor.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Unable to download invoice PDF', error);
+      this.errorMessage.set('Unable to download invoice PDF for this order.');
+    } finally {
+      this.downloadingInvoiceId.set(null);
+    }
+  }
+
+  private formatOrderType(value: string | null | undefined): string {
+    if (!value) {
+      return 'Unknown';
+    }
+
+    return value
+      .replaceAll('_', ' ')
+      .split(' + ')
+      .map((part) =>
+        part
+          .toLowerCase()
+          .split(' ')
+          .filter(Boolean)
+          .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+          .join(' '),
+      )
+      .join(' + ');
+  }
+
+  private formatStatus(value: string): string {
+    return value
+      .toLowerCase()
+      .split('_')
+      .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+      .join(' ');
+  }
+
+  private formatShippingMethod(value: string): string {
+    switch (value.toUpperCase()) {
+      case 'FULLTRUCKLOAD_DHL':
+        return 'Full Truck Load';
+      case 'FREIGHTSHIPPING':
+        return 'Freight Shipping';
+      case 'STANDARD':
+        return 'Standard';
+      default:
+        return this.formatStatus(value);
+    }
   }
 }

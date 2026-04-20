@@ -151,8 +151,9 @@ export class MyCustomBooksPageComponent {
       const response = await firstValueFrom(this.pricingService.getQuote(payload));
 
       if (!response.available || response.selectedPrice == null) {
-        this.modalQuote.set(null);
-        this.modalError.set(response.message || 'Unable to calculate price now.');
+        this.modalQuote.set(this.buildFallbackQuote(book));
+        this.modalInfo.set(response.message || 'Estimated price applied (pricing API unavailable).');
+        this.modalError.set(null);
         return;
       }
 
@@ -177,8 +178,9 @@ export class MyCustomBooksPageComponent {
       }
     } catch (error) {
       console.error('Unable to calculate custom book price', error);
-      this.modalQuote.set(null);
-      this.modalError.set('Unable to calculate price now. Please try again.');
+      this.modalQuote.set(this.buildFallbackQuote(book));
+      this.modalInfo.set('Estimated price applied (pricing API unavailable).');
+      this.modalError.set(null);
     } finally {
       this.calculatingPrice.set(false);
     }
@@ -258,6 +260,55 @@ export class MyCustomBooksPageComponent {
         labelType: book.labelType || 'NONE',
       }
     };
+  }
+
+  private buildFallbackQuote(book: Book): CustomBookPriceQuote {
+    const quantity = this.modalQuantity();
+
+    const pages = this.safeNumber(book.productionPage, 1);
+    const width = this.safeNumber(book.width, 14);
+    const height = this.safeNumber(book.height, 21);
+    const areaFactor = (width * height) / 1000;
+
+    const baseBookPrice = this.safeNumber(book.salePrice, 0);
+    const computedBase = baseBookPrice > 0 ? baseBookPrice : 5 + pages * 0.08 + areaFactor;
+
+    const priorityMultiplier = this.priorityMultiplier(this.modalPriority());
+    const unitPrice = this.roundCurrency(Math.max(1, computedBase * priorityMultiplier));
+
+    return {
+      bookId: book.bookId,
+      quantity,
+      unitPrice,
+      totalPrice: this.roundCurrency(unitPrice * quantity),
+      isEstimated: true,
+      currency: 'USD',
+      calculatedAt: new Date().toISOString(),
+      message: 'Estimated price applied',
+      priority: this.modalPriority(),
+    };
+  }
+
+  private priorityMultiplier(priority: 'LOW' | 'MEDIUM' | 'HIGH'): number {
+    switch (priority) {
+      case 'LOW':
+        return 1;
+      case 'MEDIUM':
+        return 1.15;
+      case 'HIGH':
+        return 1.3;
+    }
+  }
+
+  private safeNumber(value: number | null | undefined, fallback: number): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+      return fallback;
+    }
+    return value;
+  }
+
+  private roundCurrency(value: number): number {
+    return Math.round(value * 100) / 100;
   }
 
   private boolToInt(value: boolean | null | undefined): number {
