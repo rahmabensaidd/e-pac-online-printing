@@ -2,11 +2,11 @@
 package tn.epac.eprinting.model.dtos;
 
 import lombok.Data;
-import tn.epac.eprinting.model.enums.OrderLineStatus;
-
 @Data
 public class OrderLineUpdateDto {
     private Long orderLineId;
-    private OrderLineStatus status;  // READY, REJECTED, PRINTING, READY_TO_SHIP
+    // CUSTOM: PENDING, PRINTING, READY_TO_SHIP, VALIDATED, REJECTED
+    // MARKETPLACE: READY, READY_TO_SHIP
+    private String status;
     private String priority;          // LOW, MEDIUM, HIGH (affichage)
 }

@@ -2,6 +2,7 @@ package tn.epac.eprinting.model.dtos;
 
 import lombok.Builder;
 import lombok.Data;
+import tn.epac.eprinting.model.enums.UserType;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ public class AdminUserOrdersDetailsDto {
     private String email;
     private String username;
     private String role;
+    private UserType userType;
     private Long totalOrders;
     private List<AdminUserOrderSummaryDto> orders;
 }

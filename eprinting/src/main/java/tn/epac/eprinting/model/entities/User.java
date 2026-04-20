@@ -43,9 +43,15 @@ public class User {
 
     private String password;
 
-    private Long phoneNumber;
-
     private String companyName;
+    private String phoneNumber;
+    private String addressLine1;
+    private String addressLine2;
+    private String city;
+    private String state;
+    private String postalCode;
+    private String country;
+    private String countryCode;
 
     @Column(name = "is_enabled")
     private Boolean enabled = Boolean.TRUE;

@@ -20,9 +20,12 @@ public class OrderTrackingResponseDto {
     private LocalDate orderDate;
     private OrderPriority priority;
     private OrderStatus globalStatus;
+    private String shippingMethod;
     private String shippingStatus;
     private String carrier;
     private String trackingNumber;
+    private String trackingUrl;
+    private Boolean testShipment;
     private List<ProductionLineDto> productionLines;
     private List<ShippingLineDto> shippingLines;
 

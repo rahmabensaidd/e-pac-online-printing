@@ -8,7 +8,6 @@ import tn.epac.eprinting.model.enums.OrderStatus;
 import tn.epac.eprinting.model.enums.OrderValidationStatus;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,16 +58,4 @@ public class Order {
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "invoice_id")
     private Invoice invoice;
-    @Column(name = "dhl_booked")
-    private boolean dhlBooked = false;
-
-    @Column(name = "dhl_booked_at")
-    private LocalDateTime dhlBookedAt;
-    // Dans Order.java, ajoutez cette méthode utilitaire
-    public boolean areAllLinesReadyToShip() {
-        if (orderLines == null || orderLines.isEmpty()) {
-            return false;
-        }
-        return orderLines.stream().allMatch(line -> line.getLineStatus() == OrderLineStatus.READY_TO_SHIP);
-    }
 }

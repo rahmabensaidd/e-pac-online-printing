@@ -28,7 +28,7 @@ public class Book {
     private String description;
 
     private boolean is_created_by_user;
-    private Double weight; // kg
+
     @Enumerated(EnumType.STRING)
     private UserBookStatus userbook_status;
 

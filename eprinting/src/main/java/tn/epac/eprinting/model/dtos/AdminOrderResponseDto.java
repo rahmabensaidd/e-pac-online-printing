@@ -28,6 +28,16 @@ public class AdminOrderResponseDto {
     private String assignee;
     private Integer items;
     private String shippingMethod;
+    private String shippingStatus;
+    private String trackingNumber;
+    private String trackingUrl;
+    private String carrier;
+    private String labelUrl;
+    private String selectedRateId;
+    private String selectedRateService;
+    private String selectedRateCurrency;
+    private Float selectedRateAmount;
+    private Boolean testShipment;
     private PaymentStatus paymentStatus;
     private String notes;
     private List<OrderLineResponseDto> orderLines;

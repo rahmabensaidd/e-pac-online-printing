@@ -11,6 +11,10 @@ import java.math.BigDecimal;
 
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    java.util.Optional<Order> findByReference(String reference);
+    java.util.Optional<Order> findFirstByShippingCarrierShipmentId(String carrierShipmentId);
+    java.util.Optional<Order> findFirstByShippingTrackingNumber(String trackingNumber);
+    java.util.Optional<Order> findTopByUserUserIdOrderByOrderDateDesc(Long userId);
     Page<Order> findByStatus(OrderStatus status, Pageable pageable);
     java.util.List<Order> findByUserUserIdOrderByOrderDateDesc(Long userId);
     long countByUserUserId(Long userId);

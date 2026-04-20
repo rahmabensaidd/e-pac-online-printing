@@ -26,7 +26,19 @@ public class PricingApplicationService {
 
     public QuoteResponseDto getQuote(QuoteRequestDto request) {
         PricingApiRequestDto pricingRequest = pricingRequestMapper.toPricingApiRequest(request);
-        Map<String, Object> pricingResponse = pricingApiClient.predict(pricingRequest);
+        Map<String, Object> pricingResponse;
+        try {
+            pricingResponse = pricingApiClient.predict(pricingRequest);
+        } catch (Exception ignored) {
+            QuoteResponseDto response = new QuoteResponseDto();
+            response.setAvailable(false);
+            response.setSelectedPrice(null);
+            response.setSelectedModel(null);
+            response.setSelectedStrategy(null);
+            response.setPricingDetails(Map.of());
+            response.setMessage("Pricing service unavailable");
+            return response;
+        }
 
         SelectedPrediction selected =
                 pricingSelectionService.selectBest(pricingResponse, request.getSiren());

@@ -21,14 +21,23 @@ public class OrderComputationService {
         }
 
         if (line.isMarketplaceItem()) {
-            line.setLineStatus(OrderLineStatus.READY);
-            line.setPriority(OrderPriority.NORMAL);
-            line.setValidationStatus(OrderValidationStatus.VALIDATED);
+            // Keep explicit admin updates (ex: READY -> READY_TO_SHIP) and only fill missing defaults.
+            if (line.getLineStatus() == null) {
+                line.setLineStatus(OrderLineStatus.READY);
+            }
+            if (line.getPriority() == null) {
+                line.setPriority(OrderPriority.NORMAL);
+            }
+            if (line.getValidationStatus() == null) {
+                line.setValidationStatus(OrderValidationStatus.VALIDATED);
+            }
             return;
         }
 
         if (line.getLineStatus() == null) {
-            line.setLineStatus(OrderLineStatus.PRINTING);
+            // Custom lines start in business "PENDING" state
+            // (stored as validation PENDING + technical lineStatus READY).
+            line.setLineStatus(OrderLineStatus.READY);
         }
         if (line.getPriority() == null) {
             line.setPriority(OrderPriority.NORMAL);
@@ -39,45 +48,45 @@ public class OrderComputationService {
     }
 
     public OrderStatus computeGlobalStatusFromLines(List<OrderLine> lines) {
-        List<OrderLine> customLines = lines == null
+        List<OrderLine> allLines = lines == null
                 ? List.of()
-                : lines.stream().filter(OrderLine::isCustomItem).toList();
+                : lines.stream().filter(java.util.Objects::nonNull).toList();
 
-        if (customLines.isEmpty()) {
-            return OrderStatus.READY_TO_SHIP;
+        if (allLines.isEmpty()) {
+            return OrderStatus.PENDING;
         }
 
-        boolean anyRejected = customLines.stream()
+        boolean anyRejected = allLines.stream()
                 .anyMatch(line -> line.getLineStatus() == OrderLineStatus.REJECTED);
         if (anyRejected) {
             return OrderStatus.REJECTED;
         }
 
-        boolean anyPrinting = customLines.stream()
-                .anyMatch(line -> line.getLineStatus() == OrderLineStatus.PRINTING);
-        if (anyPrinting) {
-            return OrderStatus.IN_PRODUCTION;
-        }
-
-        boolean allShipped = customLines.stream()
-                .allMatch(line -> line.getLineStatus() == OrderLineStatus.SHIPPED);
-        if (allShipped) {
-            return OrderStatus.SHIPPED;
-        }
-
-        boolean allReadyToShip = customLines.stream()
+        boolean allReadyToShip = allLines.stream()
                 .allMatch(line -> line.getLineStatus() == OrderLineStatus.READY_TO_SHIP);
         if (allReadyToShip) {
             return OrderStatus.READY_TO_SHIP;
         }
 
-        boolean anyReadyToShip = customLines.stream()
-                .anyMatch(line -> line.getLineStatus() == OrderLineStatus.READY_TO_SHIP);
-        if (anyReadyToShip) {
-            return OrderStatus.READY_TO_SHIP;
+        boolean anyPrinting = allLines.stream()
+                .anyMatch(line -> line.getLineStatus() == OrderLineStatus.PRINTING);
+        if (anyPrinting) {
+            return OrderStatus.IN_PRODUCTION;
         }
 
-        return OrderStatus.IN_PRODUCTION;
+        boolean allShipped = allLines.stream()
+                .allMatch(line -> line.getLineStatus() == OrderLineStatus.SHIPPED);
+        if (allShipped) {
+            return OrderStatus.SHIPPED;
+        }
+
+        boolean allReady = allLines.stream()
+                .allMatch(line -> line.getLineStatus() == OrderLineStatus.READY);
+        if (allReady) {
+            return OrderStatus.PENDING;
+        }
+
+        return OrderStatus.PENDING;
     }
 
     public OrderPriority computeOrderPriority(List<OrderLine> lines) {
@@ -119,13 +128,28 @@ public class OrderComputationService {
         }
 
         boolean anyRejected = customLines.stream()
-                .anyMatch(line -> line.getValidationStatus() == OrderValidationStatus.REJECTED);
+                .anyMatch(line ->
+                        line.getValidationStatus() == OrderValidationStatus.REJECTED
+                                || line.getLineStatus() == OrderLineStatus.REJECTED);
         if (anyRejected) {
             return OrderValidationStatus.REJECTED;
         }
 
+        // Business rule:
+        // - PENDING when at least one custom line is still pending review/state
+        // - VALIDATED when all custom lines are validated/printing/ready_to_ship
         boolean anyPending = customLines.stream()
-                .anyMatch(line -> line.getValidationStatus() == null || line.getValidationStatus() == OrderValidationStatus.PENDING);
+                .anyMatch(line -> {
+                    OrderValidationStatus validationStatus = line.getValidationStatus();
+                    OrderLineStatus lineStatus = line.getLineStatus();
+                    if (validationStatus == OrderValidationStatus.PENDING) {
+                        return true;
+                    }
+                    if (validationStatus == null) {
+                        return lineStatus == null || lineStatus == OrderLineStatus.READY;
+                    }
+                    return false;
+                });
         if (anyPending) {
             return OrderValidationStatus.PENDING;
         }

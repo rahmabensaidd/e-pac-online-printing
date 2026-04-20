@@ -1,6 +1,7 @@
 package tn.epac.eprinting.serviceimpl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -12,7 +13,6 @@ import tn.epac.eprinting.model.dtos.*;
 import tn.epac.eprinting.model.entities.*;
 import tn.epac.eprinting.model.enums.*;
 import tn.epac.eprinting.repository.*;
-import tn.epac.eprinting.service.ShippingBookingProvider;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,6 +21,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class OrderServiceImpl {
 
     private final OrderRepository orderRepository;
@@ -32,7 +33,8 @@ public class OrderServiceImpl {
     private final CustomBookPricingService customBookPricingService;
     private final OrderComputationService orderComputationService;
     private final InvoicePdfServiceImpl invoicePdfService;
-    private final DhlShippingService dhlShippingService;
+    private final ShippoShippingService shippoShippingService;
+
     private String generateInvoiceNumber() {
         String year = String.valueOf(LocalDate.now().getYear());
         long count = orderRepository.count() + 1;
@@ -53,6 +55,9 @@ public class OrderServiceImpl {
 
         revalidateCustomPricing(cart, request);
 
+        ShippingMethod shippingMethod = parseShippingMethod(request.getShippingMethod());
+        validateCheckoutAddress(request, shippingMethod);
+
         User user = resolveUser(email, username, request, roles);
         Adress shippingAddress = adressRepository.save(buildAddress(request));
 
@@ -63,10 +68,12 @@ public class OrderServiceImpl {
         billing.setBillingDate(LocalDate.now());
         billing = billingRepository.save(billing);
 
-        ShippingMethod shippingMethod = parseShippingMethod(request.getShippingMethod());
-
         Shipping shipping = new Shipping();
         shipping.setShippingAddress(shippingAddress);
+        shipping.setRecipientFullName(trimToNull(request.getFullName()));
+        shipping.setRecipientEmail(trimToNull(request.getEmail()));
+        shipping.setRecipientPhone(trimToNull(request.getPhone()));
+        shipping.setRecipientCompany(trimToNull(request.getCompany()));
         shipping.setShippingMethod(shippingMethod);
         shipping.setCarrier(resolveCarrier(shippingMethod));
         shipping.setCarrierServiceCode(resolveCarrierServiceCode(shippingMethod));
@@ -108,7 +115,7 @@ public class OrderServiceImpl {
         order.setInvoice(invoice);
         invoice.setOrder(order);
         recomputeAggregates(order);
-
+        shippoShippingService.triggerTrackingIfEligible(order);
 
         Order savedOrder = orderRepository.save(order);
         cartRepository.delete(cart);
@@ -139,6 +146,21 @@ public class OrderServiceImpl {
         return mapToTrackingResponse(order);
     }
 
+    public OrderTrackingResponseDto refreshTrackingForCurrentUser(Long orderId, String email, String username) {
+        User user = resolveCurrentUser(email, username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        Order order = orderRepository.findByIdWithLines(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        if (order.getUser() == null || !Objects.equals(order.getUser().getUserId(), user.getUserId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this order");
+        }
+
+        shippoShippingService.refreshTrackingForOrder(order);
+        return mapToTrackingResponse(order);
+    }
+
     public Page<AdminOrderResponseDto> getAllOrdersAdmin(Pageable pageable, String status, String search) {
         Page<Order> orders;
 
@@ -162,6 +184,94 @@ public class OrderServiceImpl {
         Order order = orderRepository.findByIdWithLines(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
         return mapToAdminResponseDto(order);
+    }
+
+    public AdminShippingRatesResponseDto getShippingRatesForAdmin(Long orderId) {
+        Order order = orderRepository.findByIdWithLines(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        Shipping shipping = order.getShipping();
+        if (shipping == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shipping not initialized for this order");
+        }
+
+        boolean testMode = shippoShippingService.isTestModeEnabled();
+        boolean ratesEnabled = shippoShippingService.areRatesEnabled();
+        String infoMessage = shippoShippingService.describeShippingModeForAdmin();
+
+        List<ShippingRateDto> rates = ratesEnabled
+                ? shippoShippingService.fetchRatesForOrder(order)
+                : List.of();
+        return AdminShippingRatesResponseDto.builder()
+                .orderId(order.getOrderId())
+                .shippingMethod(shipping.getShippingMethod() != null ? shipping.getShippingMethod().name() : null)
+                .selectedRateId(shipping.getSelectedRateId())
+                .selectedService(shipping.getSelectedRateService())
+                .testMode(testMode)
+                .ratesEnabled(ratesEnabled)
+                .informationMessage(infoMessage)
+                .rates(rates)
+                .build();
+    }
+
+    public AdminShipmentActionResponseDto selectShippingRateForAdmin(
+            Long orderId,
+            String rateId,
+            String carrier,
+            String service,
+            String currency,
+            Float amount
+    ) {
+        Order order = orderRepository.findByIdWithLines(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        return shippoShippingService.selectRateForOrder(order, rateId, carrier, service, currency, amount);
+    }
+
+    public AdminShipmentActionResponseDto createShipmentForAdmin(
+            Long orderId,
+            String rateId,
+            String carrier,
+            String service,
+            String currency,
+            Float amount,
+            boolean autoSelect,
+            boolean testShipment
+    ) {
+        Order order = orderRepository.findByIdWithLines(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        return shippoShippingService.createShipmentForOrder(order, rateId, carrier, service, currency, amount, autoSelect, testShipment);
+    }
+
+    public AdminShipmentActionResponseDto refreshShipmentTrackingForAdmin(Long orderId) {
+        Order order = orderRepository.findByIdWithLines(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        return shippoShippingService.refreshTrackingForOrder(order);
+    }
+
+    public List<ShippingOptionDto> getShippingOptions(float subtotal, boolean organizationUser) {
+        List<ShippingOptionDto> options = new ArrayList<>();
+        if (organizationUser) {
+            options.add(ShippingOptionDto.builder()
+                    .code("freight_shipping")
+                    .label("Freight shipping")
+                    .price(subtotal >= 150 ? 0f : 8.5f)
+                    .currency("USD")
+                    .build());
+            options.add(ShippingOptionDto.builder()
+                    .code("full_truckload")
+                    .label("Full truckload")
+                    .price(0f)
+                    .currency("USD")
+                    .build());
+            return options;
+        }
+
+        options.add(ShippingOptionDto.builder()
+                .code("standard")
+                .label("Standard")
+                .price(subtotal >= 150 ? 0f : 8.5f)
+                .currency("USD")
+                .build());
+        return options;
     }
 
     public AdminOrderResponseDto createOrder(OrderUpdateRequestDto request) {
@@ -195,7 +305,6 @@ public class OrderServiceImpl {
         shipping = shippingRepository.save(shipping);
         order.setShipping(shipping);
 
-
         Order savedOrder = orderRepository.save(order);
         return mapToAdminResponseDto(savedOrder);
     }
@@ -217,7 +326,62 @@ public class OrderServiceImpl {
         return mapToAdminResponseDto(savedOrder);
     }
 
-    // Dans OrderServiceImpl.java
+    @Transactional
+    public AdminOrderResponseDto updateOrderLines(Long orderId, List<OrderLineUpdateDto> updates) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        for (OrderLineUpdateDto update : updates) {
+            OrderLine targetLine = order.getOrderLines().stream()
+                    .filter(line -> Objects.equals(line.getOrderLineId(), update.getOrderLineId()))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("OrderLine not found with id: " + update.getOrderLineId()));
+
+            if (update.getStatus() != null && !update.getStatus().isBlank()) {
+                applyOrderLineStatusUpdate(targetLine, update.getStatus(), update.getOrderLineId());
+            }
+
+            if (update.getPriority() != null && !update.getPriority().isBlank() && targetLine.isCustomItem()) {
+                OrderPriority mappedPriority = orderComputationService.fromDisplayPriority(update.getPriority());
+                targetLine.setPriority(mappedPriority);
+            }
+        }
+
+        recomputeAggregates(order);
+        shippoShippingService.triggerTrackingIfEligible(order);
+
+        Order savedOrder = orderRepository.save(order);
+        return mapToAdminResponseDto(savedOrder);
+    }
+
+    @Deprecated
+    public AdminOrderResponseDto updateOrderLineValidation(Long orderId, Long orderLineId, OrderValidationStatus validationStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        OrderLine targetLine = order.getOrderLines().stream()
+                .filter(line -> Objects.equals(line.getOrderLineId(), orderLineId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Order line not found with id: " + orderLineId));
+
+        if (!targetLine.isCustomItem()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only custom lines can be validated/rejected");
+        }
+
+        targetLine.setValidationStatus(validationStatus == null ? OrderValidationStatus.PENDING : validationStatus);
+
+        if (validationStatus == OrderValidationStatus.VALIDATED && targetLine.getLineStatus() == null) {
+            targetLine.setLineStatus(OrderLineStatus.READY);
+        }
+        if (validationStatus == OrderValidationStatus.REJECTED) {
+            targetLine.setLineStatus(OrderLineStatus.REJECTED);
+        }
+
+        recomputeAggregates(order);
+        shippoShippingService.triggerTrackingIfEligible(order);
+        Order saved = orderRepository.save(order);
+        return mapToAdminResponseDto(saved);
+    }
 
     @Deprecated
     public AdminOrderResponseDto updateOrderLineProductionStatus(Long orderId, Long orderLineId, OrderLineStatus lineStatus) {
@@ -250,89 +414,11 @@ public class OrderServiceImpl {
         }
 
         recomputeAggregates(order);
-
-        // 🔑 CRUCIAL: Vérifier si TOUTES les lignes sont READY_TO_SHIP et déclencher DHL
-        dhlShippingService.checkAndTriggerDhlIfReady(order);
-
+        shippoShippingService.triggerTrackingIfEligible(order);
         Order saved = orderRepository.save(order);
         return mapToAdminResponseDto(saved);
     }
 
-    // Modifiez updateOrderLines
-    @Transactional
-    public AdminOrderResponseDto updateOrderLines(Long orderId, List<OrderLineUpdateDto> updates) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
-
-        for (OrderLineUpdateDto update : updates) {
-            OrderLine targetLine = order.getOrderLines().stream()
-                    .filter(line -> Objects.equals(line.getOrderLineId(), update.getOrderLineId()))
-                    .findFirst()
-                    .orElseThrow(() -> new ResourceNotFoundException("OrderLine not found with id: " + update.getOrderLineId()));
-
-            if (update.getStatus() != null) {
-                if (!isAllowedLineStatus(update.getStatus())) {
-                    throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST,
-                            "Statut non autorisé pour une ligne. Autorised: READY, REJECTED, PRINTING, READY_TO_SHIP"
-                    );
-                }
-                targetLine.setLineStatus(update.getStatus());
-
-                if (update.getStatus() == OrderLineStatus.REJECTED) {
-                    targetLine.setValidationStatus(OrderValidationStatus.REJECTED);
-                } else if (update.getStatus() == OrderLineStatus.READY) {
-                    targetLine.setValidationStatus(OrderValidationStatus.VALIDATED);
-                }
-            }
-
-            if (update.getPriority() != null && !update.getPriority().isBlank()) {
-                OrderPriority mappedPriority = orderComputationService.fromDisplayPriority(update.getPriority());
-                targetLine.setPriority(mappedPriority);
-            }
-        }
-
-        recomputeAggregates(order);
-
-        // 🔑 CRUCIAL: Vérifier si TOUTES les lignes sont READY_TO_SHIP et déclencher DHL
-        dhlShippingService.checkAndTriggerDhlIfReady(order);
-
-        Order savedOrder = orderRepository.save(order);
-        return mapToAdminResponseDto(savedOrder);
-    }
-
-    // Modifiez updateOrderLineValidation
-    @Deprecated
-    public AdminOrderResponseDto updateOrderLineValidation(Long orderId, Long orderLineId, OrderValidationStatus validationStatus) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
-
-        OrderLine targetLine = order.getOrderLines().stream()
-                .filter(line -> Objects.equals(line.getOrderLineId(), orderLineId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Order line not found with id: " + orderLineId));
-
-        if (!targetLine.isCustomItem()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only custom lines can be validated/rejected");
-        }
-
-        targetLine.setValidationStatus(validationStatus == null ? OrderValidationStatus.PENDING : validationStatus);
-
-        if (validationStatus == OrderValidationStatus.VALIDATED && targetLine.getLineStatus() == null) {
-            targetLine.setLineStatus(OrderLineStatus.READY);
-        }
-        if (validationStatus == OrderValidationStatus.REJECTED) {
-            targetLine.setLineStatus(OrderLineStatus.REJECTED);
-        }
-
-        recomputeAggregates(order);
-
-        // 🔑 CRUCIAL: Vérifier si TOUTES les lignes sont READY_TO_SHIP et déclencher DHL
-        dhlShippingService.checkAndTriggerDhlIfReady(order);
-
-        Order saved = orderRepository.save(order);
-        return mapToAdminResponseDto(saved);
-    }
     public AdminOrderResponseDto updateOrder(Long orderId, OrderUpdateRequestDto request) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
@@ -378,8 +464,7 @@ public class OrderServiceImpl {
         if (order.getOrderLines() != null && !order.getOrderLines().isEmpty()) {
             recomputeAggregates(order);
         }
-
-
+        shippoShippingService.triggerTrackingIfEligible(order);
 
         Order updatedOrder = orderRepository.save(order);
         return mapToAdminResponseDto(updatedOrder);
@@ -432,10 +517,14 @@ public class OrderServiceImpl {
                 .status(order.getStatus())
                 .priority(resolveOrderPriority(order))
                 .validationStatus(resolveOrderValidation(order))
+                .shippingMethod(order.getShipping() != null && order.getShipping().getShippingMethod() != null
+                        ? order.getShipping().getShippingMethod().name()
+                        : null)
                 .shippingStatus(order.getShipping() != null && order.getShipping().getShippingStatus() != null
                         ? order.getShipping().getShippingStatus().name()
                         : null)
                 .trackingNumber(order.getShipping() != null ? order.getShipping().getTrackingNumber() : null)
+                .trackingUrl(order.getShipping() != null ? order.getShipping().getTrackingUrl() : null)
                 .carrier(order.getShipping() != null ? order.getShipping().getCarrier() : null)
                 .totalAmount(order.getTotalAmount())
                 .customerEmail(order.getUser() != null ? order.getUser().getEmail() : null)
@@ -461,6 +550,20 @@ public class OrderServiceImpl {
                 .assignee(getAssigneeFromOrder(order))
                 .items(order.getOrderLines() != null ? order.getOrderLines().size() : 0)
                 .shippingMethod(String.valueOf(order.getShipping() != null ? order.getShipping().getShippingMethod() : ShippingMethod.STANDARD))
+                .shippingStatus(order.getShipping() != null && order.getShipping().getShippingStatus() != null
+                        ? order.getShipping().getShippingStatus().name()
+                        : null)
+                .trackingNumber(order.getShipping() != null ? order.getShipping().getTrackingNumber() : null)
+                .trackingUrl(order.getShipping() != null ? order.getShipping().getTrackingUrl() : null)
+                .carrier(order.getShipping() != null ? order.getShipping().getCarrier() : null)
+                .labelUrl(order.getShipping() != null ? order.getShipping().getLabelUrl() : null)
+                .selectedRateId(order.getShipping() != null ? order.getShipping().getSelectedRateId() : null)
+                .selectedRateService(order.getShipping() != null ? order.getShipping().getSelectedRateService() : null)
+                .selectedRateCurrency(order.getShipping() != null ? order.getShipping().getSelectedRateCurrency() : null)
+                .selectedRateAmount(order.getShipping() != null && order.getShipping().getSelectedRateAmount() != null
+                        ? order.getShipping().getSelectedRateAmount().floatValue()
+                        : null)
+                .testShipment(order.getShipping() != null && order.getShipping().isTestShipment())
                 .paymentStatus(order.getBilling() != null ? order.getBilling().getPaymentStatus() : PaymentStatus.PENDING)
                 .notes("")
                 .orderLines(order.getOrderLines() != null
@@ -506,11 +609,16 @@ public class OrderServiceImpl {
                 .orderDate(order.getOrderDate())
                 .priority(resolveOrderPriority(order))
                 .globalStatus(order.getStatus())
+                .shippingMethod(order.getShipping() != null && order.getShipping().getShippingMethod() != null
+                        ? order.getShipping().getShippingMethod().name()
+                        : null)
                 .shippingStatus(order.getShipping() != null && order.getShipping().getShippingStatus() != null
                         ? order.getShipping().getShippingStatus().name()
                         : null)
                 .carrier(order.getShipping() != null ? order.getShipping().getCarrier() : null)
                 .trackingNumber(order.getShipping() != null ? order.getShipping().getTrackingNumber() : null)
+                .trackingUrl(order.getShipping() != null ? order.getShipping().getTrackingUrl() : null)
+                .testShipment(order.getShipping() != null && order.getShipping().isTestShipment())
                 .productionLines(productionLines)
                 .shippingLines(shippingLines)
                 .build();
@@ -620,10 +728,14 @@ public class OrderServiceImpl {
             return ShippingMethod.STANDARD;
         }
 
-        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        String normalized = value.trim()
+                .toUpperCase(Locale.ROOT)
+                .replace('-', '_')
+                .replace(' ', '_');
         return switch (normalized) {
-            case "FREIGHTSHIPPING" -> ShippingMethod.FREIGHTSHIPPING;
-            case "FULLTRUCKLOAD_DHL" -> ShippingMethod.FULLTRUCKLOAD_DHL;
+            case "FREIGHTSHIPPING", "FREIGHT_SHIPPING" -> ShippingMethod.FREIGHTSHIPPING;
+            case "FULLTRUCKLOAD_DHL", "FULLTRUCKLOAD", "FULL_TRACKLOAD", "FULLTRACKLOAD", "FULL_TRUCKLOAD" ->
+                    ShippingMethod.FULLTRUCKLOAD_DHL;
             case "STANDARD" -> ShippingMethod.STANDARD;
             default -> ShippingMethod.STANDARD;
         };
@@ -673,6 +785,92 @@ public class OrderServiceImpl {
                 || status == OrderStatus.CANCELLED;
     }
 
+    private void applyOrderLineStatusUpdate(OrderLine line, String requestedStatus, Long lineId) {
+        String normalized = requestedStatus.trim().toUpperCase(Locale.ROOT);
+
+        if (line.isCustomItem()) {
+            applyCustomLineStatus(line, normalized, lineId);
+            return;
+        }
+
+        applyMarketplaceLineStatus(line, normalized, lineId);
+    }
+
+    private void applyCustomLineStatus(OrderLine line, String status, Long lineId) {
+        switch (status) {
+            case "PENDING" -> {
+                line.setValidationStatus(OrderValidationStatus.PENDING);
+                line.setLineStatus(OrderLineStatus.READY);
+            }
+            case "PRINTING" -> {
+                line.setValidationStatus(OrderValidationStatus.VALIDATED);
+                line.setLineStatus(OrderLineStatus.PRINTING);
+            }
+            case "READY_TO_SHIP" -> {
+                line.setValidationStatus(OrderValidationStatus.VALIDATED);
+                line.setLineStatus(OrderLineStatus.READY_TO_SHIP);
+            }
+            case "VALIDATED", "READY" -> {
+                line.setValidationStatus(OrderValidationStatus.VALIDATED);
+                line.setLineStatus(OrderLineStatus.READY);
+            }
+            case "REJECTED" -> {
+                line.setValidationStatus(OrderValidationStatus.REJECTED);
+                line.setLineStatus(OrderLineStatus.REJECTED);
+            }
+            default -> throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid custom line status. Allowed: PENDING, PRINTING, READY_TO_SHIP, VALIDATED, REJECTED. LineId: " + lineId
+            );
+        }
+    }
+
+    private void applyMarketplaceLineStatus(OrderLine line, String status, Long lineId) {
+        switch (status) {
+            case "READY" -> {
+                line.setLineStatus(OrderLineStatus.READY);
+                line.setValidationStatus(OrderValidationStatus.VALIDATED);
+            }
+            case "READY_TO_SHIP" -> {
+                line.setLineStatus(OrderLineStatus.READY_TO_SHIP);
+                line.setValidationStatus(OrderValidationStatus.VALIDATED);
+            }
+            default -> throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Marketplace line status can only be READY or READY_TO_SHIP. LineId: " + lineId
+            );
+        }
+    }
+
+    private String resolveDisplayLineStatus(OrderLine line) {
+        if (line == null) {
+            return "READY";
+        }
+
+        if (line.isCustomItem()) {
+            if (line.getValidationStatus() == OrderValidationStatus.REJECTED || line.getLineStatus() == OrderLineStatus.REJECTED) {
+                return "REJECTED";
+            }
+            if (line.getValidationStatus() == OrderValidationStatus.PENDING
+                    || (line.getValidationStatus() == null
+                    && (line.getLineStatus() == null || line.getLineStatus() == OrderLineStatus.READY))) {
+                return "PENDING";
+            }
+            if (line.getLineStatus() == OrderLineStatus.PRINTING) {
+                return "PRINTING";
+            }
+            if (line.getLineStatus() == OrderLineStatus.READY_TO_SHIP) {
+                return "READY_TO_SHIP";
+            }
+            return "VALIDATED";
+        }
+
+        if (line.getLineStatus() == null) {
+            return "READY";
+        }
+        return line.getLineStatus().name();
+    }
+
     private boolean isAllowedLineStatus(OrderLineStatus status) {
         return status == OrderLineStatus.READY
                 || status == OrderLineStatus.REJECTED
@@ -713,7 +911,7 @@ public class OrderServiceImpl {
                 .bookId(line.getBook() != null ? line.getBook().getBookId() : null)
                 .title(line.getBook() != null ? line.getBook().getTitle() : null)
                 .itemSource(line.getItemSource() != null ? line.getItemSource().name() : CartItemSource.MARKETPLACE.name())
-                .lineStatus(line.getLineStatus() != null ? line.getLineStatus().name() : null)
+                .lineStatus(resolveDisplayLineStatus(line))
                 .priority(line.getPriority() != null ? getDisplayPriorityForDto(line.getPriority()) : OrderPriority.NORMAL.name())
                 .validationStatus(line.getValidationStatus() != null ? line.getValidationStatus().name() : OrderValidationStatus.PENDING.name())
                 .quantity(line.getQuantity())
@@ -820,9 +1018,17 @@ public class OrderServiceImpl {
         String[] names = splitName(request.getFullName());
         user.setFirstName(names[0]);
         user.setLastName(names[1]);
+        user.setPhoneNumber(trimToNull(request.getPhone()));
         if (request.getCompany() != null && !request.getCompany().isBlank()) {
             user.setCompanyName(request.getCompany());
         }
+        user.setAddressLine1(trimToNull(request.getAddressLine1()));
+        user.setAddressLine2(trimToNull(request.getAddressLine2()));
+        user.setCity(trimToNull(request.getCity()));
+        user.setState(trimToNull(request.getState()));
+        user.setPostalCode(trimToNull(request.getPostalCode()));
+        user.setCountry(normalizeCountryName(request.getCountry()));
+        user.setCountryCode(normalizeCountryCode(request.getCountry()));
         if (user.getUsername() == null || user.getUsername().isBlank()) {
             user.setUsername(toUsernameCandidate(username, user.getEmail(), request.getFullName()));
         }
@@ -838,6 +1044,14 @@ public class OrderServiceImpl {
         user.setFirstName(names[0]);
         user.setLastName(names[1]);
         user.setCompanyName(request.getCompany());
+        user.setPhoneNumber(trimToNull(request.getPhone()));
+        user.setAddressLine1(trimToNull(request.getAddressLine1()));
+        user.setAddressLine2(trimToNull(request.getAddressLine2()));
+        user.setCity(trimToNull(request.getCity()));
+        user.setState(trimToNull(request.getState()));
+        user.setPostalCode(trimToNull(request.getPostalCode()));
+        user.setCountry(normalizeCountryName(request.getCountry()));
+        user.setCountryCode(normalizeCountryCode(request.getCountry()));
         user.setRegistrationDate(LocalDate.now());
         user.setRole(resolveRole(roles));
         return userRepository.save(user);
@@ -859,13 +1073,28 @@ public class OrderServiceImpl {
     }
 
     private Adress buildAddress(CheckoutOrderRequestDto request) {
+        String street = joinAddressLines(request.getAddressLine1(), request.getAddressLine2());
+        String city = trimToNull(request.getCity());
+        String state = trimToNull(request.getState());
+        String zip = trimToNull(request.getPostalCode());
+        String country = normalizeCountryName(request.getCountry());
+        String countryCode = normalizeCountryCode(request.getCountry());
+        log.info(
+                "Checkout address mapped -> street='{}', city='{}', state='{}', postalCode='{}', country='{}', countryCode='{}'",
+                street,
+                city,
+                state,
+                zip,
+                country,
+                countryCode
+        );
         return Adress.builder()
-                .street(joinAddressLines(request.getAddressLine1(), request.getAddressLine2()))
-                .city(request.getCity())
-                .state(request.getState())
-                .zipcode(request.getPostalCode())
-                .country("Unknown")
-                .countryCode("N/A")
+                .street(street)
+                .city(city)
+                .state(state)
+                .zipcode(zip)
+                .country(country)
+                .countryCode(countryCode)
                 .build();
     }
 
@@ -874,6 +1103,96 @@ public class OrderServiceImpl {
             return line1;
         }
         return line1 + ", " + line2;
+    }
+
+    private void validateCheckoutAddress(CheckoutOrderRequestDto request, ShippingMethod shippingMethod) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Checkout payload is missing");
+        }
+        if (shippingMethod == ShippingMethod.FULLTRUCKLOAD_DHL) {
+            return;
+        }
+
+        List<String> missingFields = new ArrayList<>();
+        if (trimToNull(request.getAddressLine1()) == null) {
+            missingFields.add("addressLine1");
+        }
+        if (trimToNull(request.getCity()) == null) {
+            missingFields.add("city");
+        }
+        if (trimToNull(request.getState()) == null) {
+            missingFields.add("state");
+        }
+        if (trimToNull(request.getPostalCode()) == null) {
+            missingFields.add("postalCode");
+        }
+        if (trimToNull(request.getCountry()) == null) {
+            missingFields.add("country");
+        }
+        if (trimToNull(request.getPhone()) == null) {
+            missingFields.add("phone");
+        }
+
+        if (!missingFields.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Missing shipping address fields: " + String.join(", ", missingFields)
+            );
+        }
+    }
+
+    private String normalizeCountryName(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return "France";
+        }
+
+        return switch (normalized.trim().toUpperCase(Locale.ROOT)) {
+            case "FR", "FRA", "FRANCE" -> "France";
+            case "TN", "TUN", "TUNISIA", "TUNISIE" -> "Tunisia";
+            case "US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA", "ETATS-UNIS", "ÉTATS-UNIS" -> "United States";
+            case "GB", "UK", "UNITED KINGDOM", "ROYAUME-UNI" -> "United Kingdom";
+            case "DE", "GERMANY", "ALLEMAGNE" -> "Germany";
+            case "IT", "ITALY", "ITALIE" -> "Italy";
+            case "ES", "SPAIN", "ESPAGNE" -> "Spain";
+            case "BE", "BELGIUM", "BELGIQUE" -> "Belgium";
+            case "NL", "NETHERLANDS", "PAYS-BAS" -> "Netherlands";
+            case "PT", "PORTUGAL" -> "Portugal";
+            case "CH", "SWITZERLAND", "SUISSE" -> "Switzerland";
+            case "CA", "CANADA" -> "Canada";
+            default -> normalized;
+        };
+    }
+
+    private String normalizeCountryCode(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return "FR";
+        }
+
+        return switch (normalized.trim().toUpperCase(Locale.ROOT)) {
+            case "FR", "FRA", "FRANCE" -> "FR";
+            case "TN", "TUN", "TUNISIA", "TUNISIE" -> "TN";
+            case "US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA", "ETATS-UNIS", "ÉTATS-UNIS" -> "US";
+            case "GB", "UK", "UNITED KINGDOM", "ROYAUME-UNI" -> "GB";
+            case "DE", "GERMANY", "ALLEMAGNE" -> "DE";
+            case "IT", "ITALY", "ITALIE" -> "IT";
+            case "ES", "SPAIN", "ESPAGNE" -> "ES";
+            case "BE", "BELGIUM", "BELGIQUE" -> "BE";
+            case "NL", "NETHERLANDS", "PAYS-BAS" -> "NL";
+            case "PT", "PORTUGAL" -> "PT";
+            case "CH", "SWITZERLAND", "SUISSE" -> "CH";
+            case "CA", "CANADA" -> "CA";
+            default -> normalized.trim().toUpperCase(Locale.ROOT);
+        };
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Transactional
@@ -920,9 +1239,4 @@ public class OrderServiceImpl {
 
         orderRepository.save(order);
     }
-
-
-
-
-
 }

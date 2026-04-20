@@ -102,6 +102,53 @@ public class OrderController {
         return ResponseEntity.ok(orderService.updateOrderLines(orderId, request.getUpdates()));
     }
 
+    @GetMapping("/admin/{orderId}/shipping/rates")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminShippingRatesResponseDto> getShippingRates(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getShippingRatesForAdmin(orderId));
+    }
+
+    @PostMapping("/admin/{orderId}/shipping/rate-selection")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminShipmentActionResponseDto> selectShippingRate(
+            @PathVariable Long orderId,
+            @RequestBody AdminSelectRateRequestDto request
+    ) {
+        Float amount = request != null && request.getAmount() != null ? request.getAmount().floatValue() : null;
+        return ResponseEntity.ok(
+                orderService.selectShippingRateForAdmin(
+                        orderId,
+                        request != null ? request.getRateId() : null,
+                        request != null ? request.getCarrier() : null,
+                        request != null ? request.getService() : null,
+                        request != null ? request.getCurrency() : null,
+                        amount
+                )
+        );
+    }
+
+    @PostMapping("/admin/{orderId}/shipping/ship")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminShipmentActionResponseDto> createShipment(
+            @PathVariable Long orderId,
+            @RequestBody(required = false) AdminCreateShipmentRequestDto request
+    ) {
+        String rateId = request != null ? request.getRateId() : null;
+        String carrier = request != null ? request.getCarrier() : null;
+        String service = request != null ? request.getService() : null;
+        String currency = request != null ? request.getCurrency() : null;
+        Float amount = request != null && request.getAmount() != null ? request.getAmount().floatValue() : null;
+        boolean auto = request == null || request.getAutoSelect() == null || Boolean.TRUE.equals(request.getAutoSelect());
+        boolean testShipment = request != null && Boolean.TRUE.equals(request.getTestShipment());
+        return ResponseEntity.ok(orderService.createShipmentForAdmin(orderId, rateId, carrier, service, currency, amount, auto, testShipment));
+    }
+
+    @PostMapping("/admin/{orderId}/shipping/tracking/refresh")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AdminShipmentActionResponseDto> refreshShippingTracking(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.refreshShipmentTrackingForAdmin(orderId));
+    }
+
     // ==================== ENDPOINTS DÉPRÉCIÉS (gardés pour compatibilité) ====================
 
     @PatchMapping("/admin/{orderId}/lines/{orderLineId}/validation")
@@ -175,5 +222,35 @@ public class OrderController {
             username = jwt.getSubject();
         }
         return ResponseEntity.ok(orderService.getTrackingForCurrentUser(orderId, email, username));
+    }
+
+    @PostMapping("/my/{orderId}/tracking/refresh")
+    @PreAuthorize("hasAnyRole('user','admin','organization')")
+    public ResponseEntity<OrderTrackingResponseDto> refreshMyOrderTracking(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        String email = jwt != null ? jwt.getClaimAsString("email") : null;
+        String username = jwt != null ? jwt.getClaimAsString("preferred_username") : null;
+        if ((username == null || username.isBlank()) && jwt != null) {
+            username = jwt.getSubject();
+        }
+        return ResponseEntity.ok(orderService.refreshTrackingForCurrentUser(orderId, email, username));
+    }
+
+    @GetMapping("/shipping/options")
+    @PreAuthorize("hasAnyRole('user','admin','organization')")
+    public ResponseEntity<List<ShippingOptionDto>> getShippingOptions(
+            @RequestParam(defaultValue = "0") float subtotal,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        boolean isOrganization = false;
+        if (jwt != null) {
+            Object rolesClaim = jwt.getClaim("roles");
+            if (rolesClaim instanceof List<?> rawRoles) {
+                isOrganization = rawRoles.stream().anyMatch(r -> "organization".equalsIgnoreCase(String.valueOf(r)));
+            }
+        }
+        return ResponseEntity.ok(orderService.getShippingOptions(subtotal, isOrganization));
     }
 }

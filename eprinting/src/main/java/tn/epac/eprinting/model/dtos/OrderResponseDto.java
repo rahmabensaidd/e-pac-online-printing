@@ -22,8 +22,10 @@ public class OrderResponseDto {
     private OrderStatus status;
     private OrderPriority priority;
     private OrderValidationStatus validationStatus;
+    private String shippingMethod;
     private String shippingStatus;
     private String trackingNumber;
+    private String trackingUrl;
     private String carrier;
     private Float totalAmount;
     private String customerEmail;

@@ -79,7 +79,8 @@ public class SecurityConfig {
                                 "/api/auth/signup",
                                 "/api/auth/register-organization",
                                 "/api/auth/login",
-                                "/api/payments/webhook"  // Webhook Stripe public
+                                "/api/payments/webhook",  // Webhook Stripe public
+                                "/api/webhooks/shippo" // Webhook Shippo public
                         ).permitAll()
                         // Endpoints admin
                         .requestMatchers("/api/admin/**").hasRole("admin")

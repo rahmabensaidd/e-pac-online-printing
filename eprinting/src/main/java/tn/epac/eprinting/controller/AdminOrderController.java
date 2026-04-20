@@ -9,10 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import tn.epac.eprinting.model.dtos.AdminOrderResponseDto;
-import tn.epac.eprinting.model.dtos.OrderStatsDto;
-import tn.epac.eprinting.model.dtos.OrderUpdateRequestDto;
-import tn.epac.eprinting.model.dtos.PagedResponseDto;
+import tn.epac.eprinting.model.dtos.*;
 import tn.epac.eprinting.serviceimpl.OrderServiceImpl;
 
 @RestController
@@ -88,5 +85,50 @@ public class AdminOrderController {
     public ResponseEntity<OrderStatsDto> getOrderStats() {
         OrderStatsDto stats = orderService.getOrderStats();
         return ResponseEntity.ok(stats);
+    }
+
+    @GetMapping("/{orderId}/shipping/rates")
+    public ResponseEntity<AdminShippingRatesResponseDto> getShippingRates(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getShippingRatesForAdmin(orderId));
+    }
+
+    @PostMapping("/{orderId}/shipping/rate-selection")
+    public ResponseEntity<AdminShipmentActionResponseDto> selectShippingRate(
+            @PathVariable Long orderId,
+            @RequestBody AdminSelectRateRequestDto request
+    ) {
+        Float amount = request != null && request.getAmount() != null ? request.getAmount().floatValue() : null;
+        return ResponseEntity.ok(
+                orderService.selectShippingRateForAdmin(
+                        orderId,
+                        request != null ? request.getRateId() : null,
+                        request != null ? request.getCarrier() : null,
+                        request != null ? request.getService() : null,
+                        request != null ? request.getCurrency() : null,
+                        amount
+                )
+        );
+    }
+
+    @PostMapping("/{orderId}/shipping/ship")
+    public ResponseEntity<AdminShipmentActionResponseDto> createShipment(
+            @PathVariable Long orderId,
+            @RequestBody(required = false) AdminCreateShipmentRequestDto request
+    ) {
+        String rateId = request != null ? request.getRateId() : null;
+        String carrier = request != null ? request.getCarrier() : null;
+        String service = request != null ? request.getService() : null;
+        String currency = request != null ? request.getCurrency() : null;
+        Float amount = request != null && request.getAmount() != null ? request.getAmount().floatValue() : null;
+        boolean auto = request == null || request.getAutoSelect() == null || Boolean.TRUE.equals(request.getAutoSelect());
+        boolean testShipment = request != null && Boolean.TRUE.equals(request.getTestShipment());
+        return ResponseEntity.ok(
+                orderService.createShipmentForAdmin(orderId, rateId, carrier, service, currency, amount, auto, testShipment)
+        );
+    }
+
+    @PostMapping("/{orderId}/shipping/tracking/refresh")
+    public ResponseEntity<AdminShipmentActionResponseDto> refreshTracking(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.refreshShipmentTrackingForAdmin(orderId));
     }
 }

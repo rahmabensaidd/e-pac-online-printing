@@ -14,7 +14,9 @@ import tn.epac.eprinting.model.dtos.AdminUserResponseDto;
 import tn.epac.eprinting.model.dtos.AdminUserRoleUpdateRequestDto;
 import tn.epac.eprinting.model.dtos.AdminUserUpdateRequestDto;
 import tn.epac.eprinting.model.entities.Order;
+import tn.epac.eprinting.model.entities.OrderLine;
 import tn.epac.eprinting.model.entities.User;
+import tn.epac.eprinting.model.enums.CartItemSource;
 import tn.epac.eprinting.model.enums.Role;
 import tn.epac.eprinting.model.enums.UserType;
 import tn.epac.eprinting.repository.OrderRepository;
@@ -106,6 +108,7 @@ public class AdminUserServiceImpl {
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .role(user.getRole() == null ? Role.USER.name() : user.getRole().name())
+                .userType(user.getUserType() == null ? UserType.SIMPLE : user.getUserType())
                 .totalOrders((long) orders.size())
                 .orders(orders.stream().map(this::toOrderSummaryDto).toList())
                 .build();
@@ -138,7 +141,33 @@ public class AdminUserServiceImpl {
                 .priority(order.getPriority() == null ? "LOW" : order.getPriority().name())
                 .totalAmount(BigDecimal.valueOf(order.getTotalAmount()))
                 .items(order.getOrderLines() == null ? 0 : order.getOrderLines().size())
+                .orderType(resolveOrderType(order))
+                .shippingMethod(order.getShipping() != null ? order.getShipping().getShippingMethod() : null)
+                .shippingStatus(order.getShipping() != null ? order.getShipping().getShippingStatus() : null)
+                .invoiceAvailable(order.getInvoice() != null && order.getInvoice().getInvoicePdfPath() != null && !order.getInvoice().getInvoicePdfPath().isBlank())
                 .build();
+    }
+
+    private String resolveOrderType(Order order) {
+        List<OrderLine> lines = order.getOrderLines();
+        if (lines == null || lines.isEmpty()) {
+            return "UNKNOWN";
+        }
+
+        boolean hasMarketplace = lines.stream()
+                .map(OrderLine::getItemSource)
+                .anyMatch(source -> source == null || source == CartItemSource.MARKETPLACE);
+        boolean hasCustom = lines.stream()
+                .map(OrderLine::getItemSource)
+                .anyMatch(source -> source == CartItemSource.CUSTOM);
+
+        if (hasMarketplace && hasCustom) {
+            return "MARKETPLACE + PRINTING_ON_DEMAND";
+        }
+        if (hasCustom) {
+            return "PRINTING_ON_DEMAND";
+        }
+        return "MARKETPLACE";
     }
 
     private Role parseRole(String rawRole) {
