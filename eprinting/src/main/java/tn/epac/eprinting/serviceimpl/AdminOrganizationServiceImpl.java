@@ -28,8 +28,8 @@ public class AdminOrganizationServiceImpl {
 
     public AdminOrganizationResponseDto createOrganization(AdminOrganizationCreateRequestDto request) {
         String normalizedSiren = OrganizationNormalizationUtils.normalizeSiren(request.getSiren());
-        if (normalizedSiren.length() != 9) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SIREN must contain exactly 9 digits");
+        if (normalizedSiren.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SIREN is required");
         }
 
         if (organizationRepository.existsByNormalizedSiren(normalizedSiren)) {

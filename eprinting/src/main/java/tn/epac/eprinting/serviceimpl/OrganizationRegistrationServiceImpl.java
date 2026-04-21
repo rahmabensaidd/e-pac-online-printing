@@ -41,8 +41,8 @@ public class OrganizationRegistrationServiceImpl {
 
     public OrganizationRegistrationResponseDto registerOrganizationAccount(OrganizationRegistrationRequestDto request) {
         String normalizedSiren = OrganizationNormalizationUtils.normalizeSiren(request.getSiren());
-        if (normalizedSiren.length() != 9) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid SIREN format");
+        if (normalizedSiren.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SIREN is required");
         }
 
         Organization organization = organizationRepository.findByNormalizedSiren(normalizedSiren)

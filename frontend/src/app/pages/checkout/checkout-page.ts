@@ -459,6 +459,19 @@ export class CheckoutPageComponent implements AfterViewInit {
     this.placingOrder.set(true);
 
     try {
+      const clientSecret = this.stripeClientSecret();
+      if (!clientSecret) {
+        throw new Error('Stripe client secret is missing.');
+      }
+
+      const currentIntent = await this.stripe.retrievePaymentIntent(clientSecret);
+      const existingStatus = currentIntent.paymentIntent?.status;
+
+      if (existingStatus === 'succeeded') {
+        await this.finalizeSuccessfulCardCheckout();
+        return;
+      }
+
       const { error } = await this.stripe.confirmPayment({
         elements: this.elements,
         confirmParams: {
@@ -484,23 +497,19 @@ export class CheckoutPageComponent implements AfterViewInit {
       });
 
       if (error) {
+        if (error.code === 'payment_intent_unexpected_state') {
+          const refreshedIntent = await this.stripe.retrievePaymentIntent(clientSecret);
+          if (refreshedIntent.paymentIntent?.status === 'succeeded') {
+            await this.finalizeSuccessfulCardCheckout();
+            return;
+          }
+        }
+
         this.submissionError.set(error.message ?? 'Payment failed.');
         return;
       }
 
-      const order = await this.orderService.checkout(this.buildCheckoutPayload('card'));
-      this.orderPlaced.set(true);
-      this.orderNumber.set(`EP-${order.orderId}`);
-      this.placedTotal.set(order.totalAmount);
-      this.needsFinalPriceConfirmation.set(false);
-      this.stripeOrderId.set(order.orderId);
-
-      await this.cart.refresh();
-
-      this.ui.showToast?.({
-        message: 'Payment confirmed. Your order is being finalized.',
-        type: 'success',
-      });
+      await this.finalizeSuccessfulCardCheckout();
     } catch (error) {
       this.submissionError.set(
           error instanceof Error ? error.message : 'Unable to process payment.'
@@ -513,6 +522,22 @@ export class CheckoutPageComponent implements AfterViewInit {
     } finally {
       this.placingOrder.set(false);
     }
+  }
+
+  private async finalizeSuccessfulCardCheckout(): Promise<void> {
+    const order = await this.orderService.checkout(this.buildCheckoutPayload('card'));
+    this.orderPlaced.set(true);
+    this.orderNumber.set(`EP-${order.orderId}`);
+    this.placedTotal.set(order.totalAmount);
+    this.needsFinalPriceConfirmation.set(false);
+    this.stripeOrderId.set(order.orderId);
+
+    await this.cart.refresh();
+
+    this.ui.showToast?.({
+      message: 'Payment confirmed. Your order is being finalized.',
+      type: 'success',
+    });
   }
 
   startNewOrder(): void {

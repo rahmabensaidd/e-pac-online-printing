@@ -137,13 +137,11 @@
         </label>
 
         <label class="space-y-1 text-sm text-slate-600">
-          <span class="admin-label">SIREN (9 digits)</span>
+          <span class="admin-label">SIREN</span>
           <input
             class="admin-input w-full"
             formControlName="siren"
-            inputmode="numeric"
-            maxlength="9"
-            (input)="normalizeSirenInput($event)"
+            placeholder="Free text organization identifier"
           />
         </label>
 

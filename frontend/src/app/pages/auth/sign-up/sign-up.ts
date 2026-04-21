@@ -35,16 +35,6 @@ const passwordMatchValidator: ValidatorFn = (control: AbstractControl): Validati
   return password === confirmPassword ? null : { passwordMismatch: true };
 };
 
-const sirenValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
-  const value = typeof control.value === 'string' ? control.value.trim() : '';
-  if (!value) {
-    return null;
-  }
-
-  const normalized = value.replace(/\D/g, '');
-  return normalized.length === 9 ? null : { sirenInvalid: true };
-};
-
 @Component({
   selector: 'app-sign-up-page',
   imports: [ReactiveFormsModule, RouterLink],
@@ -66,7 +56,7 @@ export class SignUpComponent {
       accountType: this.fb.control<AccountType>('normal', { validators: [Validators.required] }),
       fullName: ['', [Validators.required]],
       organizationName: [''],
-      siren: ['', [sirenValidator]],
+      siren: [''],
       verificationToken: [''],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
@@ -164,12 +154,12 @@ export class SignUpComponent {
     if (accountType === 'organization') {
       fullNameControl.clearValidators();
       organizationNameControl.setValidators([Validators.required]);
-      sirenControl.setValidators([Validators.required, sirenValidator]);
+      sirenControl.setValidators([Validators.required]);
       verificationTokenControl.setValidators([Validators.required, Validators.minLength(12)]);
     } else {
       fullNameControl.setValidators([Validators.required]);
       organizationNameControl.clearValidators();
-      sirenControl.setValidators([sirenValidator]);
+      sirenControl.clearValidators();
       verificationTokenControl.clearValidators();
     }
 

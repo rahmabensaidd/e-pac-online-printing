@@ -109,18 +109,13 @@
                     id="sign-up-siren"
                     type="text"
                     formControlName="siren"
-                    inputmode="numeric"
                     class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-brand-navy placeholder-gray-400 shadow-xs outline-none transition focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
-                    placeholder="123456789"
+                    placeholder="Organization identifier"
                     [attr.aria-invalid]="showError('siren') ? 'true' : 'false'"
                   />
                   @if (showError('siren')) {
                     <p class="mt-2 text-sm text-brand-pink">
-                      @if (form.controls.siren.hasError('required')) {
-                        SIREN is required.
-                      } @else {
-                        SIREN must contain exactly 9 digits.
-                      }
+                      SIREN is required.
                     </p>
                   }
                 </div>

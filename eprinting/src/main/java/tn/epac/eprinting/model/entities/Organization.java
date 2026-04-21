@@ -36,10 +36,10 @@ public class Organization {
     @Column(name = "normalized_name", nullable = false, length = 255)
     private String normalizedName;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 255)
     private String siren;
 
-    @Column(name = "normalized_siren", nullable = false, unique = true, length = 16)
+    @Column(name = "normalized_siren", nullable = false, unique = true, length = 255)
     private String normalizedSiren;
 
     @Enumerated(EnumType.STRING)

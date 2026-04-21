@@ -55,7 +55,7 @@ export class BackofficeOrganizationsPageComponent {
 
   readonly createForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
-    siren: ['', [Validators.required, Validators.pattern(/^\d{9}$/)]],
+    siren: ['', [Validators.required]],
     status: ['ACTIVE' as AdminOrganizationStatus, [Validators.required]],
   });
 
@@ -108,7 +108,7 @@ export class BackofficeOrganizationsPageComponent {
       const value = this.createForm.getRawValue();
       await this.organizationsApi.createOrganization({
         name: value.name.trim(),
-        siren: value.siren.replace(/\D/g, ''),
+        siren: value.siren.trim(),
         status: value.status,
       });
       this.closeCreateModal();
@@ -153,18 +153,6 @@ export class BackofficeOrganizationsPageComponent {
     } catch {
       this.copyMessage.set('Unable to copy token automatically.');
     }
-  }
-
-  normalizeSirenInput(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    if (!target) {
-      return;
-    }
-    const normalized = target.value.replace(/\D/g, '').slice(0, 9);
-    if (normalized !== target.value) {
-      target.value = normalized;
-    }
-    this.createForm.controls.siren.setValue(normalized, { emitEvent: false });
   }
 
   statusBadgeClass(status: AdminOrganizationStatus): string {

@@ -12,7 +12,10 @@ public final class OrganizationNormalizationUtils {
         if (raw == null) {
             return "";
         }
-        return raw.replaceAll("[^0-9]", "");
+        String trimmed = raw.trim().toLowerCase(Locale.ROOT);
+        String decomposed = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return decomposed.replaceAll("\\s+", " ").trim();
     }
 
     public static String normalizeOrganizationName(String raw) {
