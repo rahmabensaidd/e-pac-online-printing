@@ -151,9 +151,17 @@
                                         @for (line of productionLines(); track line.orderLineId) {
                                             <tr class="border-t border-slate-200">
                                                 <td class="px-2 py-2 font-semibold text-brand-navy">{{ line.bookTitle }}</td>
-                                                <td class="px-2 py-2">{{ line.type }}</td>
+                                                <td class="px-2 py-2">
+                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1" [class]="typeBadgeClass(line.type)">
+                                                        {{ line.type }}
+                                                    </span>
+                                                </td>
                                                 <td class="px-2 py-2">{{ line.quantity }}</td>
-                                                <td class="px-2 py-2">{{ line.productionStatus }}</td>
+                                                <td class="px-2 py-2">
+                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1" [class]="productionStatusBadgeClass(line.productionStatus)">
+                                                        {{ formatDisplayLabel(line.productionStatus) }}
+                                                    </span>
+                                                </td>
                                             </tr>
                                         }
                                     </tbody>
@@ -168,6 +176,31 @@
                         @if (loadingTracking()) {
                             <p class="mt-4 text-sm text-slate-500">Loading shipping details...</p>
                         } @else {
+                            <div class="mt-4 rounded-2xl bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,247,237,0.92))] px-4 py-4 sm:px-5">
+                                <div class="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                                    <div>
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Shipping method</p>
+                                        <p class="mt-1 text-sm font-semibold text-brand-navy">{{ formatDisplayLabel(shippingSummary().shippingMethod) }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Shipping status</p>
+                                        <div class="mt-2">
+                                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1" [class]="shippingStatusBadgeClass(shippingSummary().shippingStatus)">
+                                                {{ formatDisplayLabel(shippingSummary().shippingStatus) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Carrier</p>
+                                        <p class="mt-1 text-sm font-semibold text-brand-navy">{{ shippingSummary().carrier }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Tracking number</p>
+                                        <p class="mt-1 break-all text-sm font-semibold text-brand-navy">{{ shippingSummary().trackingNumber }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="mt-4 overflow-x-auto">
                                 <table class="min-w-full text-left text-sm">
                                     <thead class="text-xs uppercase tracking-wide text-slate-500">
@@ -185,15 +218,17 @@
                                                 <td class="px-2 py-2 font-semibold text-brand-navy">{{ line.bookTitle }}</td>
                                                 <td class="px-2 py-2">
                           <span
-                                  class="rounded-full px-2 py-1 text-xs font-semibold"
-                                  [class]="line.type === 'Custom' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'"
+                                  class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1"
+                                  [class]="typeBadgeClass(line.type)"
                           >
                             {{ line.type }}
                           </span>
                                                 </td>
                                                 <td class="px-2 py-2">{{ line.quantity }}</td>
                                                 <td class="px-2 py-2">
-                                                    {{ line.productionStatus }}
+                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1" [class]="productionStatusBadgeClass(line.productionStatus)">
+                                                        {{ formatDisplayLabel(line.productionStatus) }}
+                                                    </span>
                                                     @if (line.estimatedPrice) {
                                                         <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Estimated</span>
                                                     }

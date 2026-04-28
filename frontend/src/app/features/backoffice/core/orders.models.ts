@@ -1,5 +1,5 @@
 // orders.models.ts
-export type OrderFilter = 'All' | 'Printing' | 'Ready to ship' | 'Shipped' | 'Rejected' | 'Cancelled';
+export type OrderFilter = 'Pending' | 'Printing' | 'Ready to ship' | 'Shipped' | 'Rejected' | 'Cancelled';
 export type OrderStatusUi = 'Shipped' | 'Rejected' | 'Cancelled';
 export type OrderLineStatusUi = 'PENDING' | 'VALIDATED' | 'READY' | 'REJECTED' | 'PRINTING' | 'READY_TO_SHIP';
 export type OrderLinePriorityDisplay = 'LOW' | 'MEDIUM' | 'HIGH';

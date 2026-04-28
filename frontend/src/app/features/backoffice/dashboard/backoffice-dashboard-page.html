@@ -34,7 +34,7 @@
     <div class="admin-panel h-[20rem] animate-pulse rounded-[1rem] bg-slate-100"></div>
   } @else {
     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      @for (metric of backofficeData.dashboardMetrics(); track metric.label) {
+      @for (metric of dashboardMetrics(); track metric.label) {
         <app-backoffice-stat-card
           [label]="metric.label"
           [value]="metric.value"
@@ -129,7 +129,7 @@
       <div class="space-y-4">
         <app-backoffice-card title="Recent activity">
           <div class="space-y-2.5">
-            @for (activity of backofficeData.recentActivity(); track activity.id) {
+            @for (activity of recentActivity(); track activity.id) {
               <a
                 [routerLink]="activity.route"
                 class="admin-focus-ring flex items-start gap-3 rounded-[0.95rem] border border-slate-200/70 bg-white/75 px-3 py-3 transition duration-200 hover:border-slate-300 hover:bg-white"
@@ -196,9 +196,9 @@
       </div>
 
       <div class="space-y-2.5">
-        @for (order of backofficeData.recentOrders(); track order.id) {
+        @for (order of recentOrders(); track order.orderId) {
           <a
-            routerLink="/backoffice/orders"
+            [routerLink]="['/backoffice/order-details', order.orderId]"
             class="admin-focus-ring grid gap-3 rounded-[0.95rem] border border-slate-200/70 bg-white/75 px-3 py-3 transition duration-200 hover:border-slate-300 hover:bg-white md:grid-cols-[minmax(0,1.4fr)_0.95fr_0.8fr_0.8fr_auto] md:items-center"
           >
             <div class="min-w-0">

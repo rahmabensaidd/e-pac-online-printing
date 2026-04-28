@@ -109,6 +109,17 @@ export const BACKOFFICE_ROUTES: Routes = [
         },
       },
       {
+        path: 'organizations/:organizationId/client-trends',
+        loadComponent: () =>
+            import('./organizations/backoffice-organization-client-trends-page').then(
+                (m) => m.BackofficeOrganizationClientTrendsPageComponent,
+            ),
+        data: {
+          title: 'Client Trends',
+          description: 'Review dynamic client trend indicators derived from order history.',
+        },
+      },
+      {
         path: 'settings',
         loadComponent: () =>
             import('./settings/backoffice-settings-page').then(

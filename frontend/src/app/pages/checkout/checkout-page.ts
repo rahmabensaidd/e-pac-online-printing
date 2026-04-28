@@ -229,6 +229,8 @@ export class CheckoutPageComponent implements AfterViewInit {
       notes: this.form.getRawValue().notes,
       shippingMethod: this.form.getRawValue().shippingMethod,
       paymentMethod: paymentMethodOverride ?? this.form.getRawValue().paymentMethod,
+      stripePaymentIntentId: this.stripePaymentIntentId(),
+      paymentConfirmed: false,
       confirmPriceUpdate: this.needsFinalPriceConfirmation(),
     };
   }
@@ -525,7 +527,11 @@ export class CheckoutPageComponent implements AfterViewInit {
   }
 
   private async finalizeSuccessfulCardCheckout(): Promise<void> {
-    const order = await this.orderService.checkout(this.buildCheckoutPayload('card'));
+    const order = await this.orderService.checkout({
+      ...this.buildCheckoutPayload('card'),
+      paymentConfirmed: true,
+      stripePaymentIntentId: this.stripePaymentIntentId(),
+    });
     this.orderPlaced.set(true);
     this.orderNumber.set(`EP-${order.orderId}`);
     this.placedTotal.set(order.totalAmount);

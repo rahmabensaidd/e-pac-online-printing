@@ -27,6 +27,31 @@ export interface OrganizationVerificationTokenApiModel {
   expiresAt: string;
 }
 
+export interface AdminOrganizationClientFeaturesApiModel {
+  siren: string;
+  clientNbOrders: number | null;
+  clientAvgPriceHt: number | null;
+  clientPriceStdHt: number | null;
+  clientAvgQuantity: number | null;
+  clientPriceVolatility: number | null;
+  clientRelativePrice: number | null;
+  clientFirstOrder: string | null;
+  clientLastOrder: string | null;
+  clientSeniorityYears: number | null;
+  clientRecencyDays: number | null;
+  clientPriceElasticity: number | null;
+  elasticityStatus: string | null;
+}
+
+export interface AdminOrganizationClientTrendsApiModel {
+  organizationId: number;
+  organizationName: string;
+  siren: string;
+  found: boolean;
+  note: string;
+  features: AdminOrganizationClientFeaturesApiModel | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BackofficeOrganizationsApiService {
   private readonly http = inject(HttpClient);
@@ -49,5 +74,15 @@ export class BackofficeOrganizationsApiService {
         {},
       ),
     );
+  }
+
+  async getClientTrends(organizationId: number): Promise<AdminOrganizationClientTrendsApiModel> {
+    return await firstValueFrom(
+      this.http.get<AdminOrganizationClientTrendsApiModel>(`${this.apiUrl}/${organizationId}/client-trends`),
+    );
+  }
+
+  async deleteOrganization(organizationId: number): Promise<void> {
+    await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/${organizationId}`));
   }
 }

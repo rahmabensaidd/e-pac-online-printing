@@ -245,6 +245,14 @@ export class Bookstable { private readonly currencyFormatter = new Intl.NumberFo
       return 'bg-brand-cream text-brand-navy border-slate-200';
     }
 
+    if (value.includes('customized')) {
+      return 'bg-brand-orange/12 text-brand-orange border-brand-orange/20';
+    }
+
+    if (value.includes('marketplace')) {
+      return 'bg-brand-teal/12 text-brand-navy border-brand-teal/20';
+    }
+
     if (value.includes('delayed') || value.includes('reorder')) {
       return 'bg-brand-pink/12 text-brand-pink border-brand-pink/20';
     }

@@ -48,6 +48,14 @@ export class BookPreview3dFloatingComponent implements AfterViewInit, OnChanges,
   isLoadingModel = false;
   loadingMessage = 'Loading 3D preview...';
   loadErrorMessage = '';
+  previewWidth = 320;
+  previewHeight = 220;
+
+  private readonly minPreviewWidth = 260;
+  private readonly maxPreviewWidth = 720;
+  private readonly minPreviewHeight = 180;
+  private readonly maxPreviewHeight = 560;
+  private resizeCleanup: (() => void) | null = null;
 
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(38, 1, 0.1, 2000);
@@ -111,6 +119,40 @@ export class BookPreview3dFloatingComponent implements AfterViewInit, OnChanges,
     }
   }
 
+  startResize(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    this.resizeCleanup?.();
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const initialWidth = this.previewWidth;
+    const initialHeight = this.previewHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const nextWidth = initialWidth + (moveEvent.clientX - startX);
+      const nextHeight = initialHeight + (moveEvent.clientY - startY);
+      this.previewWidth = Math.min(this.maxPreviewWidth, Math.max(this.minPreviewWidth, Math.round(nextWidth)));
+      this.previewHeight = Math.min(this.maxPreviewHeight, Math.max(this.minPreviewHeight, Math.round(nextHeight)));
+      this.handleResize();
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      this.resizeCleanup = null;
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    this.resizeCleanup = onMouseUp;
+  }
+
   ngOnDestroy(): void {
     if (this.animationFrame !== null) {
       cancelAnimationFrame(this.animationFrame);
@@ -122,6 +164,8 @@ export class BookPreview3dFloatingComponent implements AfterViewInit, OnChanges,
 
     this.controls?.dispose();
     this.controls = null;
+    this.resizeCleanup?.();
+    this.resizeCleanup = null;
 
     this.disposeCurrentModel();
     this.renderer?.dispose();

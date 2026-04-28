@@ -19,8 +19,11 @@ import java.math.RoundingMode;
 public class StripePaymentService {
 
     private final CartServiceImpl cartService;
+    private final OrderServiceImpl orderService;
 
     public CreatePaymentIntentResponse createPaymentIntent(CreatePaymentIntentRequest request) throws StripeException {
+        orderService.revalidateCustomPricingForCart(request.getCartId(), request.getConfirmPriceUpdate());
+
         CartResponseDto cart = cartService.getCart(request.getCartId());
 
         if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {

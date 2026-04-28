@@ -5,17 +5,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tn.epac.eprinting.client.PricingApiClient;
+import tn.epac.eprinting.model.dtos.AdminOrganizationClientFeaturesDto;
+import tn.epac.eprinting.model.dtos.AdminOrganizationClientTrendsResponseDto;
 import tn.epac.eprinting.model.dtos.AdminOrganizationCreateRequestDto;
 import tn.epac.eprinting.model.dtos.AdminOrganizationResponseDto;
 import tn.epac.eprinting.model.dtos.OrganizationVerificationTokenResponseDto;
 import tn.epac.eprinting.model.entities.Organization;
 import tn.epac.eprinting.model.entities.OrganizationVerificationToken;
 import tn.epac.eprinting.model.enums.OrganizationStatus;
+import tn.epac.eprinting.repository.OrganizationMembershipRepository;
 import tn.epac.eprinting.repository.OrganizationRepository;
 import tn.epac.eprinting.repository.OrganizationVerificationTokenRepository;
 import tn.epac.eprinting.util.OrganizationNormalizationUtils;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +29,9 @@ public class AdminOrganizationServiceImpl {
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationVerificationTokenRepository tokenRepository;
+    private final OrganizationMembershipRepository membershipRepository;
     private final OrganizationVerificationTokenService tokenService;
+    private final PricingApiClient pricingApiClient;
 
     public AdminOrganizationResponseDto createOrganization(AdminOrganizationCreateRequestDto request) {
         String normalizedSiren = OrganizationNormalizationUtils.normalizeSiren(request.getSiren());
@@ -77,6 +84,58 @@ public class AdminOrganizationServiceImpl {
                 .toList();
     }
 
+    public void deleteOrganization(Long organizationId) {
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found"));
+
+        if (membershipRepository.existsByOrganization(organization)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This organization cannot be deleted because it is already linked to members"
+            );
+        }
+
+        tokenRepository.deleteByOrganization(organization);
+        organizationRepository.delete(organization);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminOrganizationClientTrendsResponseDto getClientTrends(Long organizationId) {
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found"));
+
+        Map<String, Object> response;
+        try {
+            response = pricingApiClient.getClientFeatures(organization.getSiren());
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Client trends service unavailable");
+        }
+
+        Map<String, Object> featuresMap = getMap(response.get("features"));
+        return AdminOrganizationClientTrendsResponseDto.builder()
+                .organizationId(organization.getId())
+                .organizationName(organization.getName())
+                .siren(readString(response.get("siren"), organization.getSiren()))
+                .found(readBoolean(response.get("found")))
+                .note("These client trend metrics are dynamic and can evolve as order history changes.")
+                .features(featuresMap == null ? null : AdminOrganizationClientFeaturesDto.builder()
+                        .siren(readString(featuresMap.get("siren"), organization.getSiren()))
+                        .clientNbOrders(readInteger(featuresMap.get("client_nb_orders")))
+                        .clientAvgPriceHt(readDouble(featuresMap.get("client_avg_price_ht")))
+                        .clientPriceStdHt(readDouble(featuresMap.get("client_price_std_ht")))
+                        .clientAvgQuantity(readDouble(featuresMap.get("client_avg_quantity")))
+                        .clientPriceVolatility(readDouble(featuresMap.get("client_price_volatility")))
+                        .clientRelativePrice(readDouble(featuresMap.get("client_relative_price")))
+                        .clientFirstOrder(readString(featuresMap.get("client_first_order"), null))
+                        .clientLastOrder(readString(featuresMap.get("client_last_order"), null))
+                        .clientSeniorityYears(readDouble(featuresMap.get("client_seniority_years")))
+                        .clientRecencyDays(readInteger(featuresMap.get("client_recency_days")))
+                        .clientPriceElasticity(readDouble(featuresMap.get("client_price_elasticity")))
+                        .elasticityStatus(readString(featuresMap.get("elasticity_status"), null))
+                        .build())
+                .build();
+    }
+
     private AdminOrganizationResponseDto toDto(Organization organization) {
         return AdminOrganizationResponseDto.builder()
                 .id(organization.getId())
@@ -86,5 +145,29 @@ public class AdminOrganizationServiceImpl {
                 .createdAt(organization.getCreatedAt())
                 .updatedAt(organization.getUpdatedAt())
                 .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getMap(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            return (Map<String, Object>) map;
+        }
+        return null;
+    }
+
+    private String readString(Object value, String fallback) {
+        return value == null ? fallback : value.toString();
+    }
+
+    private Boolean readBoolean(Object value) {
+        return value instanceof Boolean bool ? bool : Boolean.FALSE;
+    }
+
+    private Double readDouble(Object value) {
+        return value instanceof Number number ? number.doubleValue() : null;
+    }
+
+    private Integer readInteger(Object value) {
+        return value instanceof Number number ? number.intValue() : null;
     }
 }

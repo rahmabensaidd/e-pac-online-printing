@@ -95,14 +95,38 @@
                   {{ organization.createdAt | date: 'yyyy-MM-dd HH:mm' }}
                 </td>
                 <td class="px-3 py-3 text-right">
-                  <button
-                    type="button"
-                    class="admin-focus-ring rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[0.74rem] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
-                    (click)="generateToken(organization)"
-                    [disabled]="isGeneratingToken(organization.id)"
-                  >
-                    {{ isGeneratingToken(organization.id) ? 'Generating...' : 'Generate token' }}
-                  </button>
+                  <div class="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      class="admin-focus-ring inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-teal/30 bg-brand-teal/5 text-[0.85rem] text-brand-navy transition hover:border-brand-teal/50 hover:bg-brand-teal/10"
+                      (click)="openClientTrends(organization)"
+                      [disabled]="isDeletingOrganization(organization.id)"
+                      title="View client trends"
+                      aria-label="View client trends"
+                    >
+                      <i class="fas fa-chart-line"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="admin-focus-ring inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-[0.85rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+                      (click)="generateToken(organization)"
+                      [disabled]="isGeneratingToken(organization.id) || isDeletingOrganization(organization.id)"
+                      title="Generate verification token"
+                      aria-label="Generate verification token"
+                    >
+                      <i [class]="isGeneratingToken(organization.id) ? 'fas fa-spinner fa-spin' : 'fas fa-key'"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="admin-focus-ring inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-pink/25 bg-brand-pink/5 text-[0.85rem] text-brand-pink transition hover:border-brand-pink/40 hover:bg-brand-pink/10 disabled:opacity-60"
+                      (click)="deleteOrganization(organization)"
+                      [disabled]="isGeneratingToken(organization.id) || isDeletingOrganization(organization.id)"
+                      title="Delete organization"
+                      aria-label="Delete organization"
+                    >
+                      <i [class]="isDeletingOrganization(organization.id) ? 'fas fa-spinner fa-spin' : 'fas fa-trash'"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
             }

@@ -17,6 +17,8 @@ export interface CheckoutOrderRequest {
   notes: string;
   shippingMethod: string;
   paymentMethod: string;
+  stripePaymentIntentId?: string | null;
+  paymentConfirmed?: boolean;
   confirmPriceUpdate?: boolean;
 }
 

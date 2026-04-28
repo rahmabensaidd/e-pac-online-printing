@@ -295,6 +295,14 @@ function createFallbackBlanks(): AdminTemplate[] {
   encapsulation: ViewEncapsulation.None
 })
 export class Editor implements AfterViewInit, OnChanges, OnDestroy {
+  readonly sizePresets = [
+    { id: '16x19', label: '16 x 19 cm', width: 16, height: 19 },
+    { id: '14x21', label: '14 x 21 cm', width: 14, height: 21 },
+    { id: '17x24', label: '17 x 24 cm', width: 17, height: 24 },
+    { id: '21x29.7', label: '21 x 29.7 cm', width: 21, height: 29.7 },
+    { id: '21.6x27.9', label: '21.6 x 27.9 cm', width: 21.6, height: 27.9 }
+  ] as const;
+
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly authService = inject(AuthService);
   private readonly coverTemplatesApi = inject(CoverTemplatesApiService);
@@ -365,16 +373,44 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     return this.isBookCreationMode() ? this.bookCreationLibraryTabs : this.defaultLibraryTabs;
   }
 
+  get selectedSizeId(): string {
+    const currentWidth = typeof this.bookWidth === 'string' ? Number(this.bookWidth) : this.bookWidth;
+    const currentHeight = typeof this.bookHeight === 'string' ? Number(this.bookHeight) : this.bookHeight;
+    const matched = this.sizePresets.find((size) => size.width === currentWidth && size.height === currentHeight);
+    return matched?.id ?? this.sizePresets[0].id;
+  }
+
+  updateEditorSize(sizeId: string): void {
+    const nextSize = this.sizePresets.find((size) => size.id === sizeId);
+    if (!nextSize) {
+      return;
+    }
+
+    this.bookWidth = nextSize.width;
+    this.bookHeight = nextSize.height;
+    this.cdr.markForCheck();
+
+    if (this.cesdk) {
+      void this.applyBookDimensionsToCurrentScene(this.currentTemplate?.family, { resizeContentAware: true });
+      this.schedulePreviewTextureRefresh();
+    }
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
+    const dimensionsChanged = !!changes['bookWidth'] || !!changes['bookHeight'] || !!changes['bookThickness'];
     this.ensureCurrentLibraryEntryIsValid();
     if (changes['initialTemplateId']) {
       this.hasAppliedInitialBookTemplate = false;
     }
     if (
       this.cesdk &&
-      (changes['bookBindingType'] || changes['bookCoverColor'] || changes['bookWidth'] || changes['bookHeight'] || changes['bookThickness'])
+      (changes['bookBindingType'] || changes['bookCoverColor'] || dimensionsChanged)
     ) {
       this.schedulePreviewTextureRefresh();
+    }
+
+    if (this.cesdk && !this.isBookCreationMode() && dimensionsChanged) {
+      void this.applyBookDimensionsToCurrentScene(this.currentTemplate?.family, { resizeContentAware: true });
     }
 
     if (!this.isBookCreationMode() || !this.cesdk) {
@@ -803,15 +839,29 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     let pageHeight = fromExistingMetadata?.pageHeight ?? fromInputs.pageHeight;
 
     if (sceneSize) {
-      pageWidth = sceneSize.width;
-      pageHeight = sceneSize.height;
       if (family.startsWith('WRAP_')) {
-        const inferredTrimWidth = (sceneSize.width - thickness) / 2;
-        if (Number.isFinite(inferredTrimWidth) && inferredTrimWidth > 0) {
-          trimWidth = inferredTrimWidth;
+        const expectedSpreadWidth = trimWidth * 2 + thickness;
+        const looksLikeFullSpread = this.areCloseDimensions(sceneSize.width, expectedSpreadWidth, 2);
+
+        if (looksLikeFullSpread) {
+          pageWidth = sceneSize.width;
+          pageHeight = sceneSize.height;
+          const inferredTrimWidth = (sceneSize.width - thickness) / 2;
+          if (Number.isFinite(inferredTrimWidth) && inferredTrimWidth > 0) {
+            trimWidth = inferredTrimWidth;
+          }
+        } else {
+          // In native CE.SDK resize, admins enter the intended book width/height.
+          // For WRAP templates we reinterpret that width as trim width, then
+          // expand the effective spread with the preserved thickness.
+          trimWidth = sceneSize.width;
+          pageWidth = trimWidth * 2 + thickness;
+          pageHeight = sceneSize.height;
         }
         trimHeight = sceneSize.height;
       } else {
+        pageWidth = sceneSize.width;
+        pageHeight = sceneSize.height;
         trimWidth = sceneSize.width;
         trimHeight = sceneSize.height;
       }
@@ -1160,16 +1210,8 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
 
     if (family === 'WRAP_2P') {
       this.resizeWrapOutsidePageContent(pages[0], sourceMetrics, targetMetrics);
-      if (pages[1]) {
-        // WRAP_2P page 2 is inside cover side; use full-page proportional remap.
-        this.resizeFlatPageContent(
-          pages[1],
-          sourceMetrics.pageWidth,
-          sourceMetrics.pageHeight,
-          targetMetrics.pageWidth,
-          targetMetrics.pageHeight
-        );
-      }
+      // Keep the existing second-page artwork intact. The follow-up page resize
+      // updates the sheet size without distorting the already designed content.
       return true;
     }
 
@@ -1195,7 +1237,29 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     await this.createEmptyScene(dimensions.pageWidth, dimensions.pageHeight);
   }
 
-  private filterAdminAssetsForBookMode(assets: AdminTemplate[]): AdminTemplate[] {
+  private areCloseDimensions(left: number, right: number, tolerance = 1): boolean {
+    return Math.abs(left - right) <= tolerance;
+  }
+
+  private matchesCurrentBookDimensions(asset: AdminTemplate, requiredFamily: string): boolean {
+    const templateMetrics = this.readLayoutMetricsFromMetadata(asset.metadataJson);
+    if (!templateMetrics) {
+      return false;
+    }
+
+    if (this.normalizeManagedFamily(templateMetrics.family) !== requiredFamily) {
+      return false;
+    }
+
+    const targetMetrics = this.buildLayoutMetricsForFamily(requiredFamily);
+    const directMatch = this.areCloseDimensions(templateMetrics.trimWidth, targetMetrics.trimWidth)
+      && this.areCloseDimensions(templateMetrics.trimHeight, targetMetrics.trimHeight);
+    const rotatedMatch = this.areCloseDimensions(templateMetrics.trimWidth, targetMetrics.trimHeight)
+      && this.areCloseDimensions(templateMetrics.trimHeight, targetMetrics.trimWidth);
+    return directMatch || rotatedMatch;
+  }
+
+  private filterAdminAssetsForBookMode(assets: AdminTemplate[], tabId?: string): AdminTemplate[] {
     if (!this.isBookCreationMode()) {
       return assets;
     }
@@ -1205,7 +1269,17 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
       return [];
     }
 
-    return assets.filter((asset) => this.normalizeManagedFamily(asset.family) === family);
+    return assets.filter((asset) => {
+      if (this.normalizeManagedFamily(asset.family) !== family) {
+        return false;
+      }
+
+      if (tabId === 'published') {
+        return this.matchesCurrentBookDimensions(asset, family);
+      }
+
+      return true;
+    });
   }
 
   private async handleBookCreationContextChanges(changes: SimpleChanges): Promise<void> {
@@ -1260,7 +1334,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     familyHint?: string,
     options?: { resizeContentAware?: boolean }
   ): Promise<void> {
-    if (!this.isBookCreationMode() || !this.cesdk) {
+    if (!this.cesdk) {
       return;
     }
 
@@ -1358,13 +1432,59 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     const targetMetrics = this.buildLayoutMetricsForFamily(family);
-    await this.createEmptyScene(targetMetrics.pageWidth, targetMetrics.pageHeight);
-    await this.cesdk.engine.scene.applyTemplateFromString(sceneString);
+    await this.cesdk.engine.scene.loadFromString(sceneString);
     this.configureCurrentSceneForPrint();
 
     const normalizedFamily = this.normalizeManagedFamily(family);
+    const actualLoadedPage = this.readCurrentFirstPageSize();
     const sourceMetricsFromMetadata = this.readLayoutMetricsFromMetadata(metadataJson);
     const isWrapFamily = normalizedFamily === 'WRAP_1P' || normalizedFamily === 'WRAP_2P';
+
+    if (isWrapFamily && actualLoadedPage && actualLoadedPage.width < targetMetrics.pageWidth * 0.85) {
+      const pages = this.getScenePages();
+      if (sourceMetricsFromMetadata) {
+        if (pages[0]) {
+          this.resizeFlatPageContent(
+            pages[0],
+            actualLoadedPage.width,
+            actualLoadedPage.height,
+            sourceMetricsFromMetadata.pageWidth,
+            sourceMetricsFromMetadata.pageHeight
+          );
+        }
+        if (normalizedFamily === 'WRAP_2P' && pages[1]) {
+          this.resizeFlatPageContent(
+            pages[1],
+            actualLoadedPage.width,
+            actualLoadedPage.height,
+            sourceMetricsFromMetadata.pageWidth,
+            sourceMetricsFromMetadata.pageHeight
+          );
+        }
+      } else {
+        if (pages[0]) {
+          this.resizeFlatPageContent(
+            pages[0],
+            actualLoadedPage.width,
+            actualLoadedPage.height,
+            targetMetrics.pageWidth,
+            targetMetrics.pageHeight
+          );
+        }
+        if (normalizedFamily === 'WRAP_2P' && pages[1]) {
+          this.resizeFlatPageContent(
+            pages[1],
+            actualLoadedPage.width,
+            actualLoadedPage.height,
+            targetMetrics.pageWidth,
+            targetMetrics.pageHeight
+          );
+        }
+        await this.applyBookDimensionsToCurrentScene(family, { resizeContentAware: false });
+        return;
+      }
+    }
+
     const sourceMetricsFromSceneString = isWrapFamily && normalizedFamily
       ? this.deriveWrapSourceMetricsFromSceneString(sceneString, normalizedFamily, targetMetrics)
       : null;
@@ -1597,7 +1717,46 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     this.saveDecisionMessage = 'You are not allowed to overwrite this template. A new template instance will be created.';
   }
 
-  private buildCurrentTemplateSavePayload(sceneString: string): {
+  private async exportCurrentTemplateThumbnailDataUrl(): Promise<string | undefined> {
+    if (!this.cesdk) {
+      return undefined;
+    }
+
+    const page = this.getScenePages()[0];
+    if (typeof page !== 'number' || !this.cesdk.engine.block.isValid(page)) {
+      return undefined;
+    }
+
+    try {
+      const blob = await this.cesdk.engine.block.export(page, 'image/png', {
+        pngCompressionLevel: 6
+      });
+      if (!(blob instanceof Blob) || blob.size === 0) {
+        return undefined;
+      }
+      return await this.blobToDataUrl(blob);
+    } catch (error) {
+      console.warn('Template thumbnail export failed:', error);
+      return undefined;
+    }
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+        reject(new Error('Unable to convert blob to data URL.'));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private async buildCurrentTemplateSavePayload(sceneString: string): Promise<{
     name: string;
     description?: string;
     family: string;
@@ -1605,14 +1764,18 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     sceneString: string;
     thumbnailUrl?: string;
     metadataJson?: string;
-  } {
+  }> {
     if (!this.currentTemplate) {
       throw new Error('No template loaded.');
     }
 
     const layoutMetrics = this.buildCurrentLayoutMetricsForTemplate(this.currentTemplate.family);
     const metadataJson = this.mergeLayoutMetricsIntoMetadata(this.currentTemplate.metadataJson, layoutMetrics);
+    const thumbnailUrl = await this.exportCurrentTemplateThumbnailDataUrl();
     this.currentTemplate.metadataJson = metadataJson;
+    if (thumbnailUrl) {
+      this.currentTemplate.meta.thumbUri = thumbnailUrl;
+    }
 
     return {
       name: this.currentTemplate.label,
@@ -1620,7 +1783,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
       family: this.currentTemplate.family,
       sourceBlankCode: this.currentTemplate.sourceBlankCode ?? this.currentTemplate.id,
       sceneString,
-      thumbnailUrl: this.currentTemplate.meta.thumbUri || undefined,
+      thumbnailUrl: thumbnailUrl ?? this.currentTemplate.meta.thumbUri ?? undefined,
       metadataJson
     };
   }
@@ -1633,7 +1796,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
 
     try {
       const sceneString = await this.cesdk.engine.scene.saveToString();
-      const payload = this.buildCurrentTemplateSavePayload(sceneString);
+      const payload = await this.buildCurrentTemplateSavePayload(sceneString);
       const saved = await this.coverTemplatesApi.saveChanges(this.currentTemplate.templateId, payload);
 
       this.currentTemplate = this.fromApiTemplate(saved);
@@ -1762,17 +1925,19 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
         }
 
         if (tab.id === 'system-blanks') {
-          this.libraryAssets = this.filterAdminAssetsForBookMode(await this.loadSystemBlanks());
+          this.libraryAssets = this.filterAdminAssetsForBookMode(await this.loadSystemBlanks(), tab.id);
         } else if (tab.id === 'my-templates') {
-          this.libraryAssets = this.filterAdminAssetsForBookMode(await this.loadMyTemplates());
+          this.libraryAssets = this.filterAdminAssetsForBookMode(await this.loadMyTemplates(), tab.id);
         } else {
-          this.libraryAssets = this.filterAdminAssetsForBookMode(await this.loadPublishedTemplates());
+          this.libraryAssets = this.filterAdminAssetsForBookMode(await this.loadPublishedTemplates(), tab.id);
         }
 
         if (this.isBookCreationMode() && this.libraryAssets.length === 0) {
           const family = this.resolveRequiredBookTemplateFamily();
           this.libraryNotice = family
-              ? `No compatible templates found for ${family}.`
+              ? (tab.id === 'published'
+                ? `No published templates match ${family} with the current book dimensions.`
+                : `No compatible templates found for ${family}.`)
               : this.libraryNotice;
         }
       } else if (tab.sourceId && this.cesdk) {
@@ -2532,9 +2697,9 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private addPanel(
-      page: number,
-      label: string,
-      x: number,
+        page: number,
+        label: string,
+        x: number,
       y: number,
       width: number,
       height: number,
@@ -2548,6 +2713,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     const shape = this.cesdk.engine.block.createShape('rect');
     const fill = this.cesdk.engine.block.createFill('color');
 
+    this.cesdk.engine.block.setString(panel, 'name', `BLANK_PANEL:${label}`);
     this.cesdk.engine.block.setShape(panel, shape);
     this.cesdk.engine.block.setColor(fill, 'fill/color/value', color);
     this.cesdk.engine.block.setFill(panel, fill);
@@ -2566,6 +2732,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     const caption = this.cesdk.engine.block.create('text');
+    this.cesdk.engine.block.setString(caption, 'name', `BLANK_CAPTION:${text}`);
     this.cesdk.engine.block.setString(caption, 'text/text', text);
     this.cesdk.engine.block.setWidth(caption, width);
     this.cesdk.engine.block.setHeight(caption, 28);
@@ -2627,18 +2794,11 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
       const templateName = this.currentTemplateSource === 'myTemplate'
           ? this.currentTemplate.label
           : `${this.currentTemplate.label} - ${new Date().toLocaleString()}`;
-      const layoutMetrics = this.buildCurrentLayoutMetricsForTemplate(this.currentTemplate.family);
-      const metadataJson = this.mergeLayoutMetricsIntoMetadata(this.currentTemplate.metadataJson, layoutMetrics);
-      this.currentTemplate.metadataJson = metadataJson;
+      const payload = await this.buildCurrentTemplateSavePayload(sceneString);
 
       const saved = await this.coverTemplatesApi.saveMyTemplate(userId, {
+        ...payload,
         name: templateName,
-        description: this.currentTemplate.description,
-        family: this.currentTemplate.family,
-        sourceBlankCode,
-        sceneString,
-        thumbnailUrl: this.currentTemplate.meta.thumbUri || undefined,
-        metadataJson
       });
 
       this.currentTemplate = this.fromApiTemplate(saved);
@@ -2879,6 +3039,7 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
     this.previewRefreshQueued = false;
 
     try {
+      this.syncTemplateDimensionsFromCurrentScene();
       const family = this.resolvePreviewTextureFamily();
       const dims = this.resolveBookDimensionsForFamily(family);
       const pageHandles = this.getScenePages();
@@ -2931,6 +3092,151 @@ export class Editor implements AfterViewInit, OnChanges, OnDestroy {
         void this.refreshPreviewTexturesNow();
       }
     }
+  }
+
+  private syncTemplateDimensionsFromCurrentScene(): void {
+    if (this.isBookCreationMode() || !this.currentTemplate) {
+      return;
+    }
+
+    const metrics = this.buildCurrentLayoutMetricsForTemplate(this.currentTemplate.family);
+    const pages = this.getScenePages();
+    for (const page of pages) {
+      if (!this.cesdk?.engine.block.isValid(page)) {
+        continue;
+      }
+      this.cesdk.engine.block.setWidth(page, metrics.pageWidth);
+      this.cesdk.engine.block.setHeight(page, metrics.pageHeight);
+    }
+    this.positionPagesInColumn(pages, metrics.pageHeight);
+    this.relayoutManagedBlankPanels(metrics);
+    this.bookWidth = metrics.trimWidth / MILLIMETERS_PER_CENTIMETER;
+    this.bookHeight = metrics.trimHeight / MILLIMETERS_PER_CENTIMETER;
+    this.bookThickness = metrics.thickness / MILLIMETERS_PER_CENTIMETER;
+    this.currentTemplate.metadataJson = this.mergeLayoutMetricsIntoMetadata(this.currentTemplate.metadataJson, metrics);
+    this.currentTemplate.meta.width = metrics.pageWidth;
+    this.currentTemplate.meta.height = metrics.pageHeight;
+    this.cdr.markForCheck();
+  }
+
+  private relayoutManagedBlankPanels(metrics: TemplateLayoutMetrics): void {
+    if (!this.cesdk) {
+      return;
+    }
+
+    const family = this.normalizeManagedFamily(this.currentTemplate?.family);
+    if (!family) {
+      return;
+    }
+
+    const pages = this.getScenePages();
+    if (family === 'WRAP_1P' || family === 'WRAP_2P') {
+      for (const page of pages) {
+        this.relayoutWrapPanels(page, metrics);
+      }
+      return;
+    }
+
+    if (family === 'FLAT_2P' || family === 'FLAT_4P') {
+      for (const page of pages) {
+        this.relayoutFlatPanels(page, metrics);
+      }
+    }
+  }
+
+  private relayoutWrapPanels(pageId: number, metrics: TemplateLayoutMetrics): void {
+    if (!this.cesdk || !this.cesdk.engine.block.isValid(pageId)) {
+      return;
+    }
+
+    const panels = this.getGraphicChildren(pageId);
+    const back = this.findNamedPanel(panels, 'Back Cover') ?? panels[0];
+    const spine = this.findNamedPanel(panels, 'Spine') ?? panels[1];
+    const front = this.findNamedPanel(panels, 'Front Cover') ?? panels[2];
+
+    if (typeof back === 'number') {
+      this.writeBlockFrame(back, {
+        x: 0,
+        y: 0,
+        width: metrics.trimWidth,
+        height: metrics.trimHeight
+      });
+    }
+
+    if (typeof spine === 'number') {
+      this.writeBlockFrame(spine, {
+        x: metrics.trimWidth,
+        y: 0,
+        width: metrics.thickness,
+        height: metrics.trimHeight
+      });
+    }
+
+    if (typeof front === 'number') {
+      this.writeBlockFrame(front, {
+        x: metrics.trimWidth + metrics.thickness,
+        y: 0,
+        width: metrics.trimWidth,
+        height: metrics.trimHeight
+      });
+    }
+  }
+
+  private relayoutFlatPanels(pageId: number, metrics: TemplateLayoutMetrics): void {
+    if (!this.cesdk || !this.cesdk.engine.block.isValid(pageId)) {
+      return;
+    }
+
+    const panels = this.getGraphicChildren(pageId);
+    const portrait = this.findNamedPanel(panels, 'Portrait Page') ?? panels[0];
+
+    if (typeof portrait === 'number') {
+      this.writeBlockFrame(portrait, {
+        x: 0,
+        y: 0,
+        width: metrics.trimWidth,
+        height: metrics.trimHeight
+      });
+    }
+  }
+
+  private getGraphicChildren(pageId: number): number[] {
+    if (!this.cesdk || !this.cesdk.engine.block.isValid(pageId)) {
+      return [];
+    }
+
+    return this.cesdk.engine.block
+      .getChildren(pageId)
+      .filter((blockId) => {
+        if (!this.cesdk!.engine.block.isValid(blockId)) {
+          return false;
+        }
+
+        try {
+          return this.cesdk!.engine.block.getType(blockId).toLowerCase().includes('graphic');
+        } catch {
+          return false;
+        }
+      })
+      .sort((left, right) => {
+        const leftFrame = this.readBlockFrame(left);
+        const rightFrame = this.readBlockFrame(right);
+        return (leftFrame?.x ?? 0) - (rightFrame?.x ?? 0);
+      });
+  }
+
+  private findNamedPanel(blockIds: number[], label: string): number | undefined {
+    if (!this.cesdk) {
+      return undefined;
+    }
+
+    return blockIds.find((blockId) => {
+      try {
+        return this.cesdk!.engine.block.getString(blockId, 'name') === `BLANK_PANEL:${label}`;
+      } catch {
+        return false;
+      }
+    });
   }
 
   private revokePreviewTextureUrls(): void {

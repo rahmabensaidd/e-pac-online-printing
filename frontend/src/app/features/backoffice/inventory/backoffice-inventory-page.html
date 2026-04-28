@@ -47,13 +47,22 @@
     </div>
 
     <div class="w-full">
+        <div class="mb-3 flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center rounded-full border border-brand-teal/20 bg-brand-teal/12 px-3 py-1 text-[0.72rem] font-semibold text-brand-navy">
+                Marketplace: {{ marketplaceBooksCount() }}
+            </span>
+            <span class="inline-flex items-center rounded-full border border-brand-orange/20 bg-brand-orange/12 px-3 py-1 text-[0.72rem] font-semibold text-brand-orange">
+                Customized: {{ customizedBooksCount() }}
+            </span>
+        </div>
+
         <app-bookstable
                 title="Books overview"
                 description="Search and manage books in the catalog."
                 [columns]="bookColumns"
                 [rows]="bookRows()"
                 [rowActions]="bookActions"
-                [searchKeys]="['title', 'authors', 'description', 'bindingType']"
+                [searchKeys]="['title', 'authors', 'description', 'bindingType', 'sourceType', 'creatorName']"
                 (rowAction)="handleBookRowAction($event)"
         />
 
@@ -215,7 +224,7 @@
                                     </section>
 
                                     <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
-                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Stock & Pricing</h3>
+                                        <h3 class="mb-4 text-[1rem] font-semibold text-brand-navy">Stock</h3>
                                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                                             <div>
                                                 <label class="admin-label" for="book-quantity">Quantity *</label>
@@ -228,21 +237,6 @@
                                                 />
                                                 @if (showError('quantity')) {
                                                     <p class="admin-error">Quantity must be 0 or greater.</p>
-                                                }
-                                            </div>
-
-                                            <div>
-                                                <label class="admin-label" for="book-sale-price">Sale Price ($) *</label>
-                                                <input
-                                                        id="book-sale-price"
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        class="admin-input"
-                                                        formControlName="salePrice"
-                                                />
-                                                @if (showError('salePrice')) {
-                                                    <p class="admin-error">Sale price must be 0 or greater.</p>
                                                 }
                                             </div>
                                         </div>
@@ -582,109 +576,174 @@
                                     </section>
                                 }
 
-                                <!-- STEP 2 : CONTENT -->
-                                @if (isCurrentStep('content')) {
-                                    <div class="grid gap-6 xl:grid-cols-2">
-
-                                        <!-- COVER -->
-                                        <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
-                                            <div class="flex items-center justify-between gap-4">
-                                                <div>
-                                                    <h3 class="text-[1rem] font-semibold text-brand-navy">Cover</h3>
-                                                    <p class="mt-1 text-[0.85rem] text-slate-500">
-                                                        Provide either manual cover content or a ready PDF file.
-                                                    </p>
-                                                </div>
-
-                                                <div class="flex gap-2">
-                                                    <button
-                                                            type="button"
-                                                            class="rounded-xl border px-3 py-2 text-sm"
-                                                            [class.bg-brand-navy]="coverGroup.get('mode')?.value === 'manual'"
-                                                            [class.text-white]="coverGroup.get('mode')?.value === 'manual'"
-                                                            (click)="onCoverModeChange('manual')"
-                                                    >
-                                                        Manual
-                                                    </button>
-
-                                                    <button
-                                                            type="button"
-                                                            class="rounded-xl border px-3 py-2 text-sm"
-                                                            [class.bg-brand-navy]="coverGroup.get('mode')?.value === 'pdf'"
-                                                            [class.text-white]="coverGroup.get('mode')?.value === 'pdf'"
-                                                            (click)="onCoverModeChange('pdf')"
-                                                    >
-                                                        Ready PDF
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div class="mt-6" [formGroup]="coverGroup">
-                                                @if (coverGroup.get('mode')?.value === 'manual') {
-                                                    <div class="grid gap-4">
-
-
-
-
-
+                                <!-- STEP 2 : PRICING -->
+                                @if (isCurrentStep('pricing')) {
+                                    <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                        <div class="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+                                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                                                <div class="flex items-start justify-between gap-4">
+                                                    <div>
+                                                        <h3 class="text-[1rem] font-semibold text-brand-navy">Book attributes</h3>
+                                                        <p class="mt-1 text-[0.82rem] text-slate-500">
+                                                            These values come from step 1 and are used to request the suggested sale price.
+                                                        </p>
                                                     </div>
-                                                } @else {
-                                                    <div class="grid gap-4">
-                                                        <div>
-                                                            <label class="admin-label">PDF file name</label>
-                                                            <input class="admin-input" formControlName="pdfFileName" placeholder="cover.pdf" />
-                                                        </div>
 
-                                                        <div>
-                                                            <label class="admin-label">Upload PDF</label>
-                                                            <input class="admin-input" type="file" accept="application/pdf" (change)="onCoverPdfSelected($event)" />
+                                                    @if (hasHiddenPricingSummaryItems()) {
+                                                        <button
+                                                                type="button"
+                                                                class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[0.74rem] font-semibold text-brand-navy transition hover:border-brand-navy/30 hover:bg-brand-navy/5"
+                                                                (click)="togglePricingAttributesExpanded()"
+                                                        >
+                                                            {{ pricingAttributesExpanded() ? 'Collapse' : 'Show all' }}
+                                                        </button>
+                                                    }
+                                                </div>
+
+                                                <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                                                    @for (item of visiblePricingSummaryItems(); track item.label) {
+                                                        <div class="border-b border-slate-200 pb-3">
+                                                            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-400">{{ item.label }}</p>
+                                                            <p class="mt-1 text-[0.9rem] font-medium text-brand-navy">{{ item.value }}</p>
                                                         </div>
+                                                    }
+                                                </div>
+
+                                                @if (hasHiddenPricingSummaryItems() && !pricingAttributesExpanded()) {
+                                                    <div class="mt-4 rounded-xl bg-white/80 px-4 py-3 text-[0.8rem] text-slate-500">
+                                                        {{ pricingSummaryItems().length - visiblePricingSummaryItems().length }} more attributes are hidden for readability.
                                                     </div>
                                                 }
                                             </div>
-                                        </section>
 
-                                        <!-- CONTENT -->
-                                        <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
-                                            <div class="flex items-center justify-between gap-4">
-                                                <div>
-                                                    <h3 class="text-[1rem] font-semibold text-brand-navy">Content</h3>
+                                            <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                                                <h3 class="text-[1rem] font-semibold text-brand-navy">Sale price</h3>
+                                                <p class="mt-1 text-[0.82rem] text-slate-500">
+                                                    Review the suggested price, understand why it was proposed, then keep it or adjust it manually.
+                                                </p>
 
-                                                </div>
-
-                                                <div class="flex gap-2">
-
-
-                                                    <button
-                                                            type="button"
-                                                            class="rounded-xl border px-3 py-2 text-sm"
-                                                            [class.bg-brand-navy]="contentGroup.get('mode')?.value === 'pdf'"
-                                                            [class.text-white]="contentGroup.get('mode')?.value === 'pdf'"
-                                                            (click)="onContentModeChange('pdf')"
-                                                    >
-                                                        Ready PDF
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div class="mt-6" [formGroup]="contentGroup">
-                                                @if (contentGroup.get('mode')?.value === 'pdf') {
-
-                                                    <div class="grid gap-4">
-                                                        <div>
-                                                            <label class="admin-label">PDF file name</label>
-                                                            <input class="admin-input" formControlName="fileName" placeholder="content.pdf" />
-                                                        </div>
-
-                                                        <div>
-                                                            <label class="admin-label">Upload PDF</label>
-                                                            <input class="admin-input" type="file" accept="application/pdf" (change)="onContentPdfSelected($event)" />
-                                                        </div>
+                                                <div class="mt-5 space-y-4">
+                                                    <div>
+                                                        <label class="admin-label" for="book-sale-price">Sale Price ($) *</label>
+                                                        <input
+                                                                id="book-sale-price"
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                class="admin-input"
+                                                                formControlName="salePrice"
+                                                        />
+                                                        @if (showError('salePrice')) {
+                                                            <p class="admin-error">Sale price must be 0 or greater.</p>
+                                                        }
                                                     </div>
-                                                }
+
+                                                      <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                                                          <div>
+                                                              <div>
+                                                                  <p class="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Suggested price</p>
+                                                                  @if (pricingExplainedQuote()?.selectedPrice != null) {
+                                                                      <p class="mt-2 text-[1.65rem] font-semibold text-brand-navy">
+                                                                          ${{ formatPricingValue(pricingExplainedQuote()?.selectedPrice) }}
+                                                                      </p>
+                                                                  }
+                                                              </div>
+                                                          </div>
+
+                                                          @if (pricingSuggestionLoading()) {
+                                                              <p class="mt-2 text-[0.9rem] font-medium text-brand-navy">Calculating suggested price...</p>
+                                                          } @else if (pricingSuggestionMessage()) {
+                                                            <p
+                                                                    class="mt-2 text-[0.86rem]"
+                                                                    [class.text-emerald-600]="pricingSuggestionAvailable()"
+                                                                    [class.text-amber-600]="!pricingSuggestionAvailable()"
+                                                            >
+                                                                  {{ pricingSuggestionMessage() }}
+                                                              </p>
+                                                          } @else {
+                                                              <p class="mt-2 text-[0.86rem] text-slate-500">Suggested price will appear here after step 1.</p>
+                                                          }
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+
+                                        @if (pricingExplanation(); as explanation) {
+                                            <div class="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                                                <div class="space-y-6">
+                                                    @if (explanation.formula) {
+                                                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                                                            <div class="flex items-center justify-between gap-3">
+                                                                <div>
+                                                                    <h4 class="text-[0.96rem] font-semibold text-brand-navy">Pricing formula</h4>
+                                                                    <p class="mt-1 text-[0.82rem] text-slate-500">
+                                                                        The selected model returned an explicit linear formula for this book family.
+                                                                    </p>
+                                                                </div>
+                                                                <span class="rounded-full bg-brand-navy/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-brand-navy">
+                                                                    {{ formatExplanationTypeLabel(explanation.explanationType) }}
+                                                                </span>
+                                                            </div>
+
+                                                            <div class="mt-4 overflow-x-auto rounded-xl bg-white p-4">
+                                                                <code class="block whitespace-pre-wrap break-words text-[0.82rem] leading-6 text-slate-700">{{ explanation.formula }}</code>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    @if (pricingKeyInsights().length) {
+                                                        <div class="rounded-2xl border border-slate-200 p-5">
+                                                            <h4 class="text-[0.96rem] font-semibold text-brand-navy">Why this price was suggested</h4>
+                                                            <div class="mt-4 space-y-3">
+                                                                @for (insight of pricingKeyInsights(); track insight) {
+                                                                    <div class="flex gap-3 rounded-xl bg-slate-50 px-4 py-3">
+                                                                        <span class="mt-1 h-2 w-2 rounded-full bg-brand-orange"></span>
+                                                                        <p class="text-[0.88rem] leading-6 text-slate-700">{{ insight }}</p>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    @if (explanation.clientContext) {
+                                                        <div class="rounded-2xl border border-slate-200 p-5">
+                                                            <h4 class="text-[0.96rem] font-semibold text-brand-navy">Client context</h4>
+                                                            <p class="mt-3 text-[0.88rem] leading-6 text-slate-600">{{ explanation.clientContext }}</p>
+                                                        </div>
+                                                    }
+                                                </div>
+
+                                                <div class="space-y-6">
+                                                    @if (pricingTopDrivers().length) {
+                                                        <div class="rounded-2xl border border-slate-200 p-5">
+                                                            <h4 class="text-[0.96rem] font-semibold text-brand-navy">Main pricing drivers</h4>
+                                                            <p class="mt-1 text-[0.82rem] text-slate-500">
+                                                                These are the strongest signals used by the selected model for this price suggestion.
+                                                            </p>
+
+                                                            <div class="mt-4 space-y-3">
+                                                                @for (driver of pricingTopDrivers(); track driver.name) {
+                                                                    <div class="space-y-2">
+                                                                        <div class="flex items-center justify-between gap-3">
+                                                                            <p class="text-[0.86rem] font-medium text-brand-navy">{{ formatDriverName(driver.name) }}</p>
+                                                                            <p class="text-[0.78rem] text-slate-500">{{ formatPricingValue(driver.importance) }}</p>
+                                                                        </div>
+                                                                        <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                                                                            <div
+                                                                                    class="h-full rounded-full bg-brand-orange"
+                                                                                    [style.width.%]="(driver.importance || 0) * 100"
+                                                                            ></div>
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                  </div>
                                             </div>
-                                        </section>
-                                    </div>
+                                        }
+                                    </section>
                                 }
 
                                 <!-- STEP 3 : PNL -->
@@ -802,6 +861,111 @@
                                     </section>
                                 }
 
+                                <!-- STEP 4 : CONTENT -->
+                                @if (isCurrentStep('content')) {
+                                    <div class="grid gap-6 xl:grid-cols-2">
+
+                                        <!-- COVER -->
+                                        <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                            <div class="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 class="text-[1rem] font-semibold text-brand-navy">Cover</h3>
+                                                    <p class="mt-1 text-[0.85rem] text-slate-500">
+                                                        Provide either manual cover content or a ready PDF file.
+                                                    </p>
+                                                </div>
+
+                                                <div class="flex gap-2">
+                                                    <button
+                                                            type="button"
+                                                            class="rounded-xl border px-3 py-2 text-sm"
+                                                            [class.bg-brand-navy]="coverGroup.get('mode')?.value === 'manual'"
+                                                            [class.text-white]="coverGroup.get('mode')?.value === 'manual'"
+                                                            (click)="onCoverModeChange('manual')"
+                                                    >
+                                                        Manual
+                                                    </button>
+
+                                                    <button
+                                                            type="button"
+                                                            class="rounded-xl border px-3 py-2 text-sm"
+                                                            [class.bg-brand-navy]="coverGroup.get('mode')?.value === 'pdf'"
+                                                            [class.text-white]="coverGroup.get('mode')?.value === 'pdf'"
+                                                            (click)="onCoverModeChange('pdf')"
+                                                    >
+                                                        Ready PDF
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-6" [formGroup]="coverGroup">
+                                                @if (coverGroup.get('mode')?.value === 'manual') {
+                                                    <div class="grid gap-4">
+
+
+
+
+
+                                                    </div>
+                                                } @else {
+                                                    <div class="grid gap-4">
+                                                        <div>
+                                                            <label class="admin-label">PDF file name</label>
+                                                            <input class="admin-input" formControlName="pdfFileName" placeholder="cover.pdf" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="admin-label">Upload PDF</label>
+                                                            <input class="admin-input" type="file" accept="application/pdf" (change)="onCoverPdfSelected($event)" />
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </section>
+
+                                        <!-- CONTENT -->
+                                        <section class="rounded-[1.25rem] border border-slate-200 bg-white p-6 shadow-sm">
+                                            <div class="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 class="text-[1rem] font-semibold text-brand-navy">Content</h3>
+
+                                                </div>
+
+                                                <div class="flex gap-2">
+
+
+                                                    <button
+                                                            type="button"
+                                                            class="rounded-xl border px-3 py-2 text-sm"
+                                                            [class.bg-brand-navy]="contentGroup.get('mode')?.value === 'pdf'"
+                                                            [class.text-white]="contentGroup.get('mode')?.value === 'pdf'"
+                                                            (click)="onContentModeChange('pdf')"
+                                                    >
+                                                        Ready PDF
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-6" [formGroup]="contentGroup">
+                                                @if (contentGroup.get('mode')?.value === 'pdf') {
+
+                                                    <div class="grid gap-4">
+                                                        <div>
+                                                            <label class="admin-label">PDF file name</label>
+                                                            <input class="admin-input" formControlName="fileName" placeholder="content.pdf" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="admin-label">Upload PDF</label>
+                                                            <input class="admin-input" type="file" accept="application/pdf" (change)="onContentPdfSelected($event)" />
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </section>
+                                    </div>
+                                }
+
                                 <!-- STEP 4 : TEMPLATE -->
                                 @if (isCurrentStep('template')) {
                                     <section class="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm" [formGroup]="templateGroup">
@@ -884,8 +1048,9 @@
                                                 type="button"
                                                 class="admin-focus-ring admin-btn-primary"
                                                 (click)="nextStep()"
+                                                [disabled]="pricingSuggestionLoading()"
                                         >
-                                            Next
+                                            {{ pricingSuggestionLoading() ? 'Suggesting price...' : 'Next' }}
                                         </button>
                                     } @else {
                                         <button

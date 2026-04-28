@@ -144,6 +144,7 @@ public class BookRequestDto {
         private String pdfFileName;
         private String pdfFileType;
         private String pdfFilePath;
+        private String pdfFileBase64;
         private Long coverTemplateId;
     }
 
@@ -156,6 +157,7 @@ public class BookRequestDto {
         private String fileName;
         private String fileType;
         private String filePath;
+        private String fileBase64;
         private Long textTemplateId;
     }
 

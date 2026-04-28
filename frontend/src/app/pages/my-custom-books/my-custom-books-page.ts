@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Book, BookService } from '../../core/services/book.service';
@@ -34,6 +35,13 @@ export class MyCustomBooksPageComponent {
   readonly modalInfo = signal<string | null>(null);
   readonly calculatingPrice = signal(false);
   readonly addingToCart = signal(false);
+  readonly duplicatingBookId = signal<number | null>(null);
+  readonly deletingBookId = signal<number | null>(null);
+  readonly openBookMenuId = signal<number | null>(null);
+  readonly deleteDecisionModalOpen = signal(false);
+  readonly deleteDecisionMode = signal<'confirm' | 'blocked'>('confirm');
+  readonly deleteDecisionMessage = signal('');
+  readonly deleteDecisionBook = signal<Book | null>(null);
 
   readonly priorityOptions = [
     { value: 'LOW' as const, label: 'Low', color: 'bg-slate-500', description: 'Standard processing' },
@@ -59,6 +67,91 @@ export class MyCustomBooksPageComponent {
     void this.load();
   }
 
+  @HostListener('document:click', ['$event'])
+  handleDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.custom-book-menu')) {
+      return;
+    }
+    this.closeBookMenu();
+  }
+
+  toggleBookMenu(bookId: number, event?: Event): void {
+    event?.stopPropagation();
+    this.openBookMenuId.update((current) => current === bookId ? null : bookId);
+  }
+
+  isBookMenuOpen(bookId: number): boolean {
+    return this.openBookMenuId() === bookId;
+  }
+
+  closeBookMenu(): void {
+    this.openBookMenuId.set(null);
+  }
+
+  async duplicateBookFromMenu(book: Book): Promise<void> {
+    this.closeBookMenu();
+    await this.duplicateBook(book);
+  }
+
+  async deleteBookFromMenu(book: Book): Promise<void> {
+    this.closeBookMenu();
+    this.prepareDeleteDecisionModal(book);
+  }
+
+  prepareDeleteDecisionModal(book: Book): void {
+    this.deleteDecisionBook.set(book);
+    this.deleteDecisionMode.set('confirm');
+    this.deleteDecisionMessage.set(`Delete "${book.title}"?`);
+    this.deleteDecisionModalOpen.set(true);
+  }
+
+  closeDeleteDecisionModal(force = false): void {
+    if (this.deletingBookId() && !force) {
+      return;
+    }
+    this.deleteDecisionModalOpen.set(false);
+    this.deleteDecisionBook.set(null);
+    this.deleteDecisionMode.set('confirm');
+    this.deleteDecisionMessage.set('');
+  }
+
+  async confirmDeleteFromDialog(): Promise<void> {
+    const book = this.deleteDecisionBook();
+    if (!book || this.deletingBookId()) {
+      return;
+    }
+    await this.performDelete(book);
+  }
+
+  private async performDelete(book: Book): Promise<void> {
+    this.deletingBookId.set(book.bookId);
+    try {
+      await this.bookService.deleteMyCustomBook(book.bookId);
+      this.books.update((current) => current.filter((item) => item.bookId !== book.bookId));
+      this.closeDeleteDecisionModal(true);
+      this.ui.showToast?.({
+        message: `"${book.title}" deleted successfully.`,
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Unable to delete custom book', error);
+      if (this.isOrderLinkedDeleteError(error)) {
+        this.deleteDecisionMode.set('blocked');
+        this.deleteDecisionMessage.set('Cannot delete book associated to order');
+        this.deleteDecisionModalOpen.set(true);
+      } else {
+        this.closeDeleteDecisionModal(true);
+        this.ui.showToast?.({
+          message: 'Unable to delete this custom book right now.',
+          type: 'error',
+        });
+      }
+    } finally {
+      this.deletingBookId.set(null);
+    }
+  }
+
   async load(): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -75,6 +168,7 @@ export class MyCustomBooksPageComponent {
   }
 
   openAddToCartModal(book: Book): void {
+    this.closeBookMenu();
     this.selectedBook.set(book);
     this.modalQuantity.set(1);
     this.modalPriority.set(this.mapPricingPriorityToModalPriority(book.priorityLevel));
@@ -221,6 +315,26 @@ export class MyCustomBooksPageComponent {
       this.modalError.set('Unable to add this custom book to cart right now.');
     } finally {
       this.addingToCart.set(false);
+    }
+  }
+
+  async duplicateBook(book: Book): Promise<void> {
+    this.duplicatingBookId.set(book.bookId);
+    try {
+      const duplicated = await this.bookService.duplicateMyCustomBook(book.bookId);
+      this.books.update((current) => [duplicated, ...current]);
+      this.ui.showToast?.({
+        message: `New instance created for "${book.title}".`,
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Unable to duplicate custom book', error);
+      this.ui.showToast?.({
+        message: 'Unable to duplicate this custom book right now.',
+        type: 'error',
+      });
+    } finally {
+      this.duplicatingBookId.set(null);
     }
   }
 
@@ -378,20 +492,72 @@ export class MyCustomBooksPageComponent {
     return `/${raw.replace(/^\.?\//, '')}`;
   }
 
-  editQueryParams(book: Book): Record<string, string | number> {
-    return {
-      bindingType: book.bindingType || '',
-      quantity: book.quantity || 1,
-      productionPage: book.productionPage || 1,
-      height: book.height || 21,
-      width: book.width || 14,
-      thickness: book.thickness || 1,
-      textPaperType: book.textPaperType || 'NONE',
-      textColor: book.textColor || 'FOUR_FOUR',
-      coverPaperType: book.coverPaperType || 'NONE',
-      coverFinishType: book.coverFinishType || 'MATT',
-      coverColor: book.coverColor || 'FOUR_ZERO',
-      headAndTail: book.headAndTail || 'NONE',
-    };
+  formatCreationDate(book: Book): string {
+    const source = book.creationDate;
+    if (!source) {
+      return 'N/A';
+    }
+    const date = new Date(source);
+    if (Number.isNaN(date.getTime())) {
+      return 'N/A';
+    }
+    const year = date.getFullYear();
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${day}-${month} ${hour}:${minute}`;
   }
+
+  updatedAgoLabel(book: Book): string {
+    const source = book.updatedAt || book.creationDate;
+    if (!source) {
+      return 'updated just now';
+    }
+
+    const updatedDate = new Date(source);
+    const now = new Date();
+    const diffMs = Math.max(0, now.getTime() - updatedDate.getTime());
+    const minuteMs = 1000 * 60;
+    const hourMs = 1000 * 60 * 60;
+    const dayMs = hourMs * 24;
+    const monthMs = dayMs * 30;
+    const yearMs = dayMs * 365;
+
+    if (diffMs < hourMs) {
+      const minutes = Math.max(1, Math.floor(diffMs / minuteMs));
+      return `updated ${minutes} minutes ago`;
+    }
+    if (diffMs < dayMs) {
+      const hours = Math.max(1, Math.floor(diffMs / hourMs));
+      return `updated ${hours}hrs ago`;
+    }
+    if (diffMs < monthMs) {
+      const days = Math.max(1, Math.floor(diffMs / dayMs));
+      return `updated ${days} days ago`;
+    }
+    if (diffMs < yearMs) {
+      const months = Math.max(1, Math.floor(diffMs / monthMs));
+      return `updated ${months} months ago`;
+    }
+
+    const years = Math.max(1, Math.floor(diffMs / yearMs));
+    return `updated ${years} years ago`;
+  }
+
+  private isOrderLinkedDeleteError(error: unknown): boolean {
+    if (!(error instanceof HttpErrorResponse)) {
+      return false;
+    }
+
+    const backendMessage = String(
+        error.error?.message ??
+        error.error?.error ??
+        error.message ??
+        ''
+    ).toLowerCase();
+
+    return error.status === 409 || backendMessage.includes('associated to order');
+  }
+
 }

@@ -50,11 +50,49 @@ export interface QuoteResponse {
     message: string;
 }
 
+export interface PricingDriver {
+    name: string;
+    importance: number | null;
+}
+
+export interface PricingModelSummary {
+    key: string;
+    label: string;
+    modelName: string | null;
+    prediction: number | null;
+    r2: number | null;
+    available: boolean | null;
+    explanationType: string | null;
+}
+
+export interface PricingExplanation {
+    selectedSourceKey: string | null;
+    selectedSourceLabel: string | null;
+    explanationType: string | null;
+    formula: string | null;
+    shapAvailable: boolean | null;
+    clientContext: string | null;
+    keyInsights: string[];
+    topDrivers: PricingDriver[];
+    modelSummaries: PricingModelSummary[];
+}
+
+export interface ExplainedQuoteResponse extends QuoteResponse {
+    requestId: string | null;
+    timestamp: string | null;
+    input: unknown;
+    explanation: PricingExplanation | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PricingService {
     private readonly http = inject(HttpClient);
 
     getQuote(payload: QuoteRequest): Observable<QuoteResponse> {
         return this.http.post<QuoteResponse>('/api/pricing/quote', payload);
+    }
+
+    getExplainedQuote(payload: QuoteRequest): Observable<ExplainedQuoteResponse> {
+        return this.http.post<ExplainedQuoteResponse>('/api/pricing/quote/explained', payload);
     }
 }

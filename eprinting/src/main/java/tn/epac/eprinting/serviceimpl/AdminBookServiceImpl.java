@@ -9,6 +9,7 @@ import tn.epac.eprinting.exception.ResourceNotFoundException;
 import tn.epac.eprinting.model.dtos.BookOverviewDto;
 import tn.epac.eprinting.model.dtos.BookRequestDto;
 import tn.epac.eprinting.model.dtos.BookResponseDto;
+import tn.epac.eprinting.model.dtos.UserBookUpsertResultDto;
 import tn.epac.eprinting.model.entities.Book;
 import tn.epac.eprinting.model.entities.Content;
 import tn.epac.eprinting.model.entities.Cover;
@@ -32,24 +33,33 @@ import tn.epac.eprinting.model.enums.TextPaperType;
 import tn.epac.eprinting.model.enums.UserBookStatus;
 import tn.epac.eprinting.repository.BookRepository;
 import tn.epac.eprinting.repository.CoverTemplateRepository;
+import tn.epac.eprinting.repository.OrderRepository;
 import tn.epac.eprinting.repository.TextTemplateRepository;
 import tn.epac.eprinting.repository.UserRepository;
 import tn.epac.eprinting.service.AdminBookService;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class AdminBookServiceImpl implements AdminBookService {
+    private static final Path CUSTOM_BOOK_UPLOADS_DIR = Paths.get(System.getProperty("user.dir"), "uploads", "custom-books");
 
     private final BookRepository bookRepository;
     private final CoverTemplateRepository coverTemplateRepository;
     private final TextTemplateRepository textTemplateRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     @Override
     public BookOverviewDto getBookOverview() {
@@ -154,6 +164,174 @@ public class AdminBookServiceImpl implements AdminBookService {
                 .stream()
                 .map(this::mapToResponseDto)
                 .toList();
+    }
+
+    @Override
+    public BookResponseDto duplicateUserBook(Long bookId, Long creatorUserId) {
+        Book source = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+
+        if (!source.is_created_by_user()) {
+            throw new IllegalArgumentException("This book is not a custom user book");
+        }
+        if (source.getCreation_author() == null
+                || creatorUserId == null
+                || !creatorUserId.equals(source.getCreation_author().getUserId())) {
+            throw new IllegalArgumentException("You do not have access to this book");
+        }
+
+        Book clone = new Book();
+        clone.setTitle(buildDuplicateTitle(source.getTitle()));
+        clone.setDescription(source.getDescription());
+        clone.setAuthors(source.getAuthors() == null ? new ArrayList<>() : new ArrayList<>(source.getAuthors()));
+        clone.setQuantity(source.getQuantity());
+        clone.setProductionPage(source.getProductionPage());
+        clone.setHeight(source.getHeight());
+        clone.setThickness(source.getThickness());
+        clone.setWidth(source.getWidth());
+        clone.setSecurityLabel(source.getSecurityLabel());
+        clone.setHasCoil(source.getHasCoil());
+        clone.setHasInsert(source.getHasInsert());
+        clone.setHasTab(source.getHasTab());
+        clone.setHasBackcover(source.getHasBackcover());
+        clone.setPerf(source.getPerf());
+        clone.setDoubleSidedCover(source.getDoubleSidedCover());
+        clone.setShrinkwrap(source.getShrinkwrap());
+        clone.setThreeHoleDrill(source.getThreeHoleDrill());
+        clone.setPnlCover(source.getPnlCover());
+        clone.setPnlText(source.getPnlText());
+        clone.setTextPaperType(source.getTextPaperType());
+        clone.setTextColor(source.getTextColor());
+        clone.setCoverFinishType(source.getCoverFinishType());
+        clone.setCoverColor(source.getCoverColor());
+        clone.setCoverSize(source.getCoverSize());
+        clone.setCoverPaperType(source.getCoverPaperType());
+        clone.setHeadAndTail(source.getHeadAndTail());
+        clone.setBindingType(source.getBindingType());
+        clone.setCoilType(source.getCoilType());
+        clone.setTabColor(source.getTabColor());
+        clone.setInsertPaperType(source.getInsertPaperType());
+        clone.setCaseFinishType(source.getCaseFinishType());
+        clone.setSpineType(source.getSpineType());
+        clone.setLabelType(source.getLabelType());
+        clone.setSalePrice(source.getSalePrice());
+        clone.setSiren(source.getSiren());
+
+        clone.set_added_from_admin(false);
+        clone.set_created_by_user(true);
+        clone.setUserbook_status(UserBookStatus.DRAFT);
+        userRepository.findById(creatorUserId).ifPresent(clone::setCreation_author);
+
+        if (source.getCover() != null) {
+            Cover sourceCover = source.getCover();
+            Cover cover = new Cover();
+            cover.setTitle(sourceCover.getTitle());
+            cover.setPdfFileName(sourceCover.getPdfFileName());
+            cover.setPdfFileType(sourceCover.getPdfFileType());
+            cover.setPdfFilePath(sourceCover.getPdfFilePath());
+            cover.setCoverTemplate(sourceCover.getCoverTemplate());
+            cover.setBook(clone);
+            clone.setCover(cover);
+        }
+
+        if (source.getContent() != null) {
+            Content sourceContent = source.getContent();
+            Content content = new Content();
+            content.setFileName(sourceContent.getFileName());
+            content.setFileType(sourceContent.getFileType());
+            content.setFilePath(sourceContent.getFilePath());
+            content.setTextTemplate(sourceContent.getTextTemplate());
+            content.setBook(clone);
+            clone.setContent(content);
+        }
+
+        if (source.getPnlInformations() != null) {
+            List<PnlInformation> pnlCopies = source.getPnlInformations().stream()
+                    .filter(Objects::nonNull)
+                    .map(info -> {
+                        PnlInformation copy = PnlInformation.builder()
+                                .pnlPageNumber(info.getPnlPageNumber())
+                                .pnlPrintingNumber(info.getPnlPrintingNumber())
+                                .pnlHorizontalMargin(info.getPnlHorizontalMargin())
+                                .pnlVerticalMargin(info.getPnlVerticalMargin())
+                                .pnlLineSpacing(info.getPnlLineSpacing())
+                                .pnlFontType(info.getPnlFontType())
+                                .pnlFontSize(info.getPnlFontSize())
+                                .pnlExcluded(info.getPnlExcluded())
+                                .build();
+                        if (info.getPnlLines() != null) {
+                            info.getPnlLines().stream()
+                                    .filter(Objects::nonNull)
+                                    .forEach(line -> copy.addLine(
+                                            PnlLine.builder()
+                                                    .lineId(line.getLineId())
+                                                    .ordering(line.getOrdering())
+                                                    .value(line.getValue())
+                                                    .pnlFontType(line.getPnlFontType())
+                                                    .pnlFontSize(line.getPnlFontSize())
+                                                    .pnlFontBold(line.getPnlFontBold())
+                                                    .pnlFontItalic(line.getPnlFontItalic())
+                                                    .build()
+                                    ));
+                        }
+                        return copy;
+                    })
+                    .toList();
+            clone.setPnlInformations(new ArrayList<>(pnlCopies));
+        }
+
+        updateStockStatus(clone);
+        Book saved = bookRepository.save(clone);
+        return mapToResponseDto(saved);
+    }
+
+    @Override
+    public UserBookUpsertResultDto updateUserBook(Long bookId, BookRequestDto bookRequest, Long creatorUserId) {
+        Book existingBook = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+
+        if (!existingBook.is_created_by_user()) {
+            throw new IllegalArgumentException("This book is not a custom user book");
+        }
+        if (existingBook.getCreation_author() == null
+                || creatorUserId == null
+                || !creatorUserId.equals(existingBook.getCreation_author().getUserId())) {
+            throw new IllegalArgumentException("You do not have access to this book");
+        }
+
+        boolean linkedToOrder = orderRepository.existsByOrderLinesBookBookId(bookId);
+        if (!linkedToOrder) {
+            applyBookFields(existingBook, bookRequest, false);
+            applyBookRelations(existingBook, bookRequest, false);
+            updateStockStatus(existingBook);
+
+            Book updatedBook = bookRepository.save(existingBook);
+            return UserBookUpsertResultDto.builder()
+                    .book(mapToResponseDto(updatedBook))
+                    .updatedInPlace(true)
+                    .cloned(false)
+                    .message("Book updated in place.")
+                    .build();
+        }
+
+        Book clonedBook = new Book();
+        applyBookFields(clonedBook, bookRequest, false);
+        applyBookRelations(clonedBook, bookRequest, false);
+        clonedBook.set_added_from_admin(false);
+        clonedBook.set_created_by_user(true);
+        clonedBook.setUserbook_status(UserBookStatus.DRAFT);
+        if (creatorUserId != null) {
+            userRepository.findById(creatorUserId).ifPresent(clonedBook::setCreation_author);
+        }
+        updateStockStatus(clonedBook);
+
+        Book savedClone = bookRepository.save(clonedBook);
+        return UserBookUpsertResultDto.builder()
+                .book(mapToResponseDto(savedClone))
+                .updatedInPlace(false)
+                .cloned(true)
+                .message("This book is already linked to an order. A new editable instance was created.")
+                .build();
     }
 
     @Override
@@ -367,9 +545,16 @@ public class AdminBookServiceImpl implements AdminBookService {
 
         Cover cover = book.getCover() != null ? book.getCover() : new Cover();
         cover.setTitle(normalizeBlankToNull(coverDto.getTitle()));
-        cover.setPdfFileName(normalizeBlankToNull(coverDto.getPdfFileName()));
-        cover.setPdfFileType(normalizeBlankToNull(coverDto.getPdfFileType()));
-        cover.setPdfFilePath(normalizeBlankToNull(coverDto.getPdfFilePath()));
+        String coverFileName = normalizeBlankToNull(coverDto.getPdfFileName());
+        String coverFileType = normalizeBlankToNull(coverDto.getPdfFileType());
+        String coverFilePath = normalizeBlankToNull(coverDto.getPdfFilePath());
+        String coverBase64 = normalizeBlankToNull(coverDto.getPdfFileBase64());
+        if (coverBase64 != null) {
+            coverFilePath = storePdfFile(coverBase64, coverFileName, "cover");
+        }
+        cover.setPdfFileName(coverFileName);
+        cover.setPdfFileType(coverFileType);
+        cover.setPdfFilePath(coverFilePath);
         cover.setBook(book);
 
         if (coverDto.getCoverTemplateId() != null) {
@@ -393,7 +578,12 @@ public class AdminBookServiceImpl implements AdminBookService {
         String fileName = normalizeBlankToNull(contentDto.getFileName());
         String fileType = normalizeBlankToNull(contentDto.getFileType());
         String filePath = normalizeBlankToNull(contentDto.getFilePath());
+        String fileBase64 = normalizeBlankToNull(contentDto.getFileBase64());
         String textContent = normalizeBlankToNull(contentDto.getTextContent());
+
+        if (fileBase64 != null) {
+            filePath = storePdfFile(fileBase64, fileName, "content");
+        }
 
         if (filePath == null && (textContent != null || contentDto.getTextTemplateId() != null)) {
             fileName = fileName != null ? fileName : "generated-from-text.pdf";
@@ -418,8 +608,14 @@ public class AdminBookServiceImpl implements AdminBookService {
     }
 
     private void applyPnlInformations(Book book, List<BookRequestDto.PnlInformationPayloadDto> pnlInfos) {
+        List<PnlInformation> targetInfos = book.getPnlInformations();
+        if (targetInfos == null) {
+            targetInfos = new ArrayList<>();
+            book.setPnlInformations(targetInfos);
+        }
+
         if (pnlInfos == null) {
-            book.setPnlInformations(new ArrayList<>());
+            targetInfos.clear();
             return;
         }
 
@@ -427,7 +623,8 @@ public class AdminBookServiceImpl implements AdminBookService {
                 .filter(Objects::nonNull)
                 .map(this::mapPnlInformation)
                 .toList();
-        book.setPnlInformations(new ArrayList<>(mappedInfos));
+        targetInfos.clear();
+        targetInfos.addAll(mappedInfos);
     }
 
     private PnlInformation mapPnlInformation(BookRequestDto.PnlInformationPayloadDto dto) {
@@ -498,6 +695,11 @@ public class AdminBookServiceImpl implements AdminBookService {
                 .labelType(book.getLabelType() != null ? book.getLabelType().name() : null)
                 .siren(book.getSiren())
                 .authors(book.getAuthors() != null ? book.getAuthors().toArray(new String[0]) : new String[0])
+                .creationAuthorUserId(book.getCreation_author() != null ? book.getCreation_author().getUserId() : null)
+                .creationAuthorFullName(resolveCreationAuthorFullName(book))
+                .creationAuthorEmail(book.getCreation_author() != null ? book.getCreation_author().getEmail() : null)
+                .creationDate(book.getCreationDate())
+                .updatedAt(book.getUpdatedAt())
                 .isAddedFromAdmin(book.is_added_from_admin())
                 .isCreatedByUser(book.is_created_by_user())
                 .stockStatus(book.getStock_status())
@@ -516,6 +718,7 @@ public class AdminBookServiceImpl implements AdminBookService {
                 .pdfFileType(cover.getPdfFileType())
                 .pdfFilePath(cover.getPdfFilePath())
                 .coverTemplateId(cover.getCoverTemplate() != null ? cover.getCoverTemplate().getTemplateId() : null)
+                .coverTemplateThumbnailUrl(cover.getCoverTemplate() != null ? cover.getCoverTemplate().getThumbnailUrl() : null)
                 .build();
     }
 
@@ -559,6 +762,34 @@ public class AdminBookServiceImpl implements AdminBookService {
         ).toList();
     }
 
+    private String buildDuplicateTitle(String sourceTitle) {
+        String normalized = sourceTitle == null ? "" : sourceTitle.trim();
+        if (normalized.isEmpty()) {
+            normalized = "Untitled";
+        }
+        return "copy of " + normalized;
+    }
+
+    private String resolveCreationAuthorFullName(Book book) {
+        if (book.getCreation_author() == null) {
+            return null;
+        }
+
+        String firstName = normalizeBlankToNull(book.getCreation_author().getFirstName());
+        String lastName = normalizeBlankToNull(book.getCreation_author().getLastName());
+        String fullName = ((firstName == null ? "" : firstName) + " " + (lastName == null ? "" : lastName)).trim();
+        if (!fullName.isEmpty()) {
+            return fullName;
+        }
+
+        String username = normalizeBlankToNull(book.getCreation_author().getUsername());
+        if (username != null) {
+            return username;
+        }
+
+        return normalizeBlankToNull(book.getCreation_author().getEmail());
+    }
+
     private double calculateCoverageDays(Book book) {
         return book.getQuantity() != null ? book.getQuantity().doubleValue() : 0;
     }
@@ -598,13 +829,43 @@ public class AdminBookServiceImpl implements AdminBookService {
                 && cleanStringList(coverDto.getImages()).isEmpty()
                 && cleanStringList(coverDto.getTexts()).isEmpty()
                 && normalizeBlankToNull(coverDto.getPdfFilePath()) == null
+                && normalizeBlankToNull(coverDto.getPdfFileBase64()) == null
                 && coverDto.getCoverTemplateId() == null;
     }
 
     private boolean isContentEmpty(BookRequestDto.ContentPayloadDto contentDto) {
         return normalizeBlankToNull(contentDto.getTextContent()) == null
                 && normalizeBlankToNull(contentDto.getFilePath()) == null
+                && normalizeBlankToNull(contentDto.getFileBase64()) == null
                 && contentDto.getTextTemplateId() == null;
+    }
+
+    private String storePdfFile(String rawBase64, String requestedFileName, String prefix) {
+        try {
+            Files.createDirectories(CUSTOM_BOOK_UPLOADS_DIR);
+            String sanitizedFileName = sanitizePdfFileName(requestedFileName, prefix);
+            String base64Payload = rawBase64.contains(",") ? rawBase64.substring(rawBase64.indexOf(',') + 1) : rawBase64;
+            byte[] bytes = Base64.getDecoder().decode(base64Payload);
+
+            Path target = CUSTOM_BOOK_UPLOADS_DIR.resolve(prefix + "-" + UUID.randomUUID() + "-" + sanitizedFileName);
+            Files.write(target, bytes);
+            return target.toAbsolutePath().toString();
+        } catch (IllegalArgumentException | IOException exception) {
+            throw new IllegalStateException("Unable to store PDF file", exception);
+        }
+    }
+
+    private String sanitizePdfFileName(String requestedFileName, String prefix) {
+        String candidate = normalizeBlankToNull(requestedFileName);
+        if (candidate == null) {
+            return prefix + ".pdf";
+        }
+
+        String sanitized = candidate.replaceAll("[^a-zA-Z0-9._-]", "_");
+        if (!sanitized.toLowerCase().endsWith(".pdf")) {
+            sanitized = sanitized + ".pdf";
+        }
+        return sanitized;
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String rawValue, E defaultValue) {

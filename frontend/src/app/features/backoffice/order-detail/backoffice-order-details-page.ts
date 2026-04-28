@@ -63,9 +63,9 @@ export class BackofficeOrderDetailsPageComponent {
 
   readonly customLineStatusOptions: readonly { value: OrderLineStatusUi; label: string }[] = [
     { value: 'PENDING', label: 'Pending' },
+    { value: 'VALIDATED', label: 'Validated' },
     { value: 'PRINTING', label: 'Printing' },
     { value: 'READY_TO_SHIP', label: 'Ready to ship' },
-    { value: 'VALIDATED', label: 'Validated' },
     { value: 'REJECTED', label: 'Rejected' },
   ];
 

@@ -1,0 +1,12 @@
+<div class="showcase-shell">
+
+
+  <div class="showcase-body">
+    <div #canvasHost class="showcase-canvas"></div>
+    @if (isLoadingModel || loadErrorMessage) {
+      <div class="showcase-overlay" [class.showcase-overlay-error]="!!loadErrorMessage">
+        {{ loadErrorMessage || loadingMessage }}
+      </div>
+    }
+  </div>
+</div>

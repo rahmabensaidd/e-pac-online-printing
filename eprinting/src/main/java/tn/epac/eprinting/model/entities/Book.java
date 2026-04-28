@@ -10,6 +10,7 @@ import tn.epac.eprinting.model.enums.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Table(name = "admin_books")
 @NoArgsConstructor
@@ -156,6 +157,12 @@ public class Book {
     @Column(name = "siren", nullable = true)
     private String siren;
 
+    @Column(name = "creation_date", nullable = false, updatable = false)
+    private LocalDateTime creationDate;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     @OneToOne(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     private Cover cover;
 
@@ -169,7 +176,13 @@ public class Book {
 
     @PrePersist
     @PreUpdate
-    public void validate() {
+    public void validateAndInitialize() {
+        LocalDateTime now = LocalDateTime.now();
+        if (creationDate == null) {
+            creationDate = now;
+        }
+        updatedAt = now;
+
         if (productionPage == null || productionPage <= 0) {
             throw new IllegalStateException("Production page must be positive");
         }

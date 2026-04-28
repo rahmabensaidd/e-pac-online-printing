@@ -5,8 +5,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
 import { CartService } from '../../core/services/cart.service';
 import { UiService } from '../../core/services/ui.service';
-import { getProductDetailsByKey } from '../../core/catalog/product-details';
+import { buildProductDetailsFromMarketplaceBook, getProductDetailsByKey } from '../../core/catalog/product-details';
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll.directive';
+import { MarketplaceService } from '../marketplace/marketplace.service';
 
 @Component({
   selector: 'app-product-details-page',
@@ -20,13 +21,23 @@ export class ProductDetailsPageComponent {
   private readonly router = inject(Router);
   private readonly cart = inject(CartService);
   private readonly ui = inject(UiService);
+  private readonly marketplaceService = inject(MarketplaceService);
 
   private readonly detailsKey = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
     { initialValue: this.route.snapshot.paramMap.get('id') ?? '' },
   );
 
-  readonly details = computed(() => getProductDetailsByKey(this.detailsKey()));
+  readonly marketplaceLoading = computed(() => this.marketplaceService.loading());
+  readonly details = computed(() => {
+    const key = this.detailsKey();
+    const liveBook = this.marketplaceService.marketplaceBooks().find((book) => book.id === key);
+    return liveBook ? buildProductDetailsFromMarketplaceBook(liveBook) : getProductDetailsByKey(key);
+  });
+  readonly waitingForMarketplaceBook = computed(() => {
+    const key = this.detailsKey().trim();
+    return /^\d+$/.test(key) && !this.details() && this.marketplaceLoading();
+  });
   readonly browseButtonLabel = computed(() => {
     const detail = this.details();
     if (!detail) {
@@ -34,6 +45,11 @@ export class ProductDetailsPageComponent {
     }
 
     return detail.marketplaceCategory ? `Browse ${detail.marketplaceCategory}` : 'Browse catalog';
+  });
+  readonly availabilityTone = computed(() => {
+    return this.details()?.isAvailable
+      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+      : 'text-rose-700 bg-rose-50 border-rose-200';
   });
   readonly previewSurfaceStyle = computed(() => {
     const detail = this.details();

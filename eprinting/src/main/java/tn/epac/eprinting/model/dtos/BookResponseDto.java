@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import tn.epac.eprinting.model.enums.AdminBookStatus;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -52,6 +53,11 @@ public class BookResponseDto {
     private String labelType;
     private String siren;
     private String[] authors;
+    private Long creationAuthorUserId;
+    private String creationAuthorFullName;
+    private String creationAuthorEmail;
+    private LocalDateTime creationDate;
+    private LocalDateTime updatedAt;
 
     private Boolean isAddedFromAdmin;
     private Boolean isCreatedByUser;
@@ -75,6 +81,7 @@ public class BookResponseDto {
         private String pdfFileType;
         private String pdfFilePath;
         private Long coverTemplateId;
+        private String coverTemplateThumbnailUrl;
     }
 
     @Data

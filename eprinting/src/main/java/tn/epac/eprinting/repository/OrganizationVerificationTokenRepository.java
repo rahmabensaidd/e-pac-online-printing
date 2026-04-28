@@ -12,4 +12,6 @@ public interface OrganizationVerificationTokenRepository extends JpaRepository<O
             Organization organization,
             String tokenHash
     );
+
+    void deleteByOrganization(Organization organization);
 }

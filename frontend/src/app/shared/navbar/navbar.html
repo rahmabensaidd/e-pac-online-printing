@@ -34,6 +34,18 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-3">
+          @if (showBackofficeLink()) {
+            <a
+              routerLink="/backoffice"
+              routerLinkActive="border-brand-orange/50 text-brand-orange"
+              class="hidden sm:inline-flex items-center justify-center h-11 w-11 rounded-full bg-white border border-gray-200 text-brand-navy hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              title="Backoffice"
+              aria-label="Open backoffice"
+            >
+              <i class="fas fa-gauge-high"></i>
+            </a>
+          }
+
           @if (auth.isAuthenticated()) {
             <div class="relative hidden lg:block">
               <button
@@ -134,6 +146,16 @@
               (click)="closeMobile()"
             >
               {{ item.label }}
+            </a>
+          }
+          @if (showBackofficeLink()) {
+            <a
+              routerLink="/backoffice"
+              routerLinkActive="text-brand-orange border-brand-orange/40"
+              class="text-left px-4 py-3 rounded-xl bg-white/70 border border-gray-200 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
+              (click)="closeMobile()"
+            >
+              Backoffice
             </a>
           }
           @if (auth.isAuthenticated()) {

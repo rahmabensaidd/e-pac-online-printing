@@ -8,7 +8,8 @@ import {
   computed,
   inject,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 import { BackofficeDataService } from '../core/backoffice.data.service';
 import { BackofficeShellService } from '../core/backoffice-shell.service';
 
@@ -29,6 +30,8 @@ export class BackofficeHeaderComponent {
 
   readonly shell = inject(BackofficeShellService);
   readonly backofficeData = inject(BackofficeDataService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   readonly currentUser = computed(
     () =>
       this.backofficeData.employees().find((employee) => employee.state !== 'Offline') ??
@@ -73,5 +76,11 @@ export class BackofficeHeaderComponent {
         this.document.removeEventListener('keydown', closeOnEscape, true);
       });
     });
+  }
+
+  onLogout(): void {
+    this.auth.logout();
+    this.shell.closeProfileMenu();
+    void this.router.navigate(['/']);
   }
 }

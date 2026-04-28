@@ -2,6 +2,7 @@ package tn.epac.eprinting.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tn.epac.eprinting.model.dtos.ExplainedQuoteResponseDto;
 import tn.epac.eprinting.model.dtos.QuoteRequestDto;
 import tn.epac.eprinting.model.dtos.QuoteResponseDto;
 import tn.epac.eprinting.serviceimpl.PricingApplicationService;
@@ -19,5 +20,10 @@ public class PricingController {
     @PostMapping("/quote")
     public ResponseEntity<QuoteResponseDto> quote(@RequestBody QuoteRequestDto request) {
         return ResponseEntity.ok(pricingApplicationService.getQuote(request));
+    }
+
+    @PostMapping("/quote/explained")
+    public ResponseEntity<ExplainedQuoteResponseDto> explainedQuote(@RequestBody QuoteRequestDto request) {
+        return ResponseEntity.ok(pricingApplicationService.getExplainedQuote(request));
     }
 }

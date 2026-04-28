@@ -52,12 +52,12 @@ export class BackofficeOrdersPageComponent {
 
   readonly backofficeData = inject(BackofficeDataService);
   readonly isLoading = signal(true);
-  readonly selectedFilter = signal<OrderFilter>('All');
+  readonly selectedFilter = signal<OrderFilter>('Pending');
   readonly ordersSignal = signal<OrderViewModel[]>([]);
   readonly statsSignal = signal<AdminOrderStatsApiModel | null>(null);
 
   readonly statusFilters: readonly OrderFilter[] = [
-    'All',
+    'Pending',
     'Printing',
     'Ready to ship',
     'Shipped',
@@ -92,9 +92,6 @@ export class BackofficeOrdersPageComponent {
   readonly filteredOrders = computed(() => {
     const filter = this.selectedFilter();
     const orders = this.ordersSignal();
-    if (filter === 'All') {
-      return orders;
-    }
     return orders.filter((order) => order.status === filter);
   });
 
@@ -117,7 +114,7 @@ export class BackofficeOrdersPageComponent {
   );
 
   readonly productionValue = computed(() => this.statsSignal()?.productionValue ?? 0);
-  readonly rejectedCount = computed(() => this.statsSignal()?.deliveredOrders ?? 0);
+  readonly rejectedCount = computed(() => this.statsSignal()?.rejectedOrders ?? 0);
   readonly shippedCount = computed(() => this.statsSignal()?.shippedOrders ?? 0);
 
   constructor() {

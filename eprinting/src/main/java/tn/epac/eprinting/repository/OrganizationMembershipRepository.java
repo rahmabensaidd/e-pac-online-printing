@@ -13,4 +13,6 @@ public interface OrganizationMembershipRepository extends JpaRepository<Organiza
             OrganizationRole role,
             MembershipStatus status
     );
+
+    boolean existsByOrganization(Organization organization);
 }

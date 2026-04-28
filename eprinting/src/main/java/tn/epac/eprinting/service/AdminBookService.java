@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import tn.epac.eprinting.model.dtos.BookOverviewDto;
 import tn.epac.eprinting.model.dtos.BookRequestDto;
 import tn.epac.eprinting.model.dtos.BookResponseDto;
+import tn.epac.eprinting.model.dtos.UserBookUpsertResultDto;
 import tn.epac.eprinting.model.enums.AdminBookStatus;
 
 import java.util.List;
@@ -70,6 +71,24 @@ public interface AdminBookService {
      * @return list of user's custom books
      */
     List<BookResponseDto> getUserCreatedBooks(Long creatorUserId);
+
+    /**
+     * Duplicates an existing custom book into a brand new editable instance for the same user.
+     * @param bookId source custom book id
+     * @param creatorUserId authenticated owner id
+     * @return duplicated custom book
+     */
+    BookResponseDto duplicateUserBook(Long bookId, Long creatorUserId);
+
+    /**
+     * Updates a custom user book in place if it is not linked to any order.
+     * If the book is already linked to an order, creates a new custom book instance instead.
+     * @param bookId existing custom book id
+     * @param bookRequest updated payload
+     * @param creatorUserId authenticated owner id
+     * @return upsert result with strategy metadata
+     */
+    UserBookUpsertResultDto updateUserBook(Long bookId, BookRequestDto bookRequest, Long creatorUserId);
 
     /**
      * Updates an existing book (full replacement)

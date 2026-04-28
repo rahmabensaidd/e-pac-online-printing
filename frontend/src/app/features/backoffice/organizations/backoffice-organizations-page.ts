@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { BackofficeSectionHeaderComponent } from '../shared/backoffice-section-header';
 import { BackofficeCardComponent } from '../shared/backoffice-card';
 import { BackofficeStatCardComponent } from '../shared/backoffice-stat-card';
@@ -26,11 +27,13 @@ import {
 })
 export class BackofficeOrganizationsPageComponent {
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly router = inject(Router);
   private readonly organizationsApi = inject(BackofficeOrganizationsApiService);
 
   readonly loading = signal(false);
   readonly createLoading = signal(false);
   readonly tokenLoadingId = signal<number | null>(null);
+  readonly deletingOrganizationId = signal<number | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly copyMessage = signal<string | null>(null);
 
@@ -155,6 +158,35 @@ export class BackofficeOrganizationsPageComponent {
     }
   }
 
+  async openClientTrends(organization: AdminOrganizationApiModel): Promise<void> {
+    await this.router.navigate(['/backoffice/organizations', organization.id, 'client-trends']);
+  }
+
+  async deleteOrganization(organization: AdminOrganizationApiModel): Promise<void> {
+    const shouldDelete = confirm(
+      `Delete organization "${organization.name}" (${organization.siren})? This action cannot be undone.`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    this.deletingOrganizationId.set(organization.id);
+    this.errorMessage.set(null);
+
+    try {
+      await this.organizationsApi.deleteOrganization(organization.id);
+      this.organizations.update((items) => items.filter((item) => item.id !== organization.id));
+    } catch (error) {
+      console.error('Unable to delete organization', error);
+      this.errorMessage.set(
+        'Unable to delete organization. It may already be linked to members or protected by existing data.',
+      );
+    } finally {
+      this.deletingOrganizationId.set(null);
+    }
+  }
+
   statusBadgeClass(status: AdminOrganizationStatus): string {
     if (status === 'ACTIVE') {
       return 'rounded-full bg-brand-teal/10 px-2.5 py-1 text-[0.68rem] font-semibold text-brand-teal';
@@ -167,5 +199,9 @@ export class BackofficeOrganizationsPageComponent {
 
   isGeneratingToken(organizationId: number): boolean {
     return this.tokenLoadingId() === organizationId;
+  }
+
+  isDeletingOrganization(organizationId: number): boolean {
+    return this.deletingOrganizationId() === organizationId;
   }
 }

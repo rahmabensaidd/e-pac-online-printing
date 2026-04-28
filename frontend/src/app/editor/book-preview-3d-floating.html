@@ -3,6 +3,8 @@
   cdkDrag
   [cdkDragBoundary]="dragBoundarySelector"
   [cdkDragStartDelay]="40"
+  [style.width.px]="previewWidth"
+  [style.height.px]="previewHeight"
 >
   <div class="preview-header" cdkDragHandle>
     <div class="preview-title-group">
@@ -35,4 +37,17 @@
       </div>
     }
   </div>
+
+  @if (!embedded && !isCollapsed) {
+    <button
+      type="button"
+      class="preview-resize-handle"
+      aria-label="Resize 3D preview"
+      (mousedown)="startResize($event)"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  }
 </div>

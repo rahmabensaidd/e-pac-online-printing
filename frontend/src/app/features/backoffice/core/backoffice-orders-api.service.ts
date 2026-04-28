@@ -60,9 +60,11 @@ export interface AdminOrderStatsApiModel {
   totalOrders: number;
   pendingOrders: number;
   processingOrders: number;
+  readyToShipOrders: number;
   shippedOrders: number;
   deliveredOrders: number;
   cancelledOrders: number;
+  rejectedOrders: number;
   productionValue: number;
 }
 

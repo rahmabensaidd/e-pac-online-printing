@@ -19,14 +19,18 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tn.epac.eprinting.model.dtos.BookRequestDto;
 import tn.epac.eprinting.model.dtos.BookResponseDto;
+import tn.epac.eprinting.model.dtos.UserBookUpsertResultDto;
 import tn.epac.eprinting.model.entities.Book;
 import tn.epac.eprinting.repository.BookRepository;
+import tn.epac.eprinting.repository.OrderRepository;
 import tn.epac.eprinting.service.AdminBookService;
 
 import java.util.List;
@@ -39,6 +43,7 @@ public class UserBookController {
 
     private final AdminBookService adminBookService;
     private final BookRepository bookRepository;
+    private final OrderRepository orderRepository;
 
     @PostMapping
     public ResponseEntity<BookResponseDto> createUserBook(
@@ -48,6 +53,47 @@ public class UserBookController {
         Long creatorUserId = extractUserId(jwt);
         BookResponseDto createdBook = adminBookService.createUserBook(bookRequest, creatorUserId);
         return new ResponseEntity<>(createdBook, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/my/{bookId}")
+    public ResponseEntity<UserBookUpsertResultDto> updateMyCustomBook(
+            @PathVariable Long bookId,
+            @Valid @RequestBody BookRequestDto bookRequest,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        Long creatorUserId = extractUserId(jwt);
+        assertOwnedCustomBook(bookId, creatorUserId);
+        return ResponseEntity.ok(adminBookService.updateUserBook(bookId, bookRequest, creatorUserId));
+    }
+
+    @PostMapping("/my/{bookId}/duplicate")
+    public ResponseEntity<BookResponseDto> duplicateMyCustomBook(
+            @PathVariable Long bookId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        Long creatorUserId = extractUserId(jwt);
+        assertOwnedCustomBook(bookId, creatorUserId);
+        BookResponseDto duplicated = adminBookService.duplicateUserBook(bookId, creatorUserId);
+        return new ResponseEntity<>(duplicated, HttpStatus.CREATED);
+    }
+
+    @DeleteMapping("/my/{bookId}")
+    public ResponseEntity<Void> deleteMyCustomBook(
+            @PathVariable Long bookId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        Long creatorUserId = extractUserId(jwt);
+        Book book = assertOwnedCustomBook(bookId, creatorUserId);
+
+        if (orderRepository.existsByOrderLinesBookBookId(bookId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot delete book associated to order"
+            );
+        }
+
+        bookRepository.delete(book);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my")

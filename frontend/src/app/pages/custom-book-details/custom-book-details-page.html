@@ -1,144 +1,255 @@
-<section class="relative min-h-[calc(100vh-10rem)] overflow-hidden bg-brand-cream py-10 sm:py-14">
-  <div class="absolute inset-0 hero-pattern opacity-20"></div>
-  <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <header class="rounded-3xl border border-gray-200/80 bg-white/90 p-6 shadow-lg sm:p-8">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">User Space</p>
-      <h1 class="mt-1 font-display text-4xl font-extrabold text-brand-navy">Custom Book Details</h1>
-      <p class="mt-3 text-gray-600">Technical sheet, 3D product preview, and PDF resources.</p>
-    </header>
+<section class="relative min-h-[calc(100vh-10rem)] overflow-hidden bg-[#f6efe7] py-10 sm:py-14">
+    <div class="absolute inset-0 opacity-60">
+        <div class="detail-mesh detail-mesh-one"></div>
+        <div class="detail-mesh detail-mesh-two"></div>
+    </div>
 
-    @if (loading()) {
-      <div class="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">
-        Loading book details...
-      </div>
-    } @else if (error()) {
-      <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {{ error() }}
-      </div>
-    } @else if (book(); as customBook) {
-      <div class="custom-book-main-grid mt-6">
-        <article class="custom-book-summary-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 class="text-2xl font-extrabold text-brand-navy">{{ customBook.title }}</h2>
-              <p class="mt-1 text-sm text-slate-600">{{ customBook.description || 'No description' }}</p>
+    <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        @if (loading()) {
+            <div class="rounded-[2rem] border border-white/70 bg-white/80 p-8 shadow-[0_30px_80px_rgba(13,31,44,0.08)] backdrop-blur">
+                <div class="grid gap-8 lg:grid-cols-[1.08fr_0.92fr]">
+                    <div class="animate-pulse">
+                        <div class="h-10 w-44 rounded-full bg-slate-200"></div>
+                        <div class="mt-6 h-[28rem] rounded-[2rem] bg-slate-200"></div>
+                    </div>
+                    <div class="animate-pulse rounded-[2rem] bg-slate-100 p-6">
+                        <div class="h-8 w-40 rounded-xl bg-slate-200"></div>
+                        <div class="mt-5 h-12 w-3/4 rounded-xl bg-slate-200"></div>
+                        <div class="mt-4 h-24 rounded-2xl bg-slate-200"></div>
+                        <div class="mt-6 h-40 rounded-2xl bg-slate-200"></div>
+                        <div class="mt-6 h-12 rounded-2xl bg-slate-300"></div>
+                    </div>
+                </div>
             </div>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase text-slate-600">Custom</span>
-          </div>
+        } @else if (error()) {
+            <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ error() }}
+            </div>
+        } @else if (book(); as customBook) {
+            <div class="flex flex-wrap items-center gap-3 text-sm">
+                <a
+                        routerLink="/my-custom-books"
+                        class="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/85 px-4 py-2 font-bold text-brand-navy shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-navy hover:text-white"
+                >
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                    Back to My Custom Books
+                </a>
+                <span class="text-slate-400" aria-hidden="true">/</span>
+                <span class="font-semibold text-slate-600">Custom Book Details</span>
+            </div>
 
-          <div class="custom-book-spec-grid mt-5">
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Binding</p>
-              <p class="mt-1 text-sm font-semibold text-brand-navy">{{ customBook.bindingType || 'N/A' }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</p>
-              <p class="mt-1 text-sm font-semibold text-brand-navy">{{ customBook.priorityLevel || 'NORMAL' }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Format</p>
-              <p class="mt-1 text-sm font-semibold text-brand-navy">{{ customBook.width }} x {{ customBook.height }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Thickness</p>
-              <p class="mt-1 text-sm font-semibold text-brand-navy">{{ customBook.thickness }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Pages</p>
-              <p class="mt-1 text-sm font-semibold text-brand-navy">{{ customBook.productionPage || 0 }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Base Price</p>
-              <p class="mt-1 text-sm font-semibold text-brand-navy">{{ customBook.salePrice | currency:'USD':'symbol':'1.2-2' }}</p>
-            </div>
-          </div>
+            <div class="mt-6">
+                <article class="overflow-hidden rounded-[2rem] border border-white/75 bg-white/88 shadow-[0_30px_80px_rgba(13,31,44,0.10)] backdrop-blur">
+                    <div class="custom-book-layout">
+                        <div class="detail-preview-shell custom-preview-panel">
+                            <div class="detail-preview-stage rounded-[2rem] p-5 sm:p-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-bold uppercase tracking-[0.14em] text-slate-600">Live Preview</p>
+                                        <h2 class="mt-2 text-2xl font-extrabold text-brand-navy">3D Product</h2>
+                                        <p class="mt-2 max-w-md text-base leading-7 text-slate-700">
+                                            Interactive preview according to the current binding, size, and template association.
+                                        </p>
+                                    </div>
+                                    <span class="rounded-full bg-[#ffe7c8] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-brand-navy">
+                    Custom
+                  </span>
+                                </div>
 
-          <div class="mt-5 grid gap-3 sm:grid-cols-2">
-            <a
-              [routerLink]="['/design-your-book']"
-              [queryParams]="{ bookId: customBook.bookId }"
-              class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-brand-navy transition hover:bg-slate-100"
-            >
-              Edit in Design Studio
-            </a>
-            <a
-              routerLink="/my-custom-books"
-              class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
-            >
-              Back to My Custom Books
-            </a>
-          </div>
-        </article>
+                                <div class="preview-hero-shell mt-6">
+                                    <div class="preview-embed-slot">
+                                        <app-book-preview-3d-showcase
+                                                [bindingType]="customBook.bindingType"
+                                                [coverColor]="customBook.coverColor"
+                                                [bookWidth]="customBook.width"
+                                                [bookHeight]="customBook.height"
+                                                [bookThickness]="customBook.thickness"
+                                                [textures]="previewTextures()"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-        <article class="custom-book-preview-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 class="text-lg font-bold text-brand-navy">3D Preview</h3>
-          <p class="mt-1 text-xs text-slate-500">Interactive preview according to current binding and dimensions.</p>
-          <div class="preview-embed-slot mt-3 overflow-hidden rounded-xl border border-slate-200">
-            <app-book-preview-3d-floating
-              [embedded]="true"
-              [bindingType]="customBook.bindingType"
-              [coverColor]="customBook.coverColor"
-              [bookWidth]="customBook.width"
-              [bookHeight]="customBook.height"
-              [bookThickness]="customBook.thickness"
-            />
-          </div>
-        </article>
-      </div>
+                        <div class="custom-details-panel min-w-0">
+                            <div class="flex flex-wrap items-start justify-between gap-4">
+                                <div class="max-w-2xl">
+                  <span class="inline-flex rounded-full bg-[#ffe7c8] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-brand-navy">
+                    {{ customBook.bindingType || 'Custom Book' }}
+                  </span>
+                                    <h1 class="mt-4 font-display text-4xl font-extrabold tracking-tight text-brand-navy lg:text-5xl">
+                                        {{ customBook.title }}
+                                    </h1>
+                                    <p class="mt-4 text-lg leading-8 text-slate-700">
+                                        {{ customBook.description || 'No description provided for this custom book yet.' }}
+                                    </p>
+                                </div>
 
-      <div class="custom-book-files-grid mt-5">
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 class="text-lg font-bold text-brand-navy">Cover Template PDF</h3>
-          <p class="mt-1 text-sm text-slate-600">Preview or download the cover PDF.</p>
-          <div class="mt-4 flex flex-wrap gap-2">
-            @if (hasCoverPdf()) {
-              <a
-                [href]="coverPdfUrl() + '?download=false'"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-slate-100"
-              >
-                Preview
-              </a>
-              <a
-                [href]="coverPdfUrl() + '?download=true'"
-                download
-                class="inline-flex items-center justify-center rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange"
-              >
-                Download
-              </a>
-            } @else {
-              <p class="text-sm text-slate-500">No cover PDF linked for this book.</p>
+                                <div class="rounded-2xl border border-[#f2d5ad] bg-[#fff6ea] px-4 py-3 text-right">
+                                    <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Unit Price</p>
+                                    <p class="mt-2 text-2xl font-extrabold text-brand-navy">
+                                        {{ customBook.salePrice | currency:'USD':'symbol':'1.2-2' }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-8 custom-book-facts-grid">
+                                <div class="border-b border-slate-200 pb-4">
+                                    <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Format</p>
+                                    <p class="mt-2 text-base font-semibold text-brand-navy">{{ customBook.width }} x {{ customBook.height }} mm</p>
+                                </div>
+                                <div class="border-b border-slate-200 pb-4">
+                                    <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Thickness</p>
+                                    <p class="mt-2 text-base font-semibold text-brand-navy">{{ customBook.thickness }} mm</p>
+                                </div>
+                                <div class="border-b border-slate-200 pb-4">
+                                    <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Pages</p>
+                                    <p class="mt-2 text-base font-semibold text-brand-navy">{{ customBook.productionPage || 0 }}</p>
+                                </div>
+                                <div class="border-b border-slate-200 pb-4">
+                                    <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Priority</p>
+                                    <p class="mt-2 text-base font-semibold text-brand-navy">{{ customBook.priorityLevel || 'NORMAL' }}</p>
+                                </div>
+                                <div class="border-b border-slate-200 pb-4">
+                                    <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Cover Color</p>
+                                    <p class="mt-2 text-base font-semibold text-brand-navy">{{ customBook.coverColor || 'N/A' }}</p>
+                                </div>
+                                <div class="border-b border-slate-200 pb-4">
+                                    <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Creation Date</p>
+                                    <p class="mt-2 text-base font-semibold text-brand-navy">{{ customBook.creationDate ? (customBook.creationDate | date:'medium') : 'N/A' }}</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-8 rounded-[1.5rem] bg-[#fff9f2] px-5 py-4">
+                                <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Production Snapshot</p>
+                                <p class="mt-2 text-base font-semibold text-brand-navy">
+                                    Binding {{ customBook.bindingType || 'N/A' }}, format {{ customBook.width }} x {{ customBook.height }} mm,
+                                    thickness {{ customBook.thickness }} mm, quantity {{ customBook.quantity }}.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="custom-actions-panel">
+                            <div class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white text-slate-900 shadow-[0_24px_50px_rgba(13,31,44,0.10)]">
+                                <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+                                    <p class="text-sm font-bold uppercase tracking-[0.14em] text-slate-600">Book Actions</p>
+                                    <p class="mt-2 text-base leading-7 text-slate-700">
+                                        Preview resources, download PDFs, or reopen this custom book in Design Studio.
+                                    </p>
+                                </div>
+
+                                <div class="custom-actions-grid px-6 py-6 sm:px-8">
+                                    <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                                        <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Cover PDF</p>
+                                        @if (hasCoverPdf()) {
+                                            <div class="mt-3 flex flex-wrap gap-2">
+                                                <button type="button" (click)="previewCoverPdf()" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-brand-navy transition hover:bg-slate-100">
+                                                    Preview
+                                                </button>
+                                                <button type="button" (click)="downloadCoverPdf()" class="inline-flex items-center justify-center rounded-xl bg-brand-orange px-3 py-2 text-sm font-bold text-brand-navy transition hover:-translate-y-0.5">
+                                                    Download
+                                                </button>
+                                            </div>
+                                        } @else {
+                                            <p class="mt-2 text-sm text-slate-600">No cover PDF linked.</p>
+                                        }
+                                    </div>
+
+                                    <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                                        <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Content PDF</p>
+                                        @if (hasContentPdf()) {
+                                            <div class="mt-3 flex flex-wrap gap-2">
+                                                <button type="button" (click)="previewContentPdf()" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-brand-navy transition hover:bg-slate-100">
+                                                    Preview
+                                                </button>
+                                                <button type="button" (click)="downloadContentPdf()" class="inline-flex items-center justify-center rounded-xl bg-brand-orange px-3 py-2 text-sm font-bold text-brand-navy transition hover:-translate-y-0.5">
+                                                    Download
+                                                </button>
+                                            </div>
+                                        } @else {
+                                            <p class="mt-2 text-sm text-slate-600">No text content PDF linked.</p>
+                                        }
+                                    </div>
+
+                                    <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                                        <p class="text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Quantity</p>
+                                        <p class="mt-2 text-base font-semibold text-brand-navy">{{ customBook.quantity }}</p>
+                                        <p class="mt-4 text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Book Type</p>
+                                        <p class="mt-2 text-base font-semibold text-brand-navy">Custom</p>
+                                    </div>
+
+                                    <div class="custom-actions-buttons">
+                                        <a
+                                                [routerLink]="['/design-your-book']"
+                                                [queryParams]="{ bookId: customBook.bookId }"
+                                                class="inline-flex w-full items-center justify-center rounded-2xl bg-brand-orange px-5 py-3.5 font-bold text-brand-navy transition hover:-translate-y-0.5 hover:shadow-lg"
+                                        >
+                                            Edit in Design Studio
+                                        </a>
+
+                                        <a
+                                                routerLink="/my-custom-books"
+                                                class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3.5 font-bold text-slate-700 transition hover:bg-slate-100"
+                                        >
+                                            Back to My Custom Books
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <div class="mt-8 grid gap-6 lg:grid-cols-3">
+                <section class="rounded-[2rem] border border-white/80 bg-white/85 p-6 shadow-[0_20px_45px_rgba(13,31,44,0.06)] backdrop-blur">
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Cover Resource</p>
+                    <ul class="mt-4 space-y-3 text-sm leading-7 text-slate-600">
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-2.5 w-2.5 rounded-full bg-brand-teal"></span>
+                            <span>Associated template: {{ customBook.cover?.coverTemplateId || 'None' }}</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-2.5 w-2.5 rounded-full bg-brand-teal"></span>
+                            <span>Cover PDF: {{ hasCoverPdf() ? 'Available for preview and download' : 'Not linked' }}</span>
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="rounded-[2rem] border border-white/80 bg-white/85 p-6 shadow-[0_20px_45px_rgba(13,31,44,0.06)] backdrop-blur">
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Content Resource</p>
+                    <ul class="mt-4 space-y-3 text-sm leading-7 text-slate-600">
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-2.5 w-2.5 rounded-full bg-brand-orange"></span>
+                            <span>Text content PDF: {{ hasContentPdf() ? 'Available for preview and download' : 'Not linked' }}</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-2.5 w-2.5 rounded-full bg-brand-orange"></span>
+                            <span>3D preview uses the current binding, size, and available cover texture.</span>
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="rounded-[2rem] border border-white/80 bg-white/85 p-6 shadow-[0_20px_45px_rgba(13,31,44,0.06)] backdrop-blur">
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Book Overview</p>
+                    <ul class="mt-4 space-y-3 text-sm leading-7 text-slate-600">
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-2.5 w-2.5 rounded-full bg-brand-teal"></span>
+                            <span>Created by user workflow and editable in Design Studio.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="mt-2 h-2.5 w-2.5 rounded-full bg-brand-teal"></span>
+                            <span>Current dimensions: {{ customBook.width }} x {{ customBook.height }} mm with thickness {{ customBook.thickness }} mm.</span>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+
+            @if (pdfActionError()) {
+                <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {{ pdfActionError() }}
+                </div>
             }
-          </div>
-        </article>
-
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 class="text-lg font-bold text-brand-navy">Text Content PDF</h3>
-          <p class="mt-1 text-sm text-slate-600">Preview (first pages in viewer) or download full PDF.</p>
-          <div class="mt-4 flex flex-wrap gap-2">
-            @if (hasContentPdf()) {
-              <a
-                [href]="contentPdfUrl() + '?preview=true'"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-slate-100"
-              >
-                Preview
-              </a>
-              <a
-                [href]="contentPdfUrl() + '?download=true'"
-                download
-                class="inline-flex items-center justify-center rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-orange"
-              >
-                Download Full PDF
-              </a>
-            } @else {
-              <p class="text-sm text-slate-500">No content PDF linked for this book.</p>
-            }
-          </div>
-        </article>
-      </div>
-    }
-  </div>
+        }
+    </div>
 </section>

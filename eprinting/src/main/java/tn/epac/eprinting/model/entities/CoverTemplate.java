@@ -50,6 +50,8 @@ public class CoverTemplate {
     /**
      * URL ou chemin miniature
      */
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String thumbnailUrl;
 
     /**

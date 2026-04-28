@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import tn.epac.eprinting.model.entities.Order;
 import tn.epac.eprinting.model.enums.OrderStatus;
+import tn.epac.eprinting.model.enums.ShippingMethod;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
@@ -18,6 +19,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByStatus(OrderStatus status, Pageable pageable);
     java.util.List<Order> findByUserUserIdOrderByOrderDateDesc(Long userId);
     long countByUserUserId(Long userId);
+    boolean existsByOrderLinesBookBookId(Long bookId);
 
     @Query("SELECT o FROM Order o WHERE " +
             "LOWER(o.reference) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
@@ -27,6 +29,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> searchOrders(@Param("search") String search, Pageable pageable);
 
     long countByStatus(OrderStatus status);
+    long countByShippingShippingMethod(ShippingMethod shippingMethod);
 
     @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.status NOT IN :excludedStatuses")
     BigDecimal sumTotalAmountByExcludedStatuses(@Param("excludedStatuses") OrderStatus... excludedStatuses);

@@ -1,7 +1,8 @@
 <section class="relative min-h-[calc(100vh-10rem)] overflow-hidden bg-brand-cream py-10 sm:py-14">
   <div class="absolute inset-0 hero-pattern opacity-20"></div>
+
   <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <header class="rounded-3xl border border-gray-200/80 bg-white/90 p-6 shadow-lg sm:p-8">
+    <header class="rounded-[2rem] border border-white/75 bg-white/88 p-6 shadow-[0_30px_80px_rgba(13,31,44,0.10)] backdrop-blur sm:p-8">
       <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">User Space</p>
       <h1 class="mt-1 font-display text-4xl font-extrabold text-brand-navy">My Custom Books</h1>
       <p class="mt-3 text-gray-600">Manage your custom books, review specs, and add priced items to your cart.</p>
@@ -20,7 +21,7 @@
         {{ error() }}
       </div>
     } @else if (books().length === 0) {
-      <article class="mt-6 rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-lg sm:p-10">
+      <article class="mt-6 rounded-[2rem] border border-white/75 bg-white/88 p-8 text-center shadow-[0_30px_80px_rgba(13,31,44,0.08)] backdrop-blur sm:p-10">
         <div class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-cream text-2xl text-brand-navy">
           <i class="fas fa-book"></i>
         </div>
@@ -38,72 +39,122 @@
     } @else {
       <div class="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         @for (book of books(); track book.bookId) {
-          <article class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-2xl">
+          <article class="custom-book-card overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_55px_rgba(13,31,44,0.10)] transition-all hover:-translate-y-1 hover:shadow-[0_34px_72px_rgba(13,31,44,0.16)]">
             <div class="relative p-5">
-              @if (coverImageUrl(book); as imageUrl) {
-                <img
-                  [src]="imageUrl"
-                  [alt]="book.title"
-                  class="h-44 w-full rounded-2xl object-cover"
-                  loading="lazy"
-                />
-              } @else {
-                <div
-                  class="grid h-44 w-full place-items-center rounded-2xl text-white"
-                  [style.background]="coverVisual(book)"
-                >
-                  <div class="px-4 text-center">
-                    <p class="text-xs uppercase tracking-[0.16em] text-white/85">Custom Book</p>
-                    <p class="mt-2 font-display text-lg font-extrabold leading-tight">{{ book.title }}</p>
-                  </div>
+              <div class="custom-book-preview-shell rounded-[1.5rem] p-3">
+                <div class="custom-book-preview-stage rounded-[1.25rem] p-2">
+                  @if (coverImageUrl(book); as imageUrl) {
+                    <img
+                      [src]="imageUrl"
+                      [alt]="book.title"
+                      class="h-44 w-full rounded-2xl object-cover"
+                      loading="lazy"
+                    />
+                  } @else {
+                    <div
+                      class="grid h-44 w-full place-items-center rounded-2xl text-white"
+                      [style.background]="coverVisual(book)"
+                    >
+                      <div class="px-4 text-center">
+                        <p class="text-xs uppercase tracking-[0.16em] text-white/85">Custom Book</p>
+                        <p class="mt-2 font-display text-lg font-extrabold leading-tight">{{ book.title }}</p>
+                      </div>
+                    </div>
+                  }
                 </div>
-              }
+              </div>
 
               <span class="absolute left-8 top-8 rounded-full bg-black/30 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
                 Custom
               </span>
+
+              <div class="custom-book-menu absolute right-8 top-8">
+                <button
+                  type="button"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/90 text-brand-navy shadow-sm transition hover:bg-white"
+                  (click)="toggleBookMenu(book.bookId, $event)"
+                  aria-label="Open actions"
+                >
+                  <i class="fas fa-ellipsis-vertical"></i>
+                </button>
+
+                @if (isBookMenuOpen(book.bookId)) {
+                  <div class="custom-book-menu__dropdown absolute right-0 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                    <a
+                      [routerLink]="['/design-your-book']"
+                      [queryParams]="{ bookId: book.bookId }"
+                      (click)="closeBookMenu()"
+                      class="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Edit
+                    </a>
+                    <button
+                      type="button"
+                      (click)="duplicateBookFromMenu(book)"
+                      [disabled]="duplicatingBookId() === book.bookId"
+                      class="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {{ duplicatingBookId() === book.bookId ? 'Duplicating...' : 'Duplicate' }}
+                    </button>
+                    <button
+                      type="button"
+                      (click)="deleteBookFromMenu(book)"
+                      [disabled]="deletingBookId() === book.bookId"
+                      class="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {{ deletingBookId() === book.bookId ? 'Deleting...' : 'Delete' }}
+                    </button>
+                  </div>
+                }
+              </div>
             </div>
 
             <div class="px-5 pb-5">
-              <h2 class="font-display text-xl font-extrabold leading-tight text-brand-navy">
-                {{ book.title }}
-              </h2>
+              <div class="flex items-start justify-between gap-3">
+                <h2 class="font-display text-xl font-extrabold leading-tight text-brand-navy">
+                  {{ book.title }}
+                </h2>
+                <span class="rounded-full bg-[#fff6ea] px-3 py-1 text-xs font-extrabold text-brand-navy">
+                  {{ (book.salePrice ?? 0) | currency:'USD':'symbol':'1.0-0' }}
+                </span>
+              </div>
+
               <p class="mt-2 line-clamp-2 min-h-[2.6rem] text-sm text-slate-600">
                 {{ book.description || 'No description provided.' }}
               </p>
+              <p class="mt-1 text-xs text-slate-500">
+                Created: {{ formatCreationDate(book) }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ updatedAgoLabel(book) }}
+              </p>
 
               <div class="mt-4 flex flex-wrap gap-2">
-                <span class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-brand-navy shadow-sm">
                   {{ book.bindingType || 'N/A' }}
                 </span>
-                <span class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-brand-navy shadow-sm">
                   {{ book.productionPage || 0 }} pages
                 </span>
-                <span class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-brand-navy shadow-sm">
                   {{ book.width }} x {{ book.height }}
                 </span>
               </div>
 
-              <div class="mt-5 grid grid-cols-3 gap-2">
-                <a
-                  [routerLink]="['/design-your-book']"
-                  [queryParams]="editQueryParams(book)"
-                  class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100"
-                >
-                  Edit
-                </a>
+              <div class="mt-5 flex gap-2">
                 <a
                   [routerLink]="['/my-custom-books', book.bookId]"
-                  class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-brand-navy transition hover:bg-slate-100"
+                  class="flex-1 rounded-2xl bg-brand-navy px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-brand-orange"
                 >
-                  Details
+                  View details
                 </a>
                 <button
                   type="button"
                   (click)="openAddToCartModal(book)"
-                  class="inline-flex items-center justify-center rounded-xl bg-brand-navy px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-orange"
+                  [attr.aria-label]="'Add ' + book.title + ' to cart'"
+                  class="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 py-3 font-bold text-brand-navy transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40"
                 >
-                  Add to cart
+                  <i class="fas fa-plus"></i>
                 </button>
               </div>
             </div>
@@ -242,6 +293,66 @@
       >
         {{ addingToCart() ? 'Adding...' : 'Add to cart' }}
       </button>
+    </div>
+  </section>
+}
+
+@if (deleteDecisionModalOpen()) {
+  <div
+    class="fixed inset-0 z-90 bg-black/45"
+    aria-hidden="true"
+    (click)="closeDeleteDecisionModal()"
+  ></div>
+  <section
+    class="fixed left-1/2 top-1/2 z-100 w-[95vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-custom-book-modal-title"
+  >
+    <div class="mb-4 flex items-center justify-between">
+      <h3 id="delete-custom-book-modal-title" class="font-display text-xl font-extrabold text-brand-navy">
+        {{ deleteDecisionMode() === 'confirm' ? 'Delete Custom Book' : 'Delete Blocked' }}
+      </h3>
+      <button
+        type="button"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-100"
+        (click)="closeDeleteDecisionModal()"
+        [disabled]="deletingBookId() !== null"
+        aria-label="Close"
+      >
+        <i class="fas fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="rounded-xl border px-3 py-3 text-sm"
+         [class]="deleteDecisionMode() === 'confirm'
+           ? 'border-amber-200 bg-amber-50 text-amber-900'
+           : 'border-red-200 bg-red-50 text-red-800'">
+      <p class="font-semibold">{{ deleteDecisionMessage() }}</p>
+      @if (deleteDecisionMode() === 'confirm') {
+        <p class="mt-1 text-xs text-amber-800/80">This action cannot be undone.</p>
+      }
+    </div>
+
+    <div class="mt-5 flex gap-2">
+      <button
+        type="button"
+        class="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+        (click)="closeDeleteDecisionModal()"
+        [disabled]="deletingBookId() !== null"
+      >
+        {{ deleteDecisionMode() === 'confirm' ? 'Cancel' : 'Close' }}
+      </button>
+      @if (deleteDecisionMode() === 'confirm') {
+        <button
+          type="button"
+          class="inline-flex flex-1 items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          (click)="confirmDeleteFromDialog()"
+          [disabled]="deletingBookId() !== null"
+        >
+          {{ deletingBookId() !== null ? 'Deleting...' : 'Delete' }}
+        </button>
+      }
     </div>
   </section>
 }

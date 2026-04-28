@@ -1,13 +1,15 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { Params, RouterLink } from '@angular/router';
-import { BackofficeDataService } from '../core/backoffice.data.service';
+import {
+  AdminDashboardApiModel,
+  BackofficeDashboardApiService,
+} from '../core/backoffice-dashboard-api.service';
 import { BackofficeCardComponent } from '../shared/backoffice-card';
 import { BackofficeSectionHeaderComponent } from '../shared/backoffice-section-header';
 import { BackofficeStatCardComponent } from '../shared/backoffice-stat-card';
@@ -24,7 +26,7 @@ import { BackofficeStatCardComponent } from '../shared/backoffice-stat-card';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BackofficeDashboardPageComponent {
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly dashboardApi = inject(BackofficeDashboardApiService);
   private readonly currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -35,13 +37,15 @@ export class BackofficeDashboardPageComponent {
     day: 'numeric',
   });
 
-  readonly backofficeData = inject(BackofficeDataService);
   readonly isLoading = signal(true);
+  readonly dashboard = signal<AdminDashboardApiModel | null>(null);
 
   readonly readinessScore = computed(() => {
-    const inventoryPenalty = this.backofficeData.lowStockItems() * 6;
-    const delayPenalty = this.backofficeData.delayedOrders() * 9;
-    return Math.max(58, 96 - inventoryPenalty - delayPenalty);
+    const snapshot = this.dashboard();
+    const inventoryPenalty = (snapshot?.lowStockItems ?? 0) * 6;
+    const queuePenalty = ((snapshot?.pendingOrders ?? 0) + (snapshot?.rejectedOrders ?? 0)) * 5;
+    const shippingPenalty = (snapshot?.cancelledOrders ?? 0) * 9;
+    return Math.max(58, 96 - inventoryPenalty - queuePenalty - shippingPenalty);
   });
 
   readonly readinessLabel = computed(() => {
@@ -56,40 +60,53 @@ export class BackofficeDashboardPageComponent {
     return 'At risk';
   });
 
-  readonly focusAreas = computed(() => [
-    {
-      label: 'Prepress',
-      value: `${this.backofficeData.orders().filter((order) => order.status === 'Prepress').length} jobs`,
-      hint: 'Pending approval',
-    },
-    {
-      label: 'Ready to ship',
-      value: `${this.backofficeData.orders().filter((order) => order.status === 'Ready to Ship').length} jobs`,
-      hint: 'Can move today',
-    },
-    {
-      label: 'Live operators',
-      value: `${this.backofficeData.activeEmployees()}`,
-      hint: 'Across ops and support',
-    },
-  ]);
+  readonly dashboardMetrics = computed(() => {
+    const snapshot = this.dashboard();
+    if (!snapshot) {
+      return [];
+    }
 
-  readonly deliveryMix = computed(() => [
-    {
-      label: 'Express',
-      value: this.backofficeData.orders().filter((order) => order.shippingMethod === 'Express').length,
-    },
-    {
-      label: 'Standard',
-      value: this.backofficeData.orders().filter((order) => order.shippingMethod === 'Standard').length,
-    },
-    {
-      label: 'Pickup',
-      value: this.backofficeData.orders().filter((order) => order.shippingMethod === 'Pickup').length,
-    },
-  ]);
+    return [
+      {
+        label: 'Open orders',
+        value: `${snapshot.openOrders}`,
+        change: `${snapshot.totalOrders} total`,
+        hint: 'live production queue',
+        icon: 'fa-layer-group',
+        tone: 'positive' as const,
+      },
+      {
+        label: 'Production value',
+        value: this.formatCurrency(snapshot.productionValue),
+        change: `${snapshot.processingOrders} printing`,
+        hint: 'active pipeline',
+        icon: 'fa-chart-line',
+        tone: 'neutral' as const,
+      },
+      {
+        label: 'Inventory alerts',
+        value: `${snapshot.lowStockItems}`,
+        change: snapshot.lowStockItems > 0 ? 'Needs action' : 'Healthy',
+        hint: 'below target',
+        icon: 'fa-boxes-stacked',
+        tone: snapshot.lowStockItems > 0 ? ('warning' as const) : ('positive' as const),
+      },
+      {
+        label: 'Team availability',
+        value: `${snapshot.activeEmployees}/${snapshot.totalEmployees}`,
+        change: snapshot.pendingOrders > 0 ? 'Watch queue' : 'On track',
+        hint: 'backoffice operators',
+        icon: 'fa-user-group',
+        tone: snapshot.pendingOrders > 0 ? ('warning' as const) : ('positive' as const),
+      },
+    ];
+  });
 
-  readonly attentionItems = computed(() => this.backofficeData.attentionItems().slice(0, 3));
+  readonly focusAreas = computed(() => this.dashboard()?.focusAreas ?? []);
+  readonly deliveryMix = computed(() => this.dashboard()?.deliveryMix ?? []);
+  readonly attentionItems = computed(() => (this.dashboard()?.attentionItems ?? []).slice(0, 3));
+  readonly recentActivity = computed(() => this.dashboard()?.recentActivity ?? []);
+  readonly recentOrders = computed(() => this.dashboard()?.recentOrders ?? []);
 
   readonly quickActions = computed<
     readonly {
@@ -103,23 +120,23 @@ export class BackofficeDashboardPageComponent {
   >(() => [
     {
       label: 'Orders',
-      meta: `${this.backofficeData.activeOrders()} active`,
+      meta: `${this.dashboard()?.openOrders ?? 0} active`,
       route: '/backoffice/orders',
       icon: 'fa-receipt',
     },
     {
       label: 'Inventory',
       meta:
-        this.backofficeData.lowStockItems() > 0
-          ? `${this.backofficeData.lowStockItems()} need attention`
+        (this.dashboard()?.lowStockItems ?? 0) > 0
+          ? `${this.dashboard()?.lowStockItems ?? 0} need attention`
           : 'All materials covered',
       route: '/backoffice/inventory',
       icon: 'fa-boxes-stacked',
     },
     {
       label: 'Team',
-      meta: `${this.backofficeData.activeEmployees()} on shift`,
-      route: '/backoffice/employees',
+      meta: `${this.dashboard()?.activeEmployees ?? 0} online`,
+      route: '/backoffice/users',
       icon: 'fa-user-group',
     },
     {
@@ -132,8 +149,19 @@ export class BackofficeDashboardPageComponent {
   ]);
 
   constructor() {
-    const timer = setTimeout(() => this.isLoading.set(false), 420);
-    this.destroyRef.onDestroy(() => clearTimeout(timer));
+    void this.loadDashboard();
+  }
+
+  private async loadDashboard(): Promise<void> {
+    this.isLoading.set(true);
+    try {
+      this.dashboard.set(await this.dashboardApi.getDashboard());
+    } catch (error) {
+      console.error('Unable to load dashboard data', error);
+      this.dashboard.set(null);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   toneClass(tone: 'positive' | 'neutral' | 'warning' | 'danger'): string {
@@ -153,15 +181,15 @@ export class BackofficeDashboardPageComponent {
   statusClass(status: string): string {
     const normalized = status.toLowerCase();
 
-    if (normalized.includes('delayed')) {
+    if (normalized.includes('delayed') || normalized.includes('rejected') || normalized.includes('cancelled')) {
       return 'bg-brand-pink/12 text-brand-pink border-brand-pink/20';
     }
 
-    if (normalized.includes('ready') || normalized.includes('completed')) {
+    if (normalized.includes('ready') || normalized.includes('completed') || normalized.includes('delivered')) {
       return 'bg-brand-teal/12 text-brand-navy border-brand-teal/20';
     }
 
-    if (normalized.includes('prepress') || normalized.includes('production')) {
+    if (normalized.includes('production') || normalized.includes('ship')) {
       return 'bg-brand-orange/12 text-brand-orange border-brand-orange/20';
     }
 

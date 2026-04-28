@@ -45,6 +45,21 @@ public class OrderServiceImpl {
         return orderRepository.findAll();
     }
 
+    public void revalidateCustomPricingForCart(Long cartId, Boolean confirmPriceUpdate) {
+        if (cartId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart id is required");
+        }
+
+        Cart cart = cartRepository.findActiveCartById(cartId)
+                .orElseThrow(() -> new ResourceNotFoundException("Active cart not found with id: " + cartId));
+
+        CheckoutOrderRequestDto request = CheckoutOrderRequestDto.builder()
+                .confirmPriceUpdate(confirmPriceUpdate)
+                .build();
+
+        revalidateCustomPricing(cart, request);
+    }
+
     public OrderResponseDto checkout(Long cartId, CheckoutOrderRequestDto request, String email, String username, List<String> roles) {
         Cart cart = cartRepository.findActiveCartById(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active cart not found with id: " + cartId));
@@ -61,11 +76,14 @@ public class OrderServiceImpl {
         User user = resolveUser(email, username, request, roles);
         Adress shippingAddress = adressRepository.save(buildAddress(request));
 
+        boolean paymentConfirmed = isCardPaymentConfirmed(request);
+
         Billing billing = new Billing();
         billing.setBillingAddress(shippingAddress);
         billing.setPaymentMethod(request.getPaymentMethod());
-        billing.setPaymentStatus(PaymentStatus.PENDING);
+        billing.setPaymentStatus(paymentConfirmed ? PaymentStatus.PAID : PaymentStatus.PENDING);
         billing.setBillingDate(LocalDate.now());
+        billing.setStripePaymentIntentId(trimToNull(request.getStripePaymentIntentId()));
         billing = billingRepository.save(billing);
 
         Shipping shipping = new Shipping();
@@ -96,8 +114,8 @@ public class OrderServiceImpl {
         invoice.setTotalHT(totalHT);
         invoice.setTvaRate(tvaRate);
         invoice.setTvaAmount(tvaAmount);
-        invoice.setPaid(false);
-        invoice.setPaymentDate(null);
+        invoice.setPaid(paymentConfirmed);
+        invoice.setPaymentDate(paymentConfirmed ? LocalDate.now() : null);
 
         List<OrderLine> orderLines = cart.getItems().stream()
                 .map(this::copyOrderLine)
@@ -479,14 +497,16 @@ public class OrderServiceImpl {
 
     public OrderStatsDto getOrderStats() {
         long totalOrders = orderRepository.count();
+        long pendingOrders = orderRepository.countByStatus(OrderStatus.PENDING);
         long printingOrders = orderRepository.countByStatus(OrderStatus.IN_PRODUCTION);
         long readyToShipOrders = orderRepository.countByStatus(OrderStatus.READY_TO_SHIP);
         long shippedOrders = orderRepository.countByStatus(OrderStatus.SHIPPED);
+        long deliveredOrders = orderRepository.countByStatus(OrderStatus.DELIVERED);
         long rejectedOrders = orderRepository.countByStatus(OrderStatus.REJECTED);
         long cancelledOrders = orderRepository.countByStatus(OrderStatus.CANCELLED);
 
         BigDecimal productionValue = orderRepository.sumTotalAmountByExcludedStatuses(
-                OrderStatus.SHIPPED, OrderStatus.CANCELLED, OrderStatus.REJECTED
+                OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REJECTED
         );
         if (productionValue == null) {
             productionValue = BigDecimal.ZERO;
@@ -494,11 +514,13 @@ public class OrderServiceImpl {
 
         return OrderStatsDto.builder()
                 .totalOrders(totalOrders)
-                .pendingOrders(printingOrders)
-                .processingOrders(readyToShipOrders)
+                .pendingOrders(pendingOrders)
+                .processingOrders(printingOrders)
+                .readyToShipOrders(readyToShipOrders)
                 .shippedOrders(shippedOrders)
-                .deliveredOrders(rejectedOrders)
+                .deliveredOrders(deliveredOrders)
                 .cancelledOrders(cancelledOrders)
+                .rejectedOrders(rejectedOrders)
                 .productionValue(productionValue)
                 .build();
     }
@@ -583,7 +605,7 @@ public class OrderServiceImpl {
                         .bookTitle(line.getBook() != null ? line.getBook().getTitle() : "Untitled")
                         .type("Custom")
                         .quantity(line.getQuantity())
-                        .productionStatus(line.getLineStatus() != null ? line.getLineStatus().name() : OrderLineStatus.PRINTING.name())
+                        .productionStatus(resolveDisplayLineStatus(line))
                         .build())
                 .toList();
 
@@ -596,7 +618,7 @@ public class OrderServiceImpl {
                         .bookTitle(line.getBook() != null ? line.getBook().getTitle() : "Untitled")
                         .type(line.isCustomItem() ? "Custom" : "Marketplace")
                         .quantity(line.getQuantity())
-                        .productionStatus(line.getLineStatus() != null ? line.getLineStatus().name() : OrderLineStatus.READY.name())
+                        .productionStatus(resolveDisplayLineStatus(line))
                         .unitPrice(line.getUnitPrice() != null ? line.getUnitPrice().floatValue() : 0f)
                         .totalPrice(line.getTotalPrice() != null ? line.getTotalPrice().floatValue() : 0f)
                         .estimatedPrice(Boolean.TRUE.equals(line.getIsEstimated()))
@@ -1139,6 +1161,15 @@ public class OrderServiceImpl {
                     "Missing shipping address fields: " + String.join(", ", missingFields)
             );
         }
+    }
+
+    private boolean isCardPaymentConfirmed(CheckoutOrderRequestDto request) {
+        if (request == null) {
+            return false;
+        }
+
+        return "card".equalsIgnoreCase(trimToNull(request.getPaymentMethod()))
+                && Boolean.TRUE.equals(request.getPaymentConfirmed());
     }
 
     private String normalizeCountryName(String value) {

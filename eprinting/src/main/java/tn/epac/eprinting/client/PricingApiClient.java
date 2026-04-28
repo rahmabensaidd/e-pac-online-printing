@@ -23,4 +23,12 @@ public class PricingApiClient {
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
     }
+
+    public Map<String, Object> getClientFeatures(String siren) {
+        return pricingWebClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/features/client/{siren}").build(siren))
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block();
+    }
 }

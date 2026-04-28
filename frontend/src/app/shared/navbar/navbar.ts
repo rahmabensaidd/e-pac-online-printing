@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { UiService } from '../../core/services/ui.service';
 import { CartService } from '../../core/services/cart.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -26,6 +26,7 @@ export class NavbarComponent {
   readonly ui = inject(UiService);
   readonly cart = inject(CartService);
   readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly primaryNav: NavItem[] = [
     { label: 'Home', path: '/', exact: true },
@@ -47,6 +48,7 @@ export class NavbarComponent {
   readonly accountMenuOpen = signal(false);
   readonly cartCount = computed(() => this.cart.count());
   readonly authActionLabel = computed(() => this.auth.isAuthenticated() ? 'Logout' : 'Login');
+  readonly showBackofficeLink = computed(() => this.auth.isAuthenticated() && this.auth.isAdmin());
 
   toggleMobile(): void {
     this.mobileOpen.update((v) => !v);
@@ -71,9 +73,13 @@ export class NavbarComponent {
 
   onAuthAction(): void {
     if (this.auth.isAuthenticated()) {
+      const shouldRedirectHome = this.router.url.startsWith('/backoffice');
       this.auth.logout();
       this.closeMobile();
       this.closeAccountMenu();
+      if (shouldRedirectHome) {
+        void this.router.navigate(['/']);
+      }
     }
   }
 }

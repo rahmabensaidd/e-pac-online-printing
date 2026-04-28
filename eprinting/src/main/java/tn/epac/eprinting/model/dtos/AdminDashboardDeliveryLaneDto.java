@@ -1,0 +1,11 @@
+package tn.epac.eprinting.model.dtos;
+
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+public class AdminDashboardDeliveryLaneDto {
+    private String label;
+    private Long value;
+}

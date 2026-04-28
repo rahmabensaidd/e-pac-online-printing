@@ -402,6 +402,7 @@
   overflow: hidden;
 }
 
+
 .editor-floating-preview {
   pointer-events: none;
 }
@@ -537,4 +538,5 @@
   .editor-canvas {
     min-height: 300px;
   }
+
 }

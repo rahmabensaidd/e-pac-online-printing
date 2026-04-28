@@ -34,6 +34,12 @@ export class OrderTrackingPageComponent {
     const apiUrl = this.tracking()?.trackingUrl || this.selectedOrder()?.trackingUrl;
     return apiUrl ?? null;
   });
+  readonly shippingSummary = computed(() => ({
+    shippingMethod: this.tracking()?.shippingMethod || this.selectedOrder()?.shippingMethod || 'STANDARD',
+    shippingStatus: this.tracking()?.shippingStatus || this.selectedOrder()?.shippingStatus || 'N/A',
+    carrier: this.tracking()?.carrier || this.selectedOrder()?.carrier || 'N/A',
+    trackingNumber: this.tracking()?.trackingNumber || this.selectedOrder()?.trackingNumber || 'N/A',
+  }));
 
   constructor() {
     void this.loadOrders();
@@ -165,5 +171,63 @@ export class OrderTrackingPageComponent {
     }
 
     return `Tracking checked. Shippo still reports ${currentStatus}.`;
+  }
+
+  formatDisplayLabel(value: string | null | undefined): string {
+    if (!value) {
+      return 'N/A';
+    }
+
+    return value
+      .toLowerCase()
+      .split('_')
+      .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+      .join(' ');
+  }
+
+  productionStatusBadgeClass(status: string | null | undefined): string {
+    const normalized = (status || '').toUpperCase();
+
+    switch (normalized) {
+      case 'PENDING':
+        return 'bg-amber-100 text-amber-800 ring-amber-200';
+      case 'PRINTING':
+        return 'bg-sky-100 text-sky-800 ring-sky-200';
+      case 'VALIDATED':
+      case 'READY':
+        return 'bg-emerald-100 text-emerald-800 ring-emerald-200';
+      case 'READY_TO_SHIP':
+        return 'bg-indigo-100 text-indigo-800 ring-indigo-200';
+      case 'REJECTED':
+        return 'bg-rose-100 text-rose-800 ring-rose-200';
+      default:
+        return 'bg-slate-100 text-slate-700 ring-slate-200';
+    }
+  }
+
+  typeBadgeClass(type: string | null | undefined): string {
+    return (type || '').toLowerCase() === 'custom'
+      ? 'bg-indigo-50 text-indigo-700 ring-indigo-200'
+      : 'bg-slate-100 text-slate-700 ring-slate-200';
+  }
+
+  shippingStatusBadgeClass(status: string | null | undefined): string {
+    const normalized = (status || '').toUpperCase();
+
+    switch (normalized) {
+      case 'PENDING':
+        return 'bg-amber-100 text-amber-800 ring-amber-200';
+      case 'PROCESSING':
+        return 'bg-sky-100 text-sky-800 ring-sky-200';
+      case 'SHIPPED':
+      case 'IN_TRANSIT':
+        return 'bg-blue-100 text-blue-800 ring-blue-200';
+      case 'DELIVERED':
+        return 'bg-emerald-100 text-emerald-800 ring-emerald-200';
+      case 'RETURNED':
+        return 'bg-rose-100 text-rose-800 ring-rose-200';
+      default:
+        return 'bg-slate-100 text-slate-700 ring-slate-200';
+    }
   }
 }

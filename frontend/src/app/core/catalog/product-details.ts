@@ -1,6 +1,6 @@
 import { Product, ProductCategory } from '../models/product';
-import { MARKETPLACE_ITEMS } from '../../pages/marketplace/marketplace.data';
-import { MarketplaceCategory, MarketplaceItem } from '../../pages/marketplace/marketplace.types';
+import { MarketplaceCategory } from '../../pages/marketplace/marketplace.types';
+import { MarketplaceBook } from '../../pages/marketplace/marketplace.service';
 
 export type ProductVisualKind = 'book' | 'magazine' | 'poster' | 'card' | 'brochure' | 'calendar' | 'label';
 
@@ -10,18 +10,23 @@ export interface ProductDetails {
   categoryLabel: string;
   marketplaceCategory?: MarketplaceCategory;
   shortDescription: string;
+  description: string;
   priceFrom: number;
   imageStyle: string;
   isAvailable: boolean;
   rating?: number;
   reviewsCount?: number;
   tags: string[];
+  highlights: string[];
   specs: string[];
   productOptions: string[];
   productionNotes: string[];
   leadTime: string;
   minimumOrder: string;
   visualKind: ProductVisualKind;
+  authors: string[];
+  stockLabel: string;
+  factSheet: Array<{ label: string; value: string }>;
   cartProduct: Product;
 }
 
@@ -104,16 +109,26 @@ const FEATURED_ONLY_DETAILS: readonly ProductDetails[] = [
     categoryLabel: 'Postcards',
     marketplaceCategory: 'Flyers',
     shortDescription: 'Direct-mail ready postcards with strong color reproduction and durable stock options.',
+    description: 'Direct-mail ready postcards with strong color reproduction, premium paper choices, and reliable campaign quantities for launches, events, and seasonal pushes.',
     priceFrom: 11,
     imageStyle: 'linear-gradient(135deg, #3A86FF 0%, #FF006E 100%)',
     isAvailable: true,
     tags: ['Direct mail', 'Matte finish', 'Bulk discount'],
+    highlights: ['Campaign-ready sizing', 'Premium coated stock', 'Reliable bulk ordering'],
     specs: ['4" x 6" and 5" x 7" formats', '14pt or 16pt card stock', 'Optional UV coating'],
     productOptions: ['Front and back print included', 'Matte and gloss paper options', 'Campaign and bulk quantity tiers'],
     productionNotes: ['Address-safe margin checks available', 'Post-print trim verification on each run'],
     leadTime: '3-5 business days',
     minimumOrder: '50 units',
     visualKind: 'poster',
+    authors: [],
+    stockLabel: 'In stock',
+    factSheet: [
+      { label: 'Format', value: 'Direct mail postcard' },
+      { label: 'Turnaround', value: '3-5 business days' },
+      { label: 'Minimum order', value: '50 units' },
+      { label: 'Availability', value: 'In stock' },
+    ],
     cartProduct: {
       id: 2001,
       name: 'Premium Postcards',
@@ -129,16 +144,26 @@ const FEATURED_ONLY_DETAILS: readonly ProductDetails[] = [
     title: 'Custom Vinyl Stickers',
     categoryLabel: 'Stickers',
     shortDescription: 'Durable, waterproof stickers for packaging, labels, and product branding.',
+    description: 'Durable, waterproof stickers for packaging, labels, and product branding, with clean cut paths and production-ready adhesive finishes.',
     priceFrom: 8,
     imageStyle: 'linear-gradient(135deg, #1A1A2E 0%, #00D9C0 100%)',
     isAvailable: true,
     tags: ['Waterproof', 'Die-cut', 'Packaging'],
+    highlights: ['Waterproof finish', 'Die-cut precision', 'Packaging-ready adhesive'],
     specs: ['Custom contours and sizes', 'Laminated vinyl options', 'Indoor and outdoor use'],
     productOptions: ['Die-cut and kiss-cut formats', 'Adhesive and laminate variants', 'Batch quantity tiers available'],
     productionNotes: ['Material durability check before print', 'Cut-line verification included in preflight'],
     leadTime: '3-5 business days',
     minimumOrder: '100 units',
     visualKind: 'label',
+    authors: [],
+    stockLabel: 'In stock',
+    factSheet: [
+      { label: 'Format', value: 'Vinyl sticker set' },
+      { label: 'Turnaround', value: '3-5 business days' },
+      { label: 'Minimum order', value: '100 units' },
+      { label: 'Availability', value: 'In stock' },
+    ],
     cartProduct: {
       id: 2002,
       name: 'Custom Vinyl Stickers',
@@ -152,7 +177,6 @@ const FEATURED_ONLY_DETAILS: readonly ProductDetails[] = [
 ];
 
 const FEATURED_DETAILS_BY_KEY = new Map(FEATURED_ONLY_DETAILS.map((item) => [item.key, item] as const));
-const MARKETPLACE_ITEM_BY_ID = new Map(MARKETPLACE_ITEMS.map((item) => [item.id, item] as const));
 
 export function getProductDetailsByKey(key: string): ProductDetails | null {
   const normalizedKey = key.trim();
@@ -160,45 +184,55 @@ export function getProductDetailsByKey(key: string): ProductDetails | null {
     return null;
   }
 
-  const marketplaceItem = MARKETPLACE_ITEM_BY_ID.get(normalizedKey);
-  if (marketplaceItem) {
-    return buildMarketplaceDetails(marketplaceItem);
-  }
-
   const featuredItem = FEATURED_DETAILS_BY_KEY.get(normalizedKey);
   return featuredItem ? cloneDetails(featuredItem) : null;
 }
 
-function buildMarketplaceDetails(item: MarketplaceItem): ProductDetails {
-  const category = item.category;
-  const imageStyle = item.imageUrl ? `url(${item.imageUrl})` : CATEGORY_TO_GRADIENT[category];
+export function buildProductDetailsFromMarketplaceBook(book: MarketplaceBook): ProductDetails {
+  const category = normalizeMarketplaceCategory(book.category);
+  const title = book.title || 'Untitled Book';
+  const description = book.description?.trim() || book.shortDescription?.trim() || title;
+  const highlights = buildHighlights(book);
+  const specs = buildSpecs(book, category);
+  const stockLabel = book.isAvailable ? `${book.quantity} units available` : 'Currently unavailable';
+  const imageStyle = book.imageUrl ? `url(${book.imageUrl})` : CATEGORY_TO_GRADIENT[category];
 
   return {
-    key: item.id,
-    title: item.title,
+    key: book.id,
+    title,
     categoryLabel: category,
     marketplaceCategory: category,
-    shortDescription: item.shortDescription,
-    priceFrom: item.priceFrom,
+    shortDescription: book.shortDescription || description,
+    description,
+    priceFrom: book.priceFrom,
     imageStyle,
-    isAvailable: item.isAvailable,
-    rating: item.rating,
-    reviewsCount: item.reviewsCount,
-    tags: [...item.tags],
-    specs: [...CATEGORY_TO_SPECS[category]],
-    productOptions: [...CATEGORY_TO_PERSONALIZATION[category]],
-    productionNotes: [...CATEGORY_TO_PRODUCTION[category]],
+    isAvailable: book.isAvailable,
+    rating: book.rating,
+    reviewsCount: book.reviewsCount,
+    tags: [...book.tags],
+    highlights,
+    specs,
+    productOptions: buildProductOptions(book, category),
+    productionNotes: buildProductionNotes(book, category),
     leadTime: CATEGORY_TO_LEAD_TIME[category],
-    minimumOrder: CATEGORY_TO_MINIMUM_ORDER[category],
+    minimumOrder: book.quantity > 0 ? '1 unit' : CATEGORY_TO_MINIMUM_ORDER[category],
     visualKind: CATEGORY_TO_VISUAL_KIND[category],
+    authors: [...book.authors],
+    stockLabel,
+    factSheet: [
+      { label: 'Binding', value: formatBindingType(book.bindingType) },
+      { label: 'Authors', value: book.authors.length ? book.authors.join(', ') : 'Not specified' },
+      { label: 'Availability', value: stockLabel },
+      { label: 'Turnaround', value: CATEGORY_TO_LEAD_TIME[category] },
+    ],
     cartProduct: {
-      id: toStableProductId(item.id),
-      name: item.title,
+      id: toMarketplaceBookProductId(book.id),
+      name: title,
       category: CATEGORY_TO_PRODUCT_CATEGORY[category],
-      price: item.priceFrom,
+      price: book.priceFrom,
       image: CATEGORY_TO_GRADIENT[category],
-      description: item.shortDescription,
-      specs: [...CATEGORY_TO_SPECS[category]],
+      description: book.shortDescription || description,
+      specs,
     },
   };
 }
@@ -207,9 +241,12 @@ function cloneDetails(details: ProductDetails): ProductDetails {
   return {
     ...details,
     tags: [...details.tags],
+    highlights: [...details.highlights],
     specs: [...details.specs],
     productOptions: [...details.productOptions],
     productionNotes: [...details.productionNotes],
+    authors: [...details.authors],
+    factSheet: details.factSheet.map((entry) => ({ ...entry })),
     cartProduct: {
       ...details.cartProduct,
       specs: [...details.cartProduct.specs],
@@ -217,13 +254,77 @@ function cloneDetails(details: ProductDetails): ProductDetails {
   };
 }
 
-function toStableProductId(itemId: string): number {
-  const index = MARKETPLACE_ITEMS.findIndex((entry) => entry.id === itemId);
-  if (index >= 0) {
-    return index + 1000;
+function normalizeMarketplaceCategory(category: string): MarketplaceCategory {
+  switch (category) {
+    case 'Calendars':
+    case 'Posters':
+    case 'Flyers':
+    case 'Business Cards':
+    case 'Brochures':
+      return category;
+    case 'Books':
+    default:
+      return 'Books';
+  }
+}
+
+function buildHighlights(book: MarketplaceBook): string[] {
+  const values = [
+    formatBindingType(book.bindingType),
+    ...(book.tags ?? []),
+    book.quantity > 0 ? `${book.quantity} units ready` : 'Made to order',
+  ].filter(Boolean);
+
+  return values.slice(0, 3);
+}
+
+function buildSpecs(book: MarketplaceBook, category: MarketplaceCategory): string[] {
+  const specs = [
+    `${formatBindingType(book.bindingType)} binding`,
+    book.authors.length ? `Author${book.authors.length > 1 ? 's' : ''}: ${book.authors.join(', ')}` : null,
+    `Category: ${category}`,
+    ...CATEGORY_TO_SPECS[category],
+  ].filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(specs)).slice(0, 6);
+}
+
+function buildProductOptions(book: MarketplaceBook, category: MarketplaceCategory): string[] {
+  const options = [
+    ...CATEGORY_TO_PERSONALIZATION[category],
+    book.tags.length ? `Included finishes and cues: ${book.tags.join(', ')}` : null,
+  ].filter((value): value is string => Boolean(value));
+
+  return options.slice(0, 5);
+}
+
+function buildProductionNotes(book: MarketplaceBook, category: MarketplaceCategory): string[] {
+  const notes = [
+    ...CATEGORY_TO_PRODUCTION[category],
+    book.isAvailable ? 'Available for immediate marketplace checkout.' : 'Currently unavailable for immediate dispatch.',
+  ];
+
+  return notes.slice(0, 4);
+}
+
+function formatBindingType(value: string): string {
+  if (!value) {
+    return 'Standard';
   }
 
+  return value
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function toStableProductId(itemId: string): number {
   return (hashString(itemId) % 9000) + 2000;
+}
+
+function toMarketplaceBookProductId(itemId: string): number {
+  const parsed = Number(itemId);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : toStableProductId(itemId);
 }
 
 function hashString(value: string): number {

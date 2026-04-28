@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import tn.epac.eprinting.model.dtos.AdminOrganizationCreateRequestDto;
+import tn.epac.eprinting.model.dtos.AdminOrganizationClientTrendsResponseDto;
 import tn.epac.eprinting.model.dtos.AdminOrganizationResponseDto;
 import tn.epac.eprinting.model.dtos.OrganizationVerificationTokenResponseDto;
 import tn.epac.eprinting.serviceimpl.AdminOrganizationServiceImpl;
@@ -30,6 +32,19 @@ public class AdminOrganizationController {
     @GetMapping
     public ResponseEntity<List<AdminOrganizationResponseDto>> getOrganizations() {
         return ResponseEntity.ok(adminOrganizationService.getOrganizations());
+    }
+
+    @GetMapping("/{organizationId}/client-trends")
+    public ResponseEntity<AdminOrganizationClientTrendsResponseDto> getClientTrends(
+            @PathVariable Long organizationId
+    ) {
+        return ResponseEntity.ok(adminOrganizationService.getClientTrends(organizationId));
+    }
+
+    @DeleteMapping("/{organizationId}")
+    public ResponseEntity<Void> deleteOrganization(@PathVariable Long organizationId) {
+        adminOrganizationService.deleteOrganization(organizationId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping

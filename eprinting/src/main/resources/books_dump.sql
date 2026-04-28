@@ -1,3 +1,9 @@
+ALTER TABLE admin_books
+    ADD COLUMN IF NOT EXISTS creation_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE admin_books
+    ADD COLUMN IF NOT EXISTS updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
 INSERT INTO admin_books (
     title,
     description,

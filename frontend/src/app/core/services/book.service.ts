@@ -1,6 +1,6 @@
 // book.service.ts
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 
 export interface Author {
@@ -60,6 +60,7 @@ export interface BookCoverPayload {
     pdfFileName?: string;
     pdfFileType?: string;
     pdfFilePath?: string;
+    pdfFileBase64?: string;
     coverTemplateId?: number | null;
 }
 
@@ -68,6 +69,7 @@ export interface BookContentPayload {
     fileName?: string;
     fileType?: string;
     filePath?: string;
+    fileBase64?: string;
     textTemplateId?: number | null;
 }
 
@@ -97,6 +99,11 @@ export interface Book {
     bookId: number;
     title: string;
     description: string;
+    creationAuthorUserId?: number | null;
+    creationAuthorFullName?: string | null;
+    creationAuthorEmail?: string | null;
+    creationDate?: string | null;
+    updatedAt?: string | null;
     isCreatedByUser: boolean;
     isAddedFromAdmin: boolean;
     stockStatus: string;
@@ -144,6 +151,7 @@ export interface Book {
         pdfFileType?: string;
         pdfFilePath?: string;
         coverTemplateId?: number | null;
+        coverTemplateThumbnailUrl?: string | null;
     } | null;
     content?: {
         contentId?: number;
@@ -161,6 +169,13 @@ export interface BookOverview {
     lowStockBooks: number;
     outOfStockBooks: number;
     totalValue: number;
+}
+
+export interface UserBookUpsertResult {
+    book: Book;
+    updatedInPlace: boolean;
+    cloned: boolean;
+    message?: string;
 }
 
 
@@ -234,6 +249,11 @@ export class BookService {
             title: book.title || 'No title',
             description: book.description || '',
             authors: Array.isArray(book.authors) ? book.authors.join(', ') : '',
+            sourceType: (book.isCreatedByUser ?? false) ? 'Customized' : 'Marketplace',
+            creatorName:
+                book.creationAuthorFullName
+                || book.creationAuthorEmail
+                || ((book.isCreatedByUser ?? false) ? 'Unknown user' : 'Catalog admin'),
             quantity: book.quantity ?? 0,
             stock_status: book.stockStatus || 'unknown',
             salePrice: book.salePrice ?? 0,
@@ -408,6 +428,49 @@ export class BookService {
             console.error('Error loading current user custom book by id:', error);
             throw error;
         }
+    }
+
+    async updateMyCustomBook(bookId: number, book: BookRequestDto): Promise<UserBookUpsertResult> {
+        try {
+            return await this.http.put<UserBookUpsertResult>(`${this.userApiUrl}/my/${bookId}`, book).toPromise() as UserBookUpsertResult;
+        } catch (error) {
+            console.error('Error updating current user custom book:', error);
+            throw error;
+        }
+    }
+
+    async duplicateMyCustomBook(bookId: number): Promise<Book> {
+        try {
+            return await this.http.post<Book>(`${this.userApiUrl}/my/${bookId}/duplicate`, {}).toPromise() as Book;
+        } catch (error) {
+            console.error('Error duplicating current user custom book:', error);
+            throw error;
+        }
+    }
+
+    async deleteMyCustomBook(bookId: number): Promise<void> {
+        try {
+            await this.http.delete<void>(`${this.userApiUrl}/my/${bookId}`).toPromise();
+        } catch (error) {
+            console.error('Error deleting current user custom book:', error);
+            throw error;
+        }
+    }
+
+    async getMyCustomBookCoverPdf(bookId: number, download: boolean): Promise<HttpResponse<Blob>> {
+        return await this.http.get(`${this.userApiUrl}/my/${bookId}/cover-pdf`, {
+            params: { download: String(download) },
+            observe: 'response',
+            responseType: 'blob'
+        }).toPromise() as HttpResponse<Blob>;
+    }
+
+    async getMyCustomBookContentPdf(bookId: number, download: boolean, preview: boolean): Promise<HttpResponse<Blob>> {
+        return await this.http.get(`${this.userApiUrl}/my/${bookId}/content-pdf`, {
+            params: { download: String(download), preview: String(preview) },
+            observe: 'response',
+            responseType: 'blob'
+        }).toPromise() as HttpResponse<Blob>;
     }
     /**
      * Update existing book

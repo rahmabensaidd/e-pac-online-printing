@@ -77,7 +77,7 @@ function mapApiStatusToFilter(apiStatus: string): OrderFilter {
     case 'SHIPPED': return 'Shipped';
     case 'REJECTED': return 'Rejected';
     case 'CANCELLED': return 'Cancelled';
-    default: return 'All';
+    default: return 'Pending';
   }
 }
 

@@ -7,7 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Editor, EditorTemplateAssociationEvent } from '../../editor/editor';
-import { BookRequestDto, BookService } from '../../core/services/book.service';
+import { Book, BookRequestDto, BookService } from '../../core/services/book.service';
 
 type BindingType =
   | ''
@@ -87,6 +87,14 @@ export class DesignYourBookPageComponent implements OnInit {
   readonly submitting = signal(false);
   readonly submitError = signal<string | null>(null);
   readonly submitSuccess = signal<string | null>(null);
+  readonly loadingExistingBook = signal(false);
+  readonly editingBookId = signal<number | null>(null);
+  readonly initialTemplateId = signal<number | null>(null);
+  readonly cloneNoticeModalOpen = signal(false);
+  readonly cloneNoticeMessage = signal<string | null>(null);
+  readonly loadedEditingBook = signal<Book | null>(null);
+  private coverPdfBase64: string | null = null;
+  private contentPdfBase64: string | null = null;
 
   readonly bindingTypeLabels: Record<BindingType, string> = {
     '': 'Select binding type',
@@ -246,6 +254,14 @@ export class DesignYourBookPageComponent implements OnInit {
   readonly form = this.initForm();
 
   ngOnInit(): void {
+    void this.initializeFromRoute();
+  }
+
+  get isEditMode(): boolean {
+    return this.editingBookId() !== null;
+  }
+
+  async initializeFromRoute(): Promise<void> {
     const qp = this.route.snapshot.queryParamMap;
     const toNum = (key: string, fallback: number): number => {
       const raw = qp.get(key);
@@ -253,6 +269,27 @@ export class DesignYourBookPageComponent implements OnInit {
       const parsed = Number(raw);
       return Number.isFinite(parsed) ? parsed : fallback;
     };
+
+    const bookIdRaw = qp.get('bookId');
+    const bookId = Number(bookIdRaw);
+    if (Number.isFinite(bookId) && bookId > 0) {
+      this.loadingExistingBook.set(true);
+      this.submitError.set(null);
+      try {
+        const existing = await this.bookService.getMyCustomBookById(bookId);
+        this.loadedEditingBook.set(existing);
+        this.editingBookId.set(existing.bookId);
+        this.initialTemplateId.set(existing.cover?.coverTemplateId ?? null);
+        this.patchFormFromExistingBook(existing);
+        this.submitSuccess.set('Custom book loaded in edit mode.');
+      } catch (error) {
+        console.error('Unable to load custom book for editing:', error);
+        this.submitError.set('Unable to load this custom book for editing.');
+      } finally {
+        this.loadingExistingBook.set(false);
+      }
+      return;
+    }
 
     this.form.patchValue({
       bindingType: qp.get('bindingType') ?? '',
@@ -320,6 +357,7 @@ export class DesignYourBookPageComponent implements OnInit {
         coverTemplateId: this.coverGroup.get('coverTemplateId')?.value ?? null,
       });
     } else {
+      this.coverPdfBase64 = null;
       this.coverGroup.patchValue({
         pdfFileName: '',
         pdfFileType: 'application/pdf',
@@ -328,12 +366,13 @@ export class DesignYourBookPageComponent implements OnInit {
     }
   }
 
-  onCoverPdfSelected(event: Event): void {
+  async onCoverPdfSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
     this.onCoverModeChange('pdf');
+    this.coverPdfBase64 = await this.readFileAsDataUrl(file);
     this.coverGroup.patchValue({
       pdfFileName: file.name,
       pdfFileType: file.type || 'application/pdf',
@@ -341,11 +380,12 @@ export class DesignYourBookPageComponent implements OnInit {
     });
   }
 
-  onContentPdfSelected(event: Event): void {
+  async onContentPdfSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
+    this.contentPdfBase64 = await this.readFileAsDataUrl(file);
     this.contentGroup.patchValue({
       fileName: file.name,
       fileType: file.type || 'application/pdf',
@@ -396,6 +436,7 @@ export class DesignYourBookPageComponent implements OnInit {
 
     this.submitting.set(true);
     const value = this.form.getRawValue();
+    const sourceBook = this.loadedEditingBook();
 
     if (!value.content.filePath) {
       this.submitting.set(false);
@@ -444,30 +485,57 @@ export class DesignYourBookPageComponent implements OnInit {
       labelType: value.labelType || undefined,
       salePrice: this.defaultUserBookSalePrice,
       cover: {
+        title: sourceBook?.cover?.title || undefined,
+        barcodeId: sourceBook?.cover?.barcodeId || undefined,
+        images: sourceBook?.cover?.images || undefined,
+        texts: sourceBook?.cover?.texts || undefined,
         pdfFileName: value.cover.pdfFileName || undefined,
         pdfFileType: value.cover.pdfFileType || undefined,
         pdfFilePath: value.cover.pdfFilePath || undefined,
+        pdfFileBase64: this.coverPdfBase64 || undefined,
         coverTemplateId: value.cover.coverTemplateId ?? undefined,
       },
       content: {
+        textContent: sourceBook?.content?.textContent || undefined,
         fileName: value.content.fileName || undefined,
         fileType: value.content.fileType || undefined,
         filePath: value.content.filePath || undefined,
+        fileBase64: this.contentPdfBase64 || undefined,
         textTemplateId: undefined,
       },
       pnlInformations: [],
     };
 
     try {
-      await this.bookService.createUserBook(payload);
-      this.submitSuccess.set('Your custom book has been saved successfully.');
-      await this.router.navigate(['/marketplace']);
+      const editingBookId = this.editingBookId();
+      if (editingBookId) {
+        const result = await this.bookService.updateMyCustomBook(editingBookId, payload);
+        const saved = result.book;
+        this.loadedEditingBook.set(saved);
+        this.editingBookId.set(saved.bookId);
+        this.initialTemplateId.set(saved.cover?.coverTemplateId ?? null);
+        this.patchFormFromExistingBook(saved);
+
+        if (result.cloned) {
+          this.cloneNoticeMessage.set(result.message || 'This custom book is linked to an order, so a new editable instance was generated.');
+          this.cloneNoticeModalOpen.set(true);
+        }
+        this.submitSuccess.set(result.message || 'Your custom book has been updated successfully.');
+      } else {
+        await this.bookService.createUserBook(payload);
+        this.submitSuccess.set('Your custom book has been saved successfully.');
+        await this.router.navigate(['/my-custom-books']);
+      }
     } catch (error) {
-      console.error('Error creating user book:', error);
-      this.submitError.set('Unable to create your custom book. Please try again.');
+      console.error('Error saving user book:', error);
+      this.submitError.set('Unable to save your custom book. Please try again.');
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  closeCloneNoticeModal(): void {
+    this.cloneNoticeModalOpen.set(false);
   }
 
   private initForm(): FormGroup {
@@ -516,6 +584,55 @@ export class DesignYourBookPageComponent implements OnInit {
       template: this.fb.group({
         action: ['select'],
       }),
+    });
+  }
+
+  private patchFormFromExistingBook(book: Book): void {
+    this.coverPdfBase64 = null;
+    this.contentPdfBase64 = null;
+
+    this.form.patchValue({
+      title: book.title || '',
+      description: book.description || '',
+      authors: Array.isArray(book.authors) ? book.authors.join(', ') : '',
+      bindingType: book.bindingType || '',
+      quantity: book.quantity ?? 1,
+      productionPage: book.productionPage ?? 1,
+      height: book.height ?? 21,
+      width: book.width ?? 14,
+      thickness: book.thickness ?? 1,
+      textPaperType: book.textPaperType || 'NONE',
+      textColor: book.textColor || 'FOUR_FOUR',
+      coverPaperType: book.coverPaperType || 'NONE',
+      coverFinishType: this.normalizeCoverFinishType(book.coverFinishType || null),
+      coverColor: book.coverColor || 'FOUR_ZERO',
+      headAndTail: book.headAndTail || 'NONE',
+      priorityLevel: book.priorityLevel || 'NORMAL',
+      securityLabel: !!book.securityLabel,
+      perf: !!book.perf,
+      doubleSidedCover: !!book.doubleSidedCover,
+      shrinkwrap: !!book.shrinkwrap,
+      threeHoleDrill: !!book.threeHoleDrill,
+      pnlCover: !!book.pnlCover,
+      pnlText: !!book.pnlText,
+      coilType: book.coilType || '',
+      tabColor: book.tabColor || '',
+      insertPaperType: book.insertPaperType || '',
+      caseFinishType: book.caseFinishType || '',
+      spineType: book.spineType || '',
+      labelType: book.labelType || '',
+      cover: {
+        mode: book.cover?.pdfFilePath ? 'pdf' : 'manual',
+        pdfFileName: book.cover?.pdfFileName || '',
+        pdfFileType: book.cover?.pdfFileType || 'application/pdf',
+        pdfFilePath: book.cover?.pdfFilePath || '',
+        coverTemplateId: book.cover?.coverTemplateId ?? null,
+      },
+      content: {
+        fileName: book.content?.fileName || '',
+        fileType: book.content?.fileType || 'application/pdf',
+        filePath: book.content?.filePath || '',
+      },
     });
   }
 
@@ -632,5 +749,21 @@ export class DesignYourBookPageComponent implements OnInit {
     if (rawValue === 'LAYFLAT_MATTE_SCUFF_FREE') return 'LAYFLAT_MATTE_SCUFF_FREE';
     if (rawValue === 'LAYFLAT_MATTE') return 'LAYFLAT_MATTE';
     return 'LAYFLAT_MATTE';
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === 'string' && result.length > 0) {
+          resolve(result);
+          return;
+        }
+        reject(new Error('Unable to read PDF file.'));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Unable to read PDF file.'));
+      reader.readAsDataURL(file);
+    });
   }
 }

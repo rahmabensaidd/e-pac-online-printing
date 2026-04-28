@@ -75,6 +75,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/books/marketplace/**",
+                                "/api/pricing/**",
                                 "/api/cart/**",
                                 "/api/auth/signup",
                                 "/api/auth/register-organization",
