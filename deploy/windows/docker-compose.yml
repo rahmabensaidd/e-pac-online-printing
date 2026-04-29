@@ -1,0 +1,188 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: eprinting-mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres-mlflow:
+    image: postgres:13
+    container_name: pricing-postgres-mlflow
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${MLFLOW_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${MLFLOW_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${MLFLOW_POSTGRES_DB}
+    volumes:
+      - postgres-mlflow-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MLFLOW_POSTGRES_USER} -d ${MLFLOW_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: pricing-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MLFLOW_S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MLFLOW_S3_SECRET_KEY}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  create-bucket:
+    image: minio/mc:latest
+    container_name: pricing-minio-mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set myminio http://minio:9000 ${MLFLOW_S3_ACCESS_KEY} ${MLFLOW_S3_SECRET_KEY}; do
+        echo 'Retrying MinIO connection...';
+        sleep 2;
+      done;
+      /usr/bin/mc mb myminio/${MLFLOW_BUCKET_NAME} --ignore-existing;
+      exit 0;
+      "
+
+  mlflow-server:
+    image: ${MLFLOW_IMAGE}
+    container_name: pricing-mlflow
+    restart: unless-stopped
+    depends_on:
+      postgres-mlflow:
+        condition: service_healthy
+      create-bucket:
+        condition: service_completed_successfully
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MLFLOW_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${MLFLOW_S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://${MLFLOW_POSTGRES_USER}:${MLFLOW_POSTGRES_PASSWORD}@postgres-mlflow:5432/${MLFLOW_POSTGRES_DB}
+      --default-artifact-root s3://${MLFLOW_BUCKET_NAME}
+      --host 0.0.0.0
+      --port 5000
+      --allowed-hosts mlflow-server,mlflow-server:5000,localhost,localhost:5000,127.0.0.1,127.0.0.1:5000
+      --cors-allowed-origins http://localhost,http://localhost:5000,http://127.0.0.1,http://127.0.0.1:5000,http://mlflow-server:5000
+      --serve-artifacts
+
+  pricing-api:
+    image: ${PRICING_API_IMAGE}
+    container_name: pricing-api
+    restart: unless-stopped
+    depends_on:
+      mlflow-server:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${PRICING_API_PORT:-8000}:8000"
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      MLFLOW_TRACKING_URI: http://mlflow-server:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MLFLOW_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${MLFLOW_S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      MLFLOW_BUCKET_NAME: ${MLFLOW_BUCKET_NAME}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+
+  pricing-watcher:
+    image: ${PRICING_API_IMAGE}
+    container_name: pricing-watcher
+    restart: unless-stopped
+    command: python /app/pricing_watcher_poll.py
+    depends_on:
+      mlflow-server:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow-server:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MLFLOW_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${MLFLOW_S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      MLFLOW_BUCKET_NAME: ${MLFLOW_BUCKET_NAME}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      PREFECT_SERVER_EPHEMERAL_STARTUP_TIMEOUT_SECONDS: 120
+      PREFECT_SERVER_ANALYTICS_ENABLED: "false"
+      DO_NOT_TRACK: "1"
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./pricing-watcher-poll.py:/app/pricing_watcher_poll.py:ro
+      - ${PRICING_SQL_DUMPS_HOST_PATH:-C:/pricing/sql-dumps}:/app/pricing__epac/data/raw/dumps/sql
+      - ${PRICING_PROCESSED_DUMPS_HOST_PATH:-C:/pricing/processed}:/app/pricing__epac/data/raw/dumps/processed
+      - ${PRICING_STATIC_HOST_PATH:-C:/pricing/static}:/app/pricing__epac/data/raw/static
+      - ${PRICING_CONSOLIDATED_HOST_PATH:-C:/pricing/consolidated}:/app/pricing__epac/data/consolidated
+      - ${PRICING_PROCESSED_DATA_HOST_PATH:-C:/pricing/processed-data}:/app/pricing__epac/data/processed
+      - ${PRICING_ENRICHED_HOST_PATH:-C:/pricing/enriched}:/app/pricing__epac/data/enriched
+      - ${PRICING_FEATURES_HOST_PATH:-C:/pricing/features}:/app/pricing__epac/data/features
+      - ${PRICING_RUNTIME_HOST_PATH:-C:/pricing/runtime}:/app/pricing__epac/runtime
+      - ${PRICING_ARTIFACTS_HOST_PATH:-C:/pricing/artifacts}:/app/pricing__epac/artifacts
+
+  backend:
+    image: ${BACKEND_IMAGE}
+    container_name: eprinting-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      pricing-api:
+        condition: service_started
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    container_name: eprinting-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:
+  postgres-mlflow-data:
+  minio-data:

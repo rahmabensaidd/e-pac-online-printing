@@ -22,6 +22,8 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+deploy/**/.env
+!deploy/**/.env.example
 *.local
 
 # Node / Angular
