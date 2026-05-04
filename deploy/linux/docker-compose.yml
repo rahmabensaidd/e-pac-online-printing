@@ -120,6 +120,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+      PYTHONPATH: /app
 
   pricing-watcher:
     image: ${PRICING_API_IMAGE}
@@ -146,6 +147,7 @@ services:
       PREFECT_SERVER_EPHEMERAL_STARTUP_TIMEOUT_SECONDS: 120
       PREFECT_SERVER_ANALYTICS_ENABLED: "false"
       DO_NOT_TRACK: "1"
+      PYTHONPATH: /app
     volumes:
       - ./.env:/app/.env:ro
       - ${PRICING_SQL_DUMPS_HOST_PATH:-/opt/pricing/sql-dumps}:/app/pricing__epac/data/raw/dumps/sql
