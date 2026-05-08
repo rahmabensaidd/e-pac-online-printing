@@ -1,0 +1,374 @@
+<div class="space-y-6">
+  <app-backoffice-section-header
+    [breadcrumb]="['Backoffice', 'Pricing Copilot']"
+    title="Pricing Copilot"
+    description="Complete a quote configuration and ask the AI for pricing interpretation."
+  />
+
+  <app-backoffice-card title="Conversation" description="A simple guided flow aligned with the existing backoffice template.">
+    <div class="space-y-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="admin-chip">{{ loading() ? 'Live analysis' : 'Ready' }}</span>
+        <span class="admin-chip">{{ isConversationDone() ? 'Quote completed' : 'Guided interview' }}</span>
+      </div>
+
+      <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <p class="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Priority level</p>
+          <div class="flex flex-wrap gap-2">
+            @for (level of priorityLevelOptions; track level) {
+              <button
+                type="button"
+                class="admin-focus-ring rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold"
+                [class.border-brand-navy]="state().priorityLevel === level"
+                [class.bg-brand-navy]="state().priorityLevel === level"
+                [class.text-white]="state().priorityLevel === level"
+                [class.border-slate-300]="state().priorityLevel !== level"
+                [class.bg-white]="state().priorityLevel !== level"
+                [class.text-slate-600]="state().priorityLevel !== level"
+                [disabled]="loading() || isConversationDone()"
+                (click)="setPriorityLevel(level)"
+              >
+                {{ level }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-[1rem] border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="admin-scrollbar max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+          @for (message of messages(); track message.id) {
+            <div class="flex" [class.justify-end]="message.sender === 'user'">
+              <div class="max-w-[90%] space-y-1.5">
+                <p
+                  class="px-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em]"
+                  [class.text-slate-400]="message.sender === 'bot'"
+                  [class.text-brand-navy]="message.sender === 'user'"
+                  [class.text-right]="message.sender === 'user'"
+                >
+                  {{ message.sender === 'bot' ? 'Copilot' : 'You' }}
+                </p>
+                <div
+                  class="rounded-[1rem] border px-4 py-3 shadow-sm"
+                  [class.border-slate-200]="message.sender === 'bot'"
+                  [class.bg-slate-50]="message.sender === 'bot'"
+                  [class.text-slate-700]="message.sender === 'bot'"
+                  [class.border-brand-navy]="message.sender === 'user'"
+                  [class.bg-brand-navy]="message.sender === 'user'"
+                  [class.text-white]="message.sender === 'user'"
+                >
+                  <div
+                    class="copilot-chat-message text-[0.84rem] leading-6"
+                    [class.copilot-chat-message--user]="message.sender === 'user'"
+                    [innerHTML]="formatMessage(message.text)"
+                  ></div>
+                  @if (message.streaming) {
+                    <span class="copilot-cursor"></span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (loading()) {
+            <div class="flex">
+              <div class="rounded-[1rem] border border-slate-200 bg-slate-50 px-4 py-3 text-[0.82rem] text-slate-600 shadow-sm">
+                <div class="flex items-center gap-2">
+                  <span class="copilot-dot"></span>
+                  <span class="copilot-dot"></span>
+                  <span class="copilot-dot"></span>
+                  <span>Running pricing and AI interpretation...</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (!isConversationDone() && !loading() && activeQuestion(); as question) {
+        <div class="rounded-[1rem] border border-slate-200 bg-slate-50 p-4">
+          <div class="mb-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">Current step</p>
+            <h3 class="mt-1 text-[0.95rem] font-semibold text-brand-navy">{{ question.label }}</h3>
+          </div>
+
+          @if (question.type === 'select' && isBindingVisualQuestion(question)) {
+            <div class="copilot-visual-grid">
+              @for (option of activeOptions(); track option) {
+                <button type="button" class="copilot-visual-card" (click)="chooseOption(option)">
+                  @if (getBindingFamilyImage(option); as optionImage) {
+                    <span class="copilot-visual-card__preview">
+                      <img [src]="optionImage" [alt]="getBindingFamilyLabel(option)" class="copilot-visual-card__image" />
+                    </span>
+                  }
+                  <span class="copilot-visual-card__title">{{ getBindingFamilyLabel(option) }}</span>
+                </button>
+              }
+            </div>
+          } @else if (question.type === 'select' && isCoverFinishVisualQuestion(question)) {
+            <div class="copilot-visual-grid">
+              @for (option of activeOptions(); track option) {
+                <button type="button" class="copilot-visual-card" (click)="chooseOption(option)">
+                  @if (getCoverFinishImage(option); as optionImage) {
+                    <span class="copilot-visual-card__preview copilot-visual-card__preview--finish">
+                      <img [src]="optionImage" [alt]="getCoverFinishLabel(option)" class="copilot-visual-card__image" />
+                    </span>
+                  }
+                  <span class="copilot-visual-card__title">{{ getCoverFinishLabel(option) }}</span>
+                </button>
+              }
+            </div>
+          } @else if (question.type === 'select' && isPriorityQuestion(question)) {
+            <div class="flex flex-wrap gap-2">
+              @for (option of activeOptions(); track option) {
+                <button
+                  type="button"
+                  class="admin-focus-ring rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold"
+                  [class.border-brand-navy]="state().priorityLevel === option"
+                  [class.bg-brand-navy]="state().priorityLevel === option"
+                  [class.text-white]="state().priorityLevel === option"
+                  [class.border-slate-300]="state().priorityLevel !== option"
+                  [class.bg-white]="state().priorityLevel !== option"
+                  [class.text-slate-600]="state().priorityLevel !== option"
+                  (click)="chooseOption(option)"
+                >
+                  {{ option }}
+                </button>
+              }
+            </div>
+          } @else if (question.type === 'select' && isBooleanQuestion(question)) {
+            <div class="flex flex-wrap gap-2">
+              @for (option of activeOptions(); track option) {
+                <button type="button" class="admin-btn-secondary admin-focus-ring" (click)="chooseOption(option)">
+                  {{ getBooleanOptionLabel(option) }}
+                </button>
+              }
+            </div>
+          } @else if (question.type === 'select') {
+            <div class="flex flex-wrap gap-2">
+              @for (option of activeOptions(); track option) {
+                <button type="button" class="admin-btn-secondary admin-focus-ring" (click)="chooseOption(option)">
+                  {{ option }}
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="flex flex-wrap items-center gap-2">
+              <input
+                type="number"
+                class="admin-input max-w-sm"
+                [placeholder]="question.placeholder || 'Enter a value'"
+                [ngModel]="numericDraftText()"
+                (ngModelChange)="numericDraft.set($event)"
+                (keyup.enter)="submitNumericAnswer()"
+              />
+              <button
+                type="button"
+                class="admin-btn-primary admin-focus-ring"
+                [disabled]="isNumericDraftEmpty()"
+                (click)="submitNumericAnswer()"
+              >
+                Send
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (isConversationDone() && !loading()) {
+        <div class="rounded-[1rem] border border-slate-200 bg-slate-50 p-4">
+          <div class="mb-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">Follow-up</p>
+            <h3 class="mt-1 text-[0.95rem] font-semibold text-brand-navy">Ask another question</h3>
+          </div>
+
+          @if (result()) {
+            <div class="flex flex-wrap gap-2">
+              @for (question of followUpQuestions(); track question) {
+                <button type="button" class="admin-btn-secondary admin-focus-ring" (click)="askFollowUpQuestion(question)">
+                  {{ question }}
+                </button>
+              }
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                class="admin-input min-w-[18rem] flex-1"
+                placeholder="Ask your own question to the LLM"
+                [ngModel]="followUpDraft()"
+                (ngModelChange)="followUpDraft.set($event)"
+                (keyup.enter)="submitCustomFollowUpQuestion()"
+              />
+              <button
+                type="button"
+                class="admin-btn-primary admin-focus-ring"
+                [disabled]="isFollowUpDraftEmpty()"
+                (click)="submitCustomFollowUpQuestion()"
+              >
+                Ask
+              </button>
+            </div>
+          }
+
+          <div class="mt-3">
+            <button type="button" class="admin-btn-secondary admin-focus-ring" (click)="startConversation()">
+              New conversation
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (error()) {
+        <div class="rounded-[0.9rem] border border-rose-200 bg-rose-50 px-4 py-3 text-[0.82rem] text-rose-600">
+          {{ error() }}
+        </div>
+      }
+    </div>
+  </app-backoffice-card>
+
+  @if (result(); as output) {
+    <div class="grid gap-4 lg:grid-cols-2">
+      <app-backoffice-card title="Copilot Decision" description="AI interpretation of the pricing response.">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Model</p>
+            <p class="mt-1 text-[0.9rem] font-semibold text-brand-navy">{{ output.copilot.selectedModel || 'n/a' }}</p>
+          </div>
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Confidence</p>
+            <p class="mt-1 text-[0.9rem] font-semibold text-brand-navy">{{ output.copilot.confidence }}</p>
+          </div>
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Action</p>
+            <p class="mt-1 text-[0.9rem] font-semibold text-brand-navy">{{ output.copilot.recommendedAction || $any(output.copilot).recommended_action || 'REVIEW' }}</p>
+          </div>
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Recommended price</p>
+            <p class="mt-1 text-[0.9rem] font-semibold text-brand-navy">{{ output.copilot.recommendedPrice ?? 'n/a' }}</p>
+          </div>
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Confidence meter</p>
+                <p class="mt-1 text-[0.84rem] text-slate-600">Quick visual cue for pricing reliability.</p>
+              </div>
+              <span class="admin-chip">{{ output.copilot.confidence }}</span>
+            </div>
+            <div class="copilot-meter mt-3">
+              <div
+                class="copilot-meter__fill"
+                [class]="getConfidenceToneClass()"
+                [style.width.%]="getConfidenceMeterWidth()"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </app-backoffice-card>
+
+      <app-backoffice-card title="Pricing Result" description="Returned by the pricing backend.">
+        <div class="grid gap-3">
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Selected price</p>
+            <p class="mt-1 text-[0.9rem] font-semibold text-brand-navy">{{ output.pricing.selectedPrice ?? 'n/a' }}</p>
+          </div>
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Strategy</p>
+            <p class="mt-1 text-[0.9rem] font-semibold text-brand-navy">{{ output.pricing.selectedStrategy || 'n/a' }}</p>
+          </div>
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Status message</p>
+            <p class="mt-1 text-[0.84rem] leading-6 text-slate-600">{{ output.pricing.message }}</p>
+          </div>
+        </div>
+      </app-backoffice-card>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-[1.15fr_1fr]">
+      <app-backoffice-card title="Visual Configuration" description="Format, finish, and color choices that shape the pricing.">
+        <div class="grid gap-3 md:grid-cols-2">
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Binding format</p>
+            <div class="mt-3 flex items-center gap-3">
+              @if (getCurrentBindingImage(); as bindingImage) {
+                <div class="copilot-preview-tile">
+                  <img [src]="bindingImage" [alt]="getCurrentBindingLabel()" class="copilot-preview-tile__image" />
+                </div>
+              }
+              <div>
+                <p class="text-[0.9rem] font-semibold text-brand-navy">{{ getCurrentBindingLabel() }}</p>
+                <p class="mt-1 text-[0.8rem] text-slate-500">{{ getCurrentFormatLabel() }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Cover finish</p>
+            <div class="mt-3 flex items-center gap-3">
+              @if (getCurrentCoverFinishImage(); as finishImage) {
+                <div class="copilot-preview-tile">
+                  <img [src]="finishImage" [alt]="getCurrentCoverFinishLabel()" class="copilot-preview-tile__image" />
+                </div>
+              }
+              <div>
+                <p class="text-[0.9rem] font-semibold text-brand-navy">{{ getCurrentCoverFinishLabel() }}</p>
+                <p class="mt-1 text-[0.8rem] text-slate-500">Selected finish for the cover surface.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-400">Cover color profile</p>
+                <p class="mt-1 text-[0.9rem] font-semibold text-brand-navy">{{ getCurrentCoverColorLabel() }}</p>
+              </div>
+              <div class="copilot-color-swatch" [style.background]="getCurrentCoverColorStyle()"></div>
+            </div>
+          </div>
+        </div>
+      </app-backoffice-card>
+
+      <app-backoffice-card title="Model Comparison" description="How the available pricing models compare on predicted unit price.">
+        @if (getModelPredictionBars().length > 0) {
+          <div class="space-y-3">
+            @for (bar of getModelPredictionBars(); track bar.label) {
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between gap-3">
+                  <p class="text-[0.78rem] font-medium text-slate-700">{{ bar.label }}</p>
+                  <span class="text-[0.76rem] font-semibold text-brand-navy">{{ bar.displayValue }}</span>
+                </div>
+                <div class="copilot-bar-track">
+                  <div class="copilot-bar-fill" [class]="bar.accentClass" [style.width.%]="bar.widthPercent"></div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="text-[0.84rem] text-slate-500">No model comparison data is available for this quote.</p>
+        }
+      </app-backoffice-card>
+    </div>
+
+    <app-backoffice-card title="Top Price Drivers" description="Visual ranking of the strongest features behind the price.">
+      @if (getTopDriverBars().length > 0) {
+        <div class="grid gap-3 lg:grid-cols-2">
+          @for (bar of getTopDriverBars(); track bar.label) {
+            <div class="rounded-[0.9rem] border border-slate-200 bg-slate-50 p-3">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-[0.8rem] font-medium text-slate-700">{{ bar.label }}</p>
+                <span class="text-[0.75rem] font-semibold text-brand-navy">{{ bar.displayValue }}</span>
+              </div>
+              <div class="copilot-bar-track mt-2">
+                <div class="copilot-bar-fill copilot-bar-fill--driver" [style.width.%]="bar.widthPercent"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="text-[0.84rem] text-slate-500">The pricing API did not return feature-importance details for this configuration.</p>
+      }
+    </app-backoffice-card>
+  }
+</div>

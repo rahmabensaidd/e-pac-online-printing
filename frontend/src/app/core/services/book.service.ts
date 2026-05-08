@@ -9,6 +9,18 @@ export interface Author {
     email?: string;
 }
 
+export interface BookReview {
+    reviewId: number;
+    bookId: number;
+    bookTitle?: string | null;
+    reviewerName: string;
+    reviewerRole?: string | null;
+    rating: number;
+    comment: string;
+    featured?: boolean | null;
+    createdAt?: string | null;
+}
+
 // book.service.ts - Version corrigée
 export interface BookRequestDto {
     title: string;
@@ -141,6 +153,9 @@ export interface Book {
     labelType: string | null;
     siren: string;
     salePrice: number;
+    averageRating?: number | null;
+    reviewsCount?: number | null;
+    reviews?: BookReview[];
     cover?: {
         coverId?: number;
         title?: string;

@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll.directive';
+import { MarketplaceService } from '../../pages/marketplace/marketplace.service';
 
 @Component({
   selector: 'app-testimonials-section',
@@ -7,4 +8,9 @@ import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scrol
   templateUrl: './testimonials-section.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TestimonialsSectionComponent {}
+export class TestimonialsSectionComponent {
+  private readonly marketplaceService = inject(MarketplaceService);
+
+  readonly stars = [1, 2, 3, 4, 5];
+  readonly featuredReviews = computed(() => this.marketplaceService.featuredReviews().slice(0, 3));
+}

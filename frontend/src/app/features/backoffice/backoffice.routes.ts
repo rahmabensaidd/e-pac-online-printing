@@ -119,7 +119,17 @@ export const BACKOFFICE_ROUTES: Routes = [
           description: 'Review dynamic client trend indicators derived from order history.',
         },
       },
-      {
+            {
+        path: 'pricing-copilot',
+        loadComponent: () =>
+            import('./pricing-copilot/backoffice-pricing-copilot-page').then(
+                (m) => m.BackofficePricingCopilotPageComponent,
+            ),
+        data: {
+          title: 'Pricing Copilot',
+          description: 'Guided pricing assistant with AI interpretation.',
+        },
+      },      {
         path: 'settings',
         loadComponent: () =>
             import('./settings/backoffice-settings-page').then(
@@ -133,3 +143,4 @@ export const BACKOFFICE_ROUTES: Routes = [
     ],
   },
 ];
+

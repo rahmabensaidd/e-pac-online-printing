@@ -8,38 +8,20 @@
     </div>
 
     <div class="grid md:grid-cols-3 gap-8">
-      <div class="rounded-3xl border border-gray-100 p-8 shadow-lg" appReveal [revealDelay]="90">
-        <div class="text-brand-orange mb-3">
-          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-        </div>
-        <p class="text-gray-700 leading-relaxed">
-          “The live simulator is accurate. We personalized postcards and shipped within the same week.”
-        </p>
-        <div class="mt-6 font-bold">Nour A.</div>
-        <div class="text-sm text-gray-500">Marketing</div>
-      </div>
-
-      <div class="rounded-3xl border border-gray-100 p-8 shadow-lg" appReveal [revealDelay]="150">
-        <div class="text-brand-orange mb-3">
-          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-        </div>
-        <p class="text-gray-700 leading-relaxed">
-          “Business cards feel premium. Configuration and pricing are clear before we place the order.”
-        </p>
-        <div class="mt-6 font-bold">Amine S.</div>
-        <div class="text-sm text-gray-500">Founder</div>
-      </div>
-
-      <div class="rounded-3xl border border-gray-100 p-8 shadow-lg" appReveal [revealDelay]="210">
-        <div class="text-brand-orange mb-3">
-          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-        </div>
-        <p class="text-gray-700 leading-relaxed">
-          “Photo books came out beautifully printed with excellent color and durable binding.”
-        </p>
-        <div class="mt-6 font-bold">Sarra M.</div>
-        <div class="text-sm text-gray-500">Photographer</div>
-      </div>
+      @for (review of featuredReviews(); track review.reviewId; let i = $index) {
+        <article class="rounded-3xl border border-gray-100 p-8 shadow-lg" appReveal [revealDelay]="90 + (i * 60)">
+          <div class="mb-3 flex items-center gap-1 text-brand-orange">
+            @for (star of stars.slice(0, review.rating); track star) {
+              <i class="fas fa-star"></i>
+            }
+          </div>
+          <p class="text-gray-700 leading-relaxed">
+            "{{ review.comment }}"
+          </p>
+          <div class="mt-6 font-bold">{{ review.reviewerName }}</div>
+          <div class="text-sm text-gray-500">{{ review.reviewerRole || review.bookTitle || 'Print team' }}</div>
+        </article>
+      }
     </div>
   </div>
 </section>

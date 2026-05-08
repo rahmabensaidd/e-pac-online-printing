@@ -420,6 +420,13 @@ export class BackofficeDataService {
             description: 'Manage organizations and verification tokens',
             group: 'Workspace',
         },
+                {
+            label: 'Pricing Copilot',
+            route: '/backoffice/pricing-copilot',
+            icon: 'fa-wand-magic-sparkles',
+            description: 'Guided AI pricing assistant',
+            group: 'Operations',
+        },
         {
             label: 'Settings',
             route: '/backoffice/settings',
@@ -502,3 +509,4 @@ export class BackofficeDataService {
         this.settings.set({...settings});
     }
 }
+

@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tn.epac.eprinting.exception.ResourceNotFoundException;
 import tn.epac.eprinting.model.dtos.BookOverviewDto;
+import tn.epac.eprinting.model.dtos.BookReviewDto;
 import tn.epac.eprinting.model.dtos.BookRequestDto;
 import tn.epac.eprinting.model.dtos.BookResponseDto;
 import tn.epac.eprinting.model.dtos.UserBookUpsertResultDto;
 import tn.epac.eprinting.model.entities.Book;
+import tn.epac.eprinting.model.entities.BookReview;
 import tn.epac.eprinting.model.entities.Content;
 import tn.epac.eprinting.model.entities.Cover;
 import tn.epac.eprinting.model.entities.PnlInformation;
@@ -32,6 +34,7 @@ import tn.epac.eprinting.model.enums.TextColor;
 import tn.epac.eprinting.model.enums.TextPaperType;
 import tn.epac.eprinting.model.enums.UserBookStatus;
 import tn.epac.eprinting.repository.BookRepository;
+import tn.epac.eprinting.repository.BookReviewRepository;
 import tn.epac.eprinting.repository.CoverTemplateRepository;
 import tn.epac.eprinting.repository.OrderRepository;
 import tn.epac.eprinting.repository.TextTemplateRepository;
@@ -56,6 +59,7 @@ public class AdminBookServiceImpl implements AdminBookService {
     private static final Path CUSTOM_BOOK_UPLOADS_DIR = Paths.get(System.getProperty("user.dir"), "uploads", "custom-books");
 
     private final BookRepository bookRepository;
+    private final BookReviewRepository bookReviewRepository;
     private final CoverTemplateRepository coverTemplateRepository;
     private final TextTemplateRepository textTemplateRepository;
     private final UserRepository userRepository;
@@ -658,6 +662,8 @@ public class AdminBookServiceImpl implements AdminBookService {
     }
 
     private BookResponseDto mapToResponseDto(Book book) {
+        Double averageRating = bookReviewRepository.findAverageRatingByBookId(book.getBookId());
+        Long reviewsCount = bookReviewRepository.countByBookBookId(book.getBookId());
         return BookResponseDto.builder()
                 .bookId(book.getBookId())
                 .title(book.getTitle())
@@ -703,10 +709,33 @@ public class AdminBookServiceImpl implements AdminBookService {
                 .isAddedFromAdmin(book.is_added_from_admin())
                 .isCreatedByUser(book.is_created_by_user())
                 .stockStatus(book.getStock_status())
+                .averageRating(averageRating != null && averageRating > 0 ? Math.round(averageRating * 10.0) / 10.0 : null)
+                .reviewsCount(reviewsCount > 0 ? reviewsCount : null)
+                .reviews(mapReviews(bookReviewRepository.findTop2ByBookBookIdOrderByCreatedAtDesc(book.getBookId())))
                 .cover(mapCover(book.getCover()))
                 .content(mapContent(book.getContent()))
                 .pnlInformations(mapPnlInformations(book.getPnlInformations()))
                 .build();
+    }
+
+    private List<BookReviewDto> mapReviews(List<BookReview> reviews) {
+        if (reviews == null) {
+            return List.of();
+        }
+        return reviews.stream()
+                .filter(Objects::nonNull)
+                .map(review -> BookReviewDto.builder()
+                        .reviewId(review.getReviewId())
+                        .bookId(review.getBook() != null ? review.getBook().getBookId() : null)
+                        .bookTitle(review.getBook() != null ? review.getBook().getTitle() : null)
+                        .reviewerName(review.getReviewerName())
+                        .reviewerRole(review.getReviewerRole())
+                        .rating(review.getRating())
+                        .comment(review.getComment())
+                        .featured(review.getFeatured())
+                        .createdAt(review.getCreatedAt())
+                        .build())
+                .toList();
     }
 
     private BookResponseDto.CoverPayloadDto mapCover(Cover cover) {

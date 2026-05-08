@@ -84,7 +84,7 @@ public class SecurityConfig {
                                 "/api/webhooks/shippo" // Webhook Shippo public
                         ).permitAll()
                         // Endpoints admin
-                        .requestMatchers("/api/admin/**").hasRole("admin")
+                        .requestMatchers("/api/admin/**").hasRole("admin")                        .requestMatchers("/api/copilot/**").hasRole("admin")
                         // Endpoints checkout
                         .requestMatchers("/api/orders/checkout").hasAnyRole("user", "admin", "organization")
                         // Endpoints user
@@ -149,3 +149,5 @@ public class SecurityConfig {
         return new SecretKeySpec(key, "HmacSHA256");
     }
 }
+
+

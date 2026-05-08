@@ -2,7 +2,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
-import { Book, PageResponse } from '../../core/services/book.service';
+import { Book, BookReview, PageResponse } from '../../core/services/book.service';
 
 export interface MarketplaceBook {
     id: string;
@@ -15,6 +15,7 @@ export interface MarketplaceBook {
     isAvailable: boolean;
     rating?: number;
     reviewsCount?: number;
+    reviews?: BookReview[];
     imageUrl?: string;
     quantity: number;
     bindingType: string;
@@ -30,12 +31,15 @@ export class MarketplaceService {
 
     private readonly booksSignal = signal<Book[]>([]);
     private readonly loadingSignal = signal(false);
+    private readonly featuredReviewsSignal = signal<BookReview[]>([]);
 
     readonly marketplaceBooks = computed(() => this.transformBooksToMarketplace(this.booksSignal()));
     readonly loading = this.loadingSignal.asReadonly();
+    readonly featuredReviews = this.featuredReviewsSignal.asReadonly();
 
     constructor() {
         this.loadMarketplaceBooks();
+        this.loadFeaturedReviews();
     }
 
     private loadMarketplaceBooks(search?: string): void {
@@ -86,10 +90,24 @@ export class MarketplaceService {
             quantity: book.quantity,
             bindingType: book.bindingType,
             authors: book.authors || [],
-            rating: undefined, // À ajouter si vous avez un système de notes
-            reviewsCount: undefined,
+            rating: book.averageRating ?? undefined,
+            reviewsCount: book.reviewsCount ?? undefined,
+            reviews: book.reviews || [],
             imageUrl: undefined // À ajouter si vous avez des images
         }));
+    }
+
+    private loadFeaturedReviews(): void {
+        this.http.get<BookReview[]>(`${this.marketplaceApiUrl}/reviews/featured`)
+            .pipe(
+                catchError((error) => {
+                    console.error('Error loading featured reviews:', error);
+                    return of([]);
+                })
+            )
+            .subscribe((reviews) => {
+                this.featuredReviewsSignal.set(reviews || []);
+            });
     }
 
     private mapBindingTypeToCategory(bindingType: string): string {
@@ -132,5 +150,6 @@ export class MarketplaceService {
 
     refreshBooks(): void {
         this.loadMarketplaceBooks();
+        this.loadFeaturedReviews();
     }
 }

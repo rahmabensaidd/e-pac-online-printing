@@ -42,6 +42,7 @@ export class MarketplacePageComponent implements OnInit {
   ];
   readonly skeletonCards = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   readonly itemsPerPage = 9;
+  readonly ratingStars = [1, 2, 3, 4, 5];
 
   // Utiliser les vraies données du service
   readonly isLoading = computed(() => this.marketplaceService.loading());
@@ -320,6 +321,11 @@ export class MarketplacePageComponent implements OnInit {
     return active
         ? 'bg-brand-navy text-white border-brand-navy'
         : 'bg-white text-gray-700 border-gray-200 hover:border-brand-orange hover:text-brand-orange';
+  }
+
+  reviewStars(reviewRating: number | undefined): number[] {
+    const safeRating = Math.max(0, Math.min(5, Math.round(reviewRating ?? 0)));
+    return this.ratingStars.slice(0, safeRating);
   }
 
   private resetPagination(): void {

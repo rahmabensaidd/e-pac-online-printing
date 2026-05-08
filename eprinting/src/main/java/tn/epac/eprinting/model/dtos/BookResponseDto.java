@@ -62,6 +62,9 @@ public class BookResponseDto {
     private Boolean isAddedFromAdmin;
     private Boolean isCreatedByUser;
     private AdminBookStatus stockStatus;
+    private Double averageRating;
+    private Long reviewsCount;
+    private List<BookReviewDto> reviews;
 
     private CoverPayloadDto cover;
     private ContentPayloadDto content;

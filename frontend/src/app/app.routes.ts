@@ -27,6 +27,12 @@ export const routes: Routes = [
       import('./pages/design-your-book/design-your-book-page').then((m) => m.DesignYourBookPageComponent),
   },
   {
+    path: 'design-your-book2',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/design-your-book2/design-your-book2-page').then((m) => m.DesignYourBook2PageComponent),
+  },
+  {
     path: 'my-custom-books',
     canActivate: [authGuard],
     loadComponent: () =>

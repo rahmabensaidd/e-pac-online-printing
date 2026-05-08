@@ -6,14 +6,11 @@ export interface QuoteRequest {
     siren: string | null;
     bindingType: string;
     product: {
-        // Champs simples
         quantity: number;
         productionPage: number;
         height: number;
         width: number;
         thickness: number;
-
-        // Booléens convertis en Integer (1/0)
         securityLabel: number;
         hasCoil: number;
         hasInsert: number;
@@ -23,8 +20,6 @@ export interface QuoteRequest {
         doubleSidedCover: number;
         shrinkwrap: number;
         threeHoleDrill: number;
-
-        // Champs string
         textPaperType: string;
         textColor: string;
         coverPaperType: string;
@@ -84,6 +79,33 @@ export interface ExplainedQuoteResponse extends QuoteResponse {
     explanation: PricingExplanation | null;
 }
 
+export interface CopilotAnalyzeRequest {
+    siren: string | null;
+    bindingType: string;
+    product: QuoteRequest['product'];
+    selectedQuestion: string;
+    conversationHistory: CopilotConversationTurn[];
+}
+
+export interface CopilotConversationTurn {
+    role: 'copilot' | 'user';
+    content: string;
+}
+
+export interface CopilotInterpretationResponse {
+    answer: string;
+    selectedModel: string | null;
+    recommendedPrice: number | null;
+    confidence: string;
+    recommendedAction: string;
+}
+
+export interface CopilotAnalyzeResponse {
+    selectedQuestion: string;
+    pricing: ExplainedQuoteResponse;
+    copilot: CopilotInterpretationResponse;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PricingService {
     private readonly http = inject(HttpClient);
@@ -94,5 +116,9 @@ export class PricingService {
 
     getExplainedQuote(payload: QuoteRequest): Observable<ExplainedQuoteResponse> {
         return this.http.post<ExplainedQuoteResponse>('/api/pricing/quote/explained', payload);
+    }
+
+    analyzeWithCopilot(payload: CopilotAnalyzeRequest): Observable<CopilotAnalyzeResponse> {
+        return this.http.post<CopilotAnalyzeResponse>('/api/copilot/pricing/analyze', payload);
     }
 }

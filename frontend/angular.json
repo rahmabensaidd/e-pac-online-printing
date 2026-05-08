@@ -53,7 +53,7 @@
               "optimization": {
                 "scripts": true,
                 "styles": true,
-                "fonts": true
+                "fonts": false
               }
             },
             "development": {

@@ -31,11 +31,12 @@ public class PricingRequestMapper {
         features.put("shrinkwrap", defaultInt(p.getShrinkwrap()));
         features.put("three_hole_drill", defaultInt(p.getThreeHoleDrill()));
 
-        features.put("text_paper_type", defaultString(p.getTextPaperType(), "NONE"));
+        features.put("text_paper_type", mapTextPaperType(p.getTextPaperType()));
         features.put("text_color", mapTextColor(p.getTextColor()));
         features.put("cover_paper_type", defaultString(p.getCoverPaperType(), "NONE"));
         features.put("cover_finish_type", defaultString(p.getCoverFinishType(), "NONE"));
         features.put("cover_color", mapCoverColor(p.getCoverColor()));
+        features.put("cover_size", defaultString(p.getCoverSize(), "MISSING"));
         features.put("priority_level", defaultString(p.getPriorityLevel(), "NORMAL"));
         features.put("head_and_tail", defaultString(p.getHeadAndTail(), "NONE"));
         features.put("coil_type", defaultString(p.getCoilType(), "NONE"));
@@ -79,6 +80,30 @@ public class PricingRequestMapper {
             case "ZERO_ZERO" -> "0/0";
             case "ONE_ZERO" -> "1/0";
             default -> value;
+        };
+    }
+
+    private String mapTextPaperType(String value) {
+        String normalized = defaultString(value, "NONE").trim().toUpperCase();
+        return switch (normalized) {
+            case "NONE" -> "MISSING";
+            case "80_GLOSSTEXT", "80_GLOSS_TEXT" -> "80_GLOSS_TEXT";
+            case "80_GLOSSCOVER" -> "80_GLOSS_COVER";
+            case "10PT_C2S" -> "10PT_C2S";
+            case "12PT_C2S" -> "12PT_C2S";
+            case "PAP1SW_70" -> "PAP1_70";
+            case "PAP1_75" -> "PAP1_75";
+            case "LETSGO MATTE 115GSM" -> "LETSGO_MATTE_115";
+            case "LETSGO MATTE 90GSM" -> "LETSGO_MATTE_90";
+            case "FSC_MC_CVG_SILKHO_1.0_70" -> "FSC_MC_CVG_SILKHO_1.0_70";
+            case "FSC_MC_CVG_SILKHO_1.061", "FSC_MC_CVG_SILKHO_1.061_CB", "FSC_MC_CVG_SILKHO_1.061_CB_BW" ->
+                    "FSC_MC_CVG_SILKHO_1.061";
+            case "FSC_MC_CVG_SILKHO_1.0_70_CB", "FSC_MC_CVG_SILKHO_1.0_70_BW" -> "FSC_MC_CVG_SILKHO_1.0_70";
+            case "FSC_MC_DOM_VJT_1.21_75", "FSC_MC_DOM_VJT_1.21_75_BW" -> "FSC_MC_DOM_VJT_1.21_75";
+            case "FSC_MC_DOM_VJT_1.29_90", "FSC_MC_DOM_VJT_1.29_90_BW" -> "FSC_MC_DOM_VJT_1.29_90";
+            case "BIRCH_W40_TB" -> "BIRCH_W40_TB";
+            case "SFI_CVG_UCR_1.8_66" -> "SFI_CVG_66";
+            default -> normalized;
         };
     }
 }

@@ -23,6 +23,7 @@ public class ProductConfigurationDto {
     private String coverPaperType;
     private String coverFinishType;
     private String coverColor;
+    private String coverSize;
     private String priorityLevel;
     private String headAndTail;
     private String coilType;
@@ -88,6 +89,9 @@ public class ProductConfigurationDto {
 
     public String getCoverColor() { return coverColor; }
     public void setCoverColor(String coverColor) { this.coverColor = coverColor; }
+
+    public String getCoverSize() { return coverSize; }
+    public void setCoverSize(String coverSize) { this.coverSize = coverSize; }
 
     public String getPriorityLevel() { return priorityLevel; }
     public void setPriorityLevel(String priorityLevel) { this.priorityLevel = priorityLevel; }
